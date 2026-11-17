@@ -149,8 +149,8 @@ button.primary {
   padding: 8px 12px;
 }
 
-.protected p:last-child {
-  margin: 8px 0 0;
+.protected p {
+  margin: 0;
 }
 
 dialog {
