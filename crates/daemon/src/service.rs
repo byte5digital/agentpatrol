@@ -28,7 +28,7 @@ use agentsweep_core::baseline::{self, Retention};
 use agentsweep_core::chain::ChainState;
 use agentsweep_core::envelope::Timestamp;
 use agentsweep_core::evaluation::EvaluationCache;
-use agentsweep_core::eventlog::{Action, EventLog, PackChange, PackRules, RulePackRecord};
+use agentsweep_core::eventlog::{Action, Actor, EventLog, PackChange, PackRules, RulePackRecord};
 use agentsweep_core::finding::{Category, Finding, FindingId, FindingState};
 use agentsweep_core::gate_facts::GateRecord;
 use agentsweep_core::gate_registration::GateCommand;
@@ -313,6 +313,10 @@ pub struct Daemon {
     /// The Items that awaited judgement when the last Scans looked at them,
     /// which a switch of engine feeds to the queue again. In memory only.
     pub(crate) awaiting: Mutex<Vec<Awaiting>>,
+    /// The Items whose only Finding a malicious Verdict opened, with what
+    /// their request is built from: a switch of engine closes those whose
+    /// Verdict no longer counts and judges them again. In memory only.
+    pub(crate) judged_malicious: Mutex<Vec<Awaiting>>,
     /// What the cloud caps count: rebuilt from the `judgement-spend` records
     /// of the Event Log at start, extended by every request this daemon
     /// settles.
@@ -610,6 +614,7 @@ impl Daemon {
             engines,
             judgement_queue: Arc::new(JudgementQueue::new()),
             awaiting: Mutex::new(Vec::new()),
+            judged_malicious: Mutex::new(Vec::new()),
             spend: Mutex::new(spend),
             health: Mutex::new(health),
             reset: Mutex::new(reset),
@@ -880,8 +885,9 @@ impl Daemon {
                 match run {
                     Ok(mut run) => {
                         let awaiting = std::mem::take(&mut run.awaiting);
+                        let judged = std::mem::take(&mut run.judged_malicious);
                         self.took(run);
-                        self.feed_the_queue(awaiting, in_force, trigger, None);
+                        self.feed_the_queue(awaiting, judged, in_force, trigger, None);
                     }
                     Err(error) => say!("the Full Scan failed: {error}"),
                 }
@@ -920,9 +926,16 @@ impl Daemon {
                             at,
                         });
                         let awaiting = std::mem::take(&mut run.awaiting);
+                        let judged = std::mem::take(&mut run.judged_malicious);
                         let looked_at = run.looked_at.clone();
                         self.took(run);
-                        self.feed_the_queue(awaiting, in_force, Trigger::Watcher, Some(&looked_at));
+                        self.feed_the_queue(
+                            awaiting,
+                            judged,
+                            in_force,
+                            Trigger::Watcher,
+                            Some(&looked_at),
+                        );
                     }
                     Err(error) => say!("the Change Scan failed: {error}"),
                 }
@@ -2205,7 +2218,7 @@ impl Daemon {
 
     /// Keeps one Activity line a Scan left that no record stands behind, and
     /// sends it to every subscriber.
-    fn keep_activity(&self, line: ActivityLine) {
+    pub(crate) fn keep_activity(&self, line: ActivityLine) {
         self.activity
             .lock()
             .expect("the Activity is not poisoned")
@@ -2431,6 +2444,10 @@ pub fn start_with(options: &Options, daemon: Arc<Daemon>) -> Result<Running, Box
         );
     }
     say!("the peer check is {}", daemon.check.describe());
+    // Settings an earlier version left may run an engine outside the eval
+    // bar in the Simple Posture, which this one never does (spec section
+    // 4.4): it goes off before the first Scan looks anything up under it.
+    daemon.keep_the_engine_within_the_bar(Actor::Auto);
     // The Full Scan every start runs is asked for first, so a due check that
     // asks before it has finished joins it rather than taking its place. The
     // watcher starts behind that Scan, because nothing has declared a watch

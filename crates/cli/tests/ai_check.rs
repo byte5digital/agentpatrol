@@ -22,7 +22,9 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::{JudgementEngine, JudgementSettings, OllamaAddress, Settings};
+use agentsweep_core::settings::{
+    JudgementEngine, JudgementSettings, OllamaAddress, Posture, Settings,
+};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -85,8 +87,14 @@ fn listing(root: &Path) -> BTreeSet<String> {
 }
 
 /// A folder with the odd file, and a home whose settings file holds these
-/// AI Judgement choices.
+/// AI Judgement choices in the Developer Posture, which runs an engine
+/// outside the eval bar.
 fn folder_and_home(judgement: JudgementSettings) -> (Temporary, Temporary) {
+    folder_and_home_in(judgement, Posture::Developer)
+}
+
+/// The same in `posture`.
+fn folder_and_home_in(judgement: JudgementSettings, posture: Posture) -> (Temporary, Temporary) {
     let folder = Temporary::new("folder");
     fs::write(folder.path().join("CLAUDE.md"), ODD).expect("an odd instruction file");
     let home = Temporary::new("home");
@@ -94,6 +102,7 @@ fn folder_and_home(judgement: JudgementSettings) -> (Temporary, Temporary) {
     fs::create_dir_all(data.root()).expect("a data directory");
     let settings = Settings {
         judgement,
+        posture,
         ..Settings::default()
     };
     fs::write(data.settings_file(), settings.to_value().to_string()).expect("a settings file");
@@ -281,6 +290,21 @@ fn no_ai_shows_no_verdict_and_asks_nothing() {
     assert!(printed.contains("Safe to open."), "{printed}");
     assert_eq!(ollama.connections(), 0);
     assert_eq!((listing(folder.path()), listing(home.path())), before);
+}
+
+/// In the Simple Posture an engine outside the eval bar, which until the
+/// eval records a row is every engine, is not asked: the AI check did not
+/// run, and nothing reaches Ollama.
+#[test]
+fn simple_asks_no_untested_engine() {
+    let ollama = FixtureOllama::answering(MALICIOUS);
+    let (folder, home) = folder_and_home_in(ollama_at(&ollama.address), Posture::Simple);
+
+    let output = scan(folder.path(), home.path(), &[]);
+    let printed = text(&output.stdout);
+
+    assert!(printed.contains("The AI check did not run"), "{printed}");
+    assert_eq!(ollama.connections(), 0);
 }
 
 /// A settings file that chooses no engine this build can ask: one line says

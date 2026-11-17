@@ -12,7 +12,7 @@ use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use agentsweep_core::adapter::Detection;
-use agentsweep_core::finding::Finding;
+use agentsweep_core::finding::{Finding, FiredHeuristic};
 use agentsweep_core::finding_facts::HeuristicLine;
 use agentsweep_core::heuristics::Assessment;
 use agentsweep_core::item::{Item, ItemId};
@@ -135,18 +135,23 @@ pub fn ambiguous(
         .filter(|assessment| !flagged.contains(&assessment.item_id))
         .filter_map(|assessment| {
             let item = items.iter().find(|item| item.id == assessment.item_id)?;
-            Some(AmbiguousItem {
-                item_id: item.id.clone(),
-                kind: item.kind,
-                score: assessment.score,
-                heuristics: assessment
-                    .fired
-                    .iter()
-                    .map(|heuristic| HeuristicLine::of(heuristic, Some(item)))
-                    .collect(),
-            })
+            Some(ambiguous_item(item, assessment.score, &assessment.fired))
         })
         .collect()
+}
+
+/// The Overview's entry for one Item in the Ambiguous Band: its Score and a
+/// line per fired Heuristic.
+pub fn ambiguous_item(item: &Item, score: i64, fired: &[FiredHeuristic]) -> AmbiguousItem {
+    AmbiguousItem {
+        item_id: item.id.clone(),
+        kind: item.kind,
+        score,
+        heuristics: fired
+            .iter()
+            .map(|heuristic| HeuristicLine::of(heuristic, Some(item)))
+            .collect(),
+    }
 }
 
 /// The Items a cached benign Verdict moved to Clear, in enumeration order:

@@ -15,16 +15,16 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use agentsweep_core::eventlog::{Action, Event, EventLog};
+use agentsweep_core::eventlog::{Action, Actor, Event, EventLog};
 use agentsweep_core::keychain::{ChainKey, ClaudeKey, KeyError, KeySource, MemoryKeySource};
 use agentsweep_core::ollama::OllamaPresence;
 use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::{JudgementEngine, SettingsFile};
+use agentsweep_core::settings::{JudgementEngine, Posture, Settings, SettingsFile, SettingsWriter};
 use agentsweep_daemon::Tuning;
 use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
 use agentsweep_daemon::service::{self, Background, Daemon};
 use agentsweep_ipc::peer::{Nobody, PeerCheck, SameUser};
-use agentsweep_ipc::protocol::{EngineChange, Hello, Message, Request, Role};
+use agentsweep_ipc::protocol::{EngineChange, Hello, Message, Request, Role, SettingsChange};
 use agentsweep_ipc::{Client, ClientError, connect};
 
 #[path = "../../core/tests/fixture_ollama/mod.rs"]
@@ -236,6 +236,117 @@ fn contains(haystack: &[u8], needle: &str) -> bool {
     haystack
         .windows(needle.len())
         .any(|window| window == needle.as_bytes())
+}
+
+/// Moves the Posture, as Settings does.
+fn posture(client: &mut Client, posture: Posture) {
+    client
+        .change_settings(SettingsChange {
+            posture: Some(posture),
+            ..SettingsChange::default()
+        })
+        .expect("the Posture moves");
+}
+
+/// In the Simple Posture the daemon refuses every engine outside the eval
+/// bar, which until the eval records a row is every engine, with a plain
+/// error; nothing is written and nothing is recorded.
+#[test]
+fn an_untested_engine_is_refused_in_the_simple_posture() {
+    let sandbox = Sandbox::new("untested-simple");
+    let _daemon = sandbox.start();
+    let mut client = sandbox.client();
+    client.set_claude_key(key(A_KEY)).expect("a key");
+    let written = sandbox.settings_bytes();
+    let recorded = sandbox.engine_events().len();
+    for change in [
+        engine(JudgementEngine::Apple),
+        EngineChange {
+            engine: Some(JudgementEngine::Ollama),
+            ollama_model: Some("qwen3:8b".to_string()),
+            ..EngineChange::default()
+        },
+        engine(JudgementEngine::Claude),
+    ] {
+        let Err(ClientError::Request(refused)) = client.change_engine(change.clone()) else {
+            panic!("{change:?} was taken in the Simple Posture");
+        };
+        assert_eq!(refused.code, "not-tested");
+        assert_eq!(
+            refused.message,
+            "this AI check is not tested yet, so it stays off in the simple view"
+        );
+    }
+    assert_eq!(
+        client.engine().expect("the state").engine,
+        JudgementEngine::Off
+    );
+    assert_eq!(sandbox.settings_bytes(), written, "nothing was written");
+    assert_eq!(
+        sandbox.engine_events().len(),
+        recorded,
+        "nothing was recorded"
+    );
+}
+
+/// The Developer Posture switches an untested engine on. Moving the Posture
+/// back to Simple switches it off, with one `engine-changed` event by the
+/// user.
+#[test]
+fn developer_switches_an_untested_engine_on_and_simple_switches_it_off() {
+    let sandbox = Sandbox::new("untested-developer");
+    let _daemon = sandbox.start();
+    let mut client = sandbox.client();
+    posture(&mut client, Posture::Developer);
+    let state = client
+        .change_engine(engine(JudgementEngine::Apple))
+        .expect("Developer switches Apple on");
+    assert_eq!((state.engine, state.recorded), (JudgementEngine::Apple, 1));
+
+    posture(&mut client, Posture::Simple);
+    assert_eq!(
+        client.engine().expect("the state").engine,
+        JudgementEngine::Off
+    );
+    let events = sandbox.engine_events();
+    assert_eq!(
+        events.iter().map(change).collect::<Vec<_>>(),
+        ["enabled", "disabled"]
+    );
+    assert_eq!(events[1].actor, Actor::User);
+    assert_eq!(
+        events[1].detail.get("from_engine").map(String::as_str),
+        Some("apple")
+    );
+
+    // Back in Developer, it stays off until the user switches it on again.
+    posture(&mut client, Posture::Developer);
+    assert_eq!(
+        client.engine().expect("the state").engine,
+        JudgementEngine::Off
+    );
+    assert_eq!(sandbox.engine_events().len(), 2);
+}
+
+/// Settings an earlier version left with an untested engine on in the Simple
+/// Posture: the daemon switches it off as it starts, with one
+/// `engine-changed` event by AgentSweep itself.
+#[test]
+fn a_start_switches_off_an_untested_engine_left_on_in_simple() {
+    let sandbox = Sandbox::new("untested-start");
+    let mut settings = Settings::default();
+    settings.judgement.engine = JudgementEngine::Apple;
+    SettingsWriter::write(&SettingsFile::in_data_directory(&sandbox.data()), &settings)
+        .expect("the settings are written");
+    let _daemon = sandbox.start();
+    assert_eq!(
+        sandbox.client().engine().expect("the state").engine,
+        JudgementEngine::Off
+    );
+    let events = sandbox.engine_events();
+    assert_eq!(events.len(), 1);
+    assert_eq!(change(&events[0]), "disabled");
+    assert_eq!(events[0].actor, Actor::Auto);
 }
 
 /// Before any choice the engine is off, every choice is at its default and
@@ -502,6 +613,8 @@ fn a_handed_over_key_is_kept_and_removing_it_turns_claude_off() {
     let sandbox = Sandbox::new("key");
     let _daemon = sandbox.start();
     let mut client = sandbox.client();
+    // An engine outside the eval bar is switched on in the Developer Posture.
+    posture(&mut client, Posture::Developer);
 
     let state = client.set_claude_key(key(A_KEY)).expect("the key is kept");
     assert_eq!(state.claude_key_ending.as_deref(), Some("4f2a"));
@@ -564,6 +677,7 @@ fn every_engine_change_is_one_event_and_the_key_is_nowhere() {
     let sandbox = Sandbox::new("events");
     let daemon = sandbox.start();
     let mut client = sandbox.client();
+    posture(&mut client, Posture::Developer);
 
     client.set_claude_key(key(A_KEY)).expect("a key");
     client

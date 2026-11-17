@@ -42,6 +42,7 @@ pub mod drift;
 pub mod enforcement;
 pub mod entry_edit;
 pub mod envelope;
+pub mod eval_bar;
 pub mod evaluation;
 pub mod eventlog;
 pub mod finding;

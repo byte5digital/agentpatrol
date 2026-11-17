@@ -79,6 +79,17 @@ impl Sandbox {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         let _ = std::fs::remove_file(&socket);
+        // Every engine is outside the eval bar until the eval records a row,
+        // so the AI check is chosen in the Developer Posture.
+        let settings = Settings {
+            posture: Posture::Developer,
+            ..Settings::default()
+        };
+        SettingsWriter::write(
+            &SettingsFile::in_data_directory(&DataDirectory::at(root.join("data"))),
+            &settings,
+        )
+        .expect("the settings of the temporary data directory");
         Sandbox {
             root,
             socket,
@@ -538,6 +549,7 @@ fn a_late_malicious_verdict_needs_you_once_without_ai_wording() {
     let mut settings = Settings::default();
     settings.judgement.engine = JudgementEngine::Ollama;
     settings.judgement.ollama_model = "qwen3:8b".to_string();
+    settings.posture = Posture::Developer;
     SettingsWriter::write(&SettingsFile::in_data_directory(&data), &settings)
         .expect("the settings of the temporary data directory");
 

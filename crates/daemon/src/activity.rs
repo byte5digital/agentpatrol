@@ -5,7 +5,9 @@
 //! spec section 5.5, the chain restarts, the answers to an integrity state
 //! and the `rule-pack` records. Beside them stand the lines a Scan leaves
 //! that no record stands behind: a consistent plugin update (spec section
-//! 4.6.5), content that changed back, and a Finding that went gone.
+//! 4.6.5), content that changed back, and a Finding that went gone; and the
+//! one line a change of the AI check leaves when the Findings its Verdicts
+//! alone opened go.
 //!
 //! A line names the Item, who did what to it and how it came out. It never
 //! carries what the Item holds, and never a sensitive field, not even its
@@ -140,6 +142,21 @@ pub fn of_gone(finding: &RecordedFinding, at: Timestamp) -> ActivityLine {
         item_id: finding.item_id.to_string(),
         content_hash: finding.content_hash.clone(),
         rule_id: finding.rule_id,
+        ..ActivityLine::default()
+    }
+}
+
+/// The one line the Findings a malicious Verdict alone opened leave when
+/// that Verdict no longer counts: AI Judgement was switched off, the engine
+/// was switched, or the prompt changed. Like a Finding gone, no record stands
+/// behind it; the `engine-changed` event before it says what changed.
+pub fn of_verdicts_dropped(items: usize, at: Timestamp) -> ActivityLine {
+    ActivityLine {
+        recorded_at: at,
+        line: match items {
+            1 => "1 item the AI check flagged is no longer flagged.".to_string(),
+            n => format!("{n} items the AI check flagged are no longer flagged."),
+        },
         ..ActivityLine::default()
     }
 }
@@ -411,6 +428,23 @@ mod tests {
         }
         let view = log.read(&keys).expect("a readable log");
         (directory, view)
+    }
+
+    /// The Findings an AI check's Verdicts alone opened leave one plain line
+    /// when they go, naming how many and nothing of the Items.
+    #[test]
+    fn dropped_verdicts_leave_one_plain_line() {
+        let at = Timestamp::now();
+        let one = of_verdicts_dropped(1, at);
+        assert_eq!(
+            one.line,
+            "1 item the AI check flagged is no longer flagged."
+        );
+        assert_eq!((one.sequence, one.item_id.as_str()), (None, ""));
+        assert_eq!(
+            of_verdicts_dropped(70, at).line,
+            "70 items the AI check flagged are no longer flagged."
+        );
     }
 
     #[test]

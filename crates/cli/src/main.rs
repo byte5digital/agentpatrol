@@ -300,9 +300,15 @@ fn ai_check(
     let normalisation = std::env::var_os("HOME")
         .map(|home| agentsweep_core::judgement_request::Normalisation::of_home(home.as_ref()))
         .unwrap_or_default();
-    let chosen = judgement::read_the_settings().and_then(|settings| {
-        judgement::choose(&settings, normalisation, invocation.socket.as_deref())
-    });
+    let chosen = judgement::read_the_settings()
+        .filter(judgement::admitted)
+        .and_then(|settings| {
+            judgement::choose(
+                &settings.judgement,
+                normalisation,
+                invocation.socket.as_deref(),
+            )
+        });
     match chosen {
         Some(mut chosen) => judgement::judge_the_folder(
             enumeration,

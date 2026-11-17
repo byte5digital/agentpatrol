@@ -125,6 +125,11 @@ impl FakeEngine {
         self.opened.notify_all();
     }
 
+    /// Holds every answer from now on, until [`FakeEngine::open`].
+    fn shut(&self) {
+        *self.shut.lock().expect("the gate") = true;
+    }
+
     fn asked(&self) -> Vec<String> {
         self.asked.lock().expect("the list").clone()
     }
@@ -271,6 +276,8 @@ impl Sandbox {
         sandbox.write(".claude.json", "{\"projects\": {}}\n");
         let mut settings = Settings::default();
         settings.judgement.engine = engine;
+        // An engine outside the eval bar runs in the Developer Posture only.
+        settings.posture = settings::Posture::Developer;
         settings.judgement.ollama_model = "qwen3:8b".to_string();
         SettingsWriter::write(&SettingsFile::in_data_directory(&sandbox.data()), &settings)
             .expect("the settings are written");
@@ -934,6 +941,209 @@ fn switching_the_engine_queues_the_ambiguous_items_under_the_new_engine() {
     assert_eq!(sandbox.engine.asked().len(), 4, "off queues nothing");
 }
 
+/// The open T3 Findings of a status, by the name of the skill they are on.
+fn ai_findings(status: &Status) -> BTreeSet<String> {
+    status
+        .findings
+        .iter()
+        .filter(|finding| finding.tier == Tier::AiJudgement && finding.is_open())
+        .map(|finding| {
+            finding
+                .item_id
+                .as_str()
+                .rsplit('/')
+                .next()
+                .unwrap_or_default()
+                .to_string()
+        })
+        .collect()
+}
+
+/// The Activity lines of a status that say AI Findings went.
+fn dropped_lines(status: &Status) -> Vec<String> {
+    status
+        .activity
+        .iter()
+        .map(|line| line.line.clone())
+        .filter(|line| line.contains("the AI check flagged"))
+        .collect()
+}
+
+/// Switching AI Judgement off closes the Findings its Verdicts alone opened
+/// at once, without a Scan: their Items go back to the Ambiguous Band, the
+/// Threat count drops, and the Activity says so in one line after the line
+/// of the engine change.
+#[test]
+fn switching_off_closes_the_ai_findings_at_once_with_one_activity_line() {
+    let sandbox = Sandbox::new(
+        "off-closes",
+        settings::JudgementEngine::Ollama,
+        FakeEngine::new(Duration::ZERO, false),
+    );
+    sandbox.ambiguous_skill("malicious-one");
+    sandbox.ambiguous_skill("malicious-two");
+    sandbox.ambiguous_skill("plain-helper");
+    let daemon = sandbox.start();
+    wait_until("three requests", || sandbox.engine.asked().len() == 3);
+    wait_for_the_queue(&daemon);
+    let before = sandbox.status();
+    assert_eq!(
+        ai_findings(&before),
+        ["malicious-one", "malicious-two"].map(String::from).into()
+    );
+    assert_eq!(before.health.open_threats, 2);
+    let scans = before.scan.expect("a Scan").started_at;
+
+    let events = sandbox.subscribe();
+    Client::connect_at(&sandbox.socket, Role::App)
+        .expect("a client")
+        .change_engine(EngineChange {
+            engine: Some(settings::JudgementEngine::Off),
+            ..EngineChange::default()
+        })
+        .expect("the engine is off");
+    for _ in 0..2 {
+        next_of(&events, |event| match event {
+            StateEvent::FindingChanged { state, finding, .. } if state == "gone" => {
+                assert!(finding.is_none());
+                Some(())
+            }
+            _ => None,
+        });
+    }
+
+    let after = sandbox.status();
+    assert!(ai_findings(&after).is_empty(), "{:?}", after.findings);
+    assert_eq!(after.health.open_threats, 0);
+    assert_eq!(
+        ambiguous_names(&after),
+        ["malicious-one", "malicious-two", "plain-helper"]
+            .map(String::from)
+            .into()
+    );
+    assert_eq!(
+        dropped_lines(&after),
+        vec!["2 items the AI check flagged are no longer flagged.".to_string()]
+    );
+    let lines: Vec<&str> = after
+        .activity
+        .iter()
+        .map(|line| line.line.as_str())
+        .collect();
+    let off = lines
+        .iter()
+        .position(|line| *line == "The AI check was switched off.")
+        .expect("the engine change");
+    let dropped = lines
+        .iter()
+        .position(|line| line.contains("the AI check flagged"))
+        .expect("the dropped line");
+    assert!(off < dropped, "{lines:?}");
+    assert_eq!(after.scan.expect("a Scan").started_at, scans, "no Scan ran");
+
+    // A Scan with AI Judgement off opens nothing again and adds no line.
+    sandbox.scan_now(&daemon);
+    let scanned = sandbox.status();
+    assert!(ai_findings(&scanned).is_empty());
+    assert_eq!(dropped_lines(&scanned).len(), 1);
+}
+
+/// Switching the engine leaves only the new engine's Verdicts in force: the
+/// Finding the old engine's Verdict opened closes at once and its Item is
+/// asked again under the new engine, whose own malicious Verdict opens it
+/// again in its name. A malicious Verdict the new engine cached under an
+/// older prompt version opens nothing. Switching back, the old engine's
+/// cached Verdict applies at once, as today, without asking.
+#[test]
+fn switching_the_engine_keeps_only_the_new_engine_s_verdicts() {
+    use agentsweep_core::judgement::{Category, Verdict};
+    use agentsweep_core::verdicts::{CachedVerdict, VerdictCacheWriter, cache_key};
+
+    let sandbox = Sandbox::new(
+        "switch-closes",
+        settings::JudgementEngine::Ollama,
+        FakeEngine::new(Duration::ZERO, false),
+    );
+    sandbox.ambiguous_skill("malicious-helper");
+    let daemon = sandbox.start();
+    wait_until("the request", || sandbox.engine.asked().len() == 1);
+    wait_for_the_queue(&daemon);
+    let opened = sandbox.status();
+    assert_eq!(
+        ai_findings(&opened),
+        ["malicious-helper"].map(String::from).into()
+    );
+    assert_eq!(
+        findings_on(&opened, "malicious-helper")[0]
+            .facts
+            .judgement_engine,
+        "ollama"
+    );
+
+    // Apple's cache holds a malicious Verdict of an older prompt version
+    // for the same request, which counts for nothing.
+    let hash = sandbox.engine.request_hashes()[0].clone();
+    let apple_model = "apple-fake@sha256:0";
+    let malicious = Verdict::Malicious {
+        category: Category::InstructionFileInjection,
+        reason: "It tells the agent its rules no longer apply.".to_string(),
+        evidence: vec![QUOTE.to_string()],
+    };
+    let mut old = CachedVerdict::of(&hash, "apple", apple_model, Timestamp::now(), &malicious);
+    old.key = cache_key(&hash, "apple", apple_model, "1");
+    old.prompt_version = "1".to_string();
+    VerdictCacheWriter::open(
+        &VerdictCache::in_data_directory(&sandbox.data()),
+        &sandbox.keys,
+    )
+    .expect("the cache opens")
+    .append(&old)
+    .expect("a record is written");
+
+    sandbox.engine.shut();
+    daemon
+        .daemon()
+        .change_engine(&EngineChange {
+            engine: Some(settings::JudgementEngine::Apple),
+            ..EngineChange::default()
+        })
+        .expect("the engine is switched");
+    let switched = sandbox.status();
+    assert!(
+        ai_findings(&switched).is_empty(),
+        "the Ollama Verdict no longer counts, the old Apple one never did"
+    );
+    assert!(ambiguous_names(&switched).contains("malicious-helper"));
+    assert_eq!(dropped_lines(&switched).len(), 1);
+    wait_until("the Item asked under Apple", || {
+        sandbox.engine.asked().len() == 2
+    });
+
+    sandbox.engine.open();
+    wait_for_the_queue(&daemon);
+    let reopened = sandbox.status();
+    let bad = findings_on(&reopened, "malicious-helper");
+    assert_eq!(bad.len(), 1);
+    assert!(bad[0].is_open());
+    assert_eq!(bad[0].facts.judgement_engine, "apple");
+
+    // Back to Ollama: its cached Verdict applies at once, nothing is asked.
+    daemon
+        .daemon()
+        .change_engine(&EngineChange {
+            engine: Some(settings::JudgementEngine::Ollama),
+            ..EngineChange::default()
+        })
+        .expect("the engine is switched back");
+    let back = sandbox.status();
+    let bad = findings_on(&back, "malicious-helper");
+    assert_eq!(bad.len(), 1);
+    assert!(bad[0].is_open());
+    assert_eq!(bad[0].facts.judgement_engine, "ollama");
+    wait_for_the_queue(&daemon);
+    assert_eq!(sandbox.engine.asked().len(), 2, "the cache answered");
+}
+
 /// The installed daemon's own engines against a fixture Ollama on a loopback
 /// port: the Verdict is cached under the tag and digest Ollama's model list
 /// names, the chat request keeps the model loaded for five minutes, and the
@@ -979,6 +1189,7 @@ fn ollama_verdicts_are_cached_and_kept_under_the_tag_and_digest() {
     );
     let mut settings = Settings::default();
     settings.judgement.engine = settings::JudgementEngine::Ollama;
+    settings.posture = settings::Posture::Developer;
     settings.judgement.ollama_model = "qwen3:8b".to_string();
     settings.judgement.ollama_address =
         settings::OllamaAddress::parse(&ollama.address().to_string()).expect("loopback");

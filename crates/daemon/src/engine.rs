@@ -9,26 +9,35 @@
 //! never read.
 //!
 //! Exactly one engine is active, and only a request moves it: nothing in the
-//! daemon switches an engine on or over by itself (ADR 0005). Every engine
+//! daemon switches an engine on or over by itself (ADR 0005). In the Simple
+//! Posture only an engine within the eval bar of spec section 4.4 is switched
+//! on; one outside it is refused there, and is switched off when the Posture
+//! moves to Simple or a start finds it on in Simple. Every engine
 //! change, enabled, switched, disabled, key added or key removed, appends one
 //! `engine-changed` event to the Event Log carrying the engines and model ids
 //! involved and no key material.
 
 use std::sync::Arc;
 
+use agentsweep_core::apple::AppleAvailability;
 use agentsweep_core::apple_engine::AppleHelper;
+use agentsweep_core::eval_bar;
 use agentsweep_core::eventlog::{Action, Actor, Event};
 use agentsweep_core::keychain::{ClaudeKey, ClaudeKeyStore, MemoryClaudeKeyStore};
 use agentsweep_core::ollama::OllamaClient;
 use agentsweep_core::settings::{
     CLAUDE_MODEL, ChoiceRefused, JudgementEngine, JudgementSettings, OLLAMA_MODEL, OllamaAddress,
-    SettingsFile, SettingsWriter, model_id,
+    Posture, SettingsFile, SettingsWriter, model_id,
 };
 use agentsweep_ipc::protocol::{EngineChange, EngineState, RequestError};
 
 use crate::options::KeySourceChoice;
 use crate::service::Daemon;
 use crate::stores::open_the_event_log;
+
+/// Why an engine outside the eval bar is not switched on in the Simple
+/// Posture, as the app shows it.
+pub const NOT_TESTED: &str = "this AI check is not tested yet, so it stays off in the simple view";
 
 /// The store the Claude API key is kept in, by where the chain key comes from:
 /// the login Keychain for the shipped daemon, the process's memory for a test
@@ -100,8 +109,9 @@ fn engine_event(
     kind: EngineChangeKind,
     before: &JudgementSettings,
     after: &JudgementSettings,
+    actor: Actor,
 ) -> Event {
-    let mut event = Event::new(Action::EngineChanged, Actor::User)
+    let mut event = Event::new(Action::EngineChanged, actor)
         .noting("change", kind.as_str())
         .noting("from_engine", before.engine.as_str())
         .noting("to_engine", after.engine.as_str());
@@ -258,9 +268,17 @@ impl Daemon {
         if after == before {
             return Ok(self.engine_state_of(&after, 0));
         }
+        // An engine outside the eval bar stays off in the Simple Posture
+        // (spec section 4.4); the Developer Posture may switch it on.
+        if after.engine.is_on()
+            && engine_change(&before, &after).is_some()
+            && !self.admits(self.posture(), &after)
+        {
+            return Err(RequestError::new("not-tested", NOT_TESTED));
+        }
         self.write_judgement(&after)?;
         let recorded = match engine_change(&before, &after) {
-            Some(kind) => self.record(&engine_event(kind, &before, &after)),
+            Some(kind) => self.record(&engine_event(kind, &before, &after, Actor::User)),
             None => 0,
         };
         self.tell_settings();
@@ -301,7 +319,12 @@ impl Daemon {
                 ..before.clone()
             };
             self.write_judgement(&after)?;
-            recorded += self.record(&engine_event(EngineChangeKind::Disabled, &before, &after));
+            recorded += self.record(&engine_event(
+                EngineChangeKind::Disabled,
+                &before,
+                &after,
+                Actor::User,
+            ));
         }
         if held || before.engine == JudgementEngine::Claude {
             self.tell_settings();
@@ -311,6 +334,66 @@ impl Daemon {
             self.judge_again();
         }
         Ok(self.engine_state_of(&self.judgement(), recorded))
+    }
+
+    /// The Posture in force.
+    fn posture(&self) -> Posture {
+        self.settings
+            .lock()
+            .expect("the settings are not poisoned")
+            .posture
+    }
+
+    /// Whether `judgement` may stand under `posture`: anything in the
+    /// Developer Posture, only an engine within the eval bar in the Simple
+    /// one. Apple's model is the macOS version its helper names, asked only
+    /// when the bar holds an Apple row.
+    fn admits(&self, posture: Posture, judgement: &JudgementSettings) -> bool {
+        eval_bar::admits(posture, judgement, || {
+            let helper = self.apple_helper.as_ref()?;
+            match AppleHelper::at(helper).check() {
+                AppleAvailability::Available { model_version, .. } => Some(model_version),
+                AppleAvailability::Unavailable { .. } => None,
+            }
+        })
+    }
+
+    /// Switches AI Judgement off when the engine on is outside the eval bar
+    /// and the Posture is Simple: what moving the Posture to Simple does, and
+    /// what a start does with settings an earlier version left. One
+    /// `engine-changed` event says so, by `actor`. Answers how many events
+    /// were recorded.
+    pub(crate) fn keep_the_engine_within_the_bar(self: &Arc<Daemon>, actor: Actor) -> u32 {
+        let writing = self.writing.lock().expect("the write lock is not poisoned");
+        let before = self.judgement();
+        if !before.engine.is_on() || self.admits(self.posture(), &before) {
+            return 0;
+        }
+        let after = JudgementSettings {
+            engine: JudgementEngine::Off,
+            ..before.clone()
+        };
+        if let Err(error) = self.write_judgement(&after) {
+            say!(
+                "an untested engine could not be switched off: {}",
+                error.message
+            );
+            return 0;
+        }
+        say!(
+            "the Judgement Engine {} is not tested and was switched off in the Simple Posture",
+            before.engine
+        );
+        let recorded = self.record(&engine_event(
+            EngineChangeKind::Disabled,
+            &before,
+            &after,
+            actor,
+        ));
+        self.tell_settings();
+        drop(writing);
+        self.judge_again();
+        recorded
     }
 
     /// Whether the Keychain holds a Claude API key. The key itself is dropped,
@@ -423,7 +506,7 @@ mod tests {
     fn an_engine_event_names_the_engines_and_models_and_nothing_else() {
         let ollama = with(JudgementEngine::Ollama);
         let claude = with(JudgementEngine::Claude);
-        let event = engine_event(EngineChangeKind::Switched, &ollama, &claude);
+        let event = engine_event(EngineChangeKind::Switched, &ollama, &claude, Actor::User);
         assert_eq!(event.action, Action::EngineChanged);
         assert_eq!(event.actor, Actor::User);
         assert!(event.item_id.is_none());

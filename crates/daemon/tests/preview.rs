@@ -129,6 +129,8 @@ impl Sandbox {
         sandbox.write(".claude.json", "{\"projects\": {}}\n");
         let mut settings = Settings::default();
         settings.judgement.engine = engine;
+        // An engine outside the eval bar runs in the Developer Posture only.
+        settings.posture = settings::Posture::Developer;
         settings.judgement.ollama_model = "qwen3:8b".to_string();
         SettingsWriter::write(&SettingsFile::in_data_directory(&sandbox.data()), &settings)
             .expect("the settings are written");

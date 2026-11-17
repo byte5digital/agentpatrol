@@ -26,7 +26,9 @@
 //! - the crates.io build asks only Ollama, and only when the settings file
 //!   names its address and model; it never guesses a model.
 //!
-//! Otherwise the AI check did not run, and one line says so. There is no
+//! In the Simple Posture an engine outside the eval bar is not asked, as the
+//! daemon never runs one there. Otherwise the AI check did not run, and one
+//! line says so. There is no
 //! Verdict cache in this process: the daemon looks its own up for the cloud
 //! requests it answers. Nothing here writes anything.
 
@@ -35,6 +37,7 @@ use std::path::Path;
 use agentsweep_core::adapter::Enumeration;
 #[cfg(feature = "bundle")]
 use agentsweep_core::apple_engine::{AppleEngine, AppleHelper};
+use agentsweep_core::eval_bar;
 use agentsweep_core::finding::FiredHeuristic;
 use agentsweep_core::item::ItemId;
 use agentsweep_core::judged::{self, AppliedVerdict, Judge};
@@ -43,7 +46,9 @@ use agentsweep_core::judgement_request::{JudgementRequest, Normalisation};
 use agentsweep_core::ollama::{OllamaClient, OllamaEngine};
 use agentsweep_core::paths::DataDirectory;
 use agentsweep_core::scan::ScanReport;
-use agentsweep_core::settings::{JudgementEngine as EngineChoice, JudgementSettings, SettingsFile};
+use agentsweep_core::settings::{
+    JudgementEngine as EngineChoice, JudgementSettings, Settings, SettingsFile,
+};
 use agentsweep_core::spend::CapNotice;
 
 /// The most Items one Folder Scan asks a local engine about, the same cap
@@ -271,15 +276,36 @@ pub struct Chosen {
     pub cap: usize,
 }
 
-/// The AI Judgement choices of the settings file in the user's data
-/// directory, read and never written. A missing or unreadable file chooses
-/// nothing.
-pub fn read_the_settings() -> Option<JudgementSettings> {
+/// The choices of the settings file in the user's data directory, read and
+/// never written. A missing or unreadable file chooses nothing.
+pub fn read_the_settings() -> Option<Settings> {
     let directory = DataDirectory::for_user()?;
-    SettingsFile::in_data_directory(&directory)
-        .read()
-        .ok()
-        .map(|settings| settings.judgement)
+    SettingsFile::in_data_directory(&directory).read().ok()
+}
+
+/// Whether the settings let their engine be asked: in the Simple Posture only
+/// an engine within the eval bar (spec section 4.4), the same rule the daemon
+/// keeps; in the Developer Posture any engine.
+pub fn admitted(settings: &Settings) -> bool {
+    eval_bar::admits(settings.posture, &settings.judgement, apple_version)
+}
+
+/// The macOS version Apple on-device runs under, as the helper beside this
+/// executable names it.
+#[cfg(feature = "bundle")]
+fn apple_version() -> Option<String> {
+    match AppleHelper::beside_this_executable()?.check() {
+        agentsweep_core::apple::AppleAvailability::Available { model_version, .. } => {
+            Some(model_version)
+        }
+        agentsweep_core::apple::AppleAvailability::Unavailable { .. } => None,
+    }
+}
+
+/// Without the bundle there is no Apple helper to ask.
+#[cfg(not(feature = "bundle"))]
+fn apple_version() -> Option<String> {
+    None
 }
 
 /// The engine this build can ask among the ones the settings choose, or
@@ -565,6 +591,22 @@ mod tests {
             "{rendered}"
         );
         assert_eq!(code, 0);
+    }
+
+    /// The Simple Posture asks no engine outside the eval bar, which until
+    /// the eval records a row is every engine; the Developer Posture asks
+    /// any.
+    #[test]
+    fn simple_asks_no_untested_engine_and_developer_any() {
+        let mut settings = Settings::default();
+        settings.judgement.engine = EngineChoice::Ollama;
+        settings.judgement.ollama_model = "qwen3:8b".to_string();
+        assert!(!admitted(&settings), "Simple, untested");
+        settings.posture = agentsweep_core::settings::Posture::Developer;
+        assert!(admitted(&settings), "Developer");
+        settings.judgement.engine = EngineChoice::Off;
+        settings.posture = agentsweep_core::settings::Posture::Simple;
+        assert!(admitted(&settings), "off asks nothing anyway");
     }
 
     /// Without the bundle only Ollama is asked, and only when the settings
