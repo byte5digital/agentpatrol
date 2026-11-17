@@ -402,9 +402,6 @@ pub struct Daemon {
     /// `uninstall` from then on, until it is unregistered or its bundle is
     /// gone (spec section 9.6).
     uninstalled: AtomicBool,
-    /// Set by Uninstall with Delete everything, so the exit removes the app's
-    /// temporary folder once more.
-    pub(crate) deleted_everything: AtomicBool,
     /// The app's folder in the per-user temporary directory, beside the
     /// documented socket; absent for a socket of another name.
     pub(crate) temporary: Option<PathBuf>,
@@ -641,7 +638,6 @@ impl Daemon {
             told: Mutex::new(None),
             leaving: AtomicBool::new(false),
             uninstalled: AtomicBool::new(false),
-            deleted_everything: AtomicBool::new(false),
             temporary: crate::uninstall::temporary_folder(&options.socket),
             checking: AtomicBool::new(false),
         });
@@ -2534,18 +2530,101 @@ impl Daemon {
     }
 }
 
+/// What a daemon started from a bundle in a Trash folder does instead of
+/// starting (spec section 9.6): the bundle is gone, so it takes the Gate's
+/// entries and the Codex pins under `command` out of every Agent, each
+/// recorded in the Event Log, and answers with what it took out. It opens no
+/// daemon, so nothing is compiled, no socket is bound, no Scan runs and the
+/// Gate is never registered from there. The caller exits 0, which keeps
+/// `KeepAlive` from starting it again.
+///
+/// It is the removal a bundle gone for good makes ([`Daemon::leave`]), on
+/// the machine with the config directories the settings file names, and the
+/// same exact entries: entries under another path belong to another bundle.
+/// There is no work in hand to finish and no socket of its own to unlink.
+pub fn leave_the_trash(
+    options: &Options,
+    bundle: &std::path::Path,
+    keys: &dyn KeySource,
+    command: Option<&GateCommand>,
+) -> crate::gate::Removal {
+    say!(
+        "the bundle at {} is in the Trash: it is gone, so taking the Gate out and exiting for good",
+        bundle.display()
+    );
+    let Some(command) = command else {
+        say!("the Gate has no command line interface path, so there is nothing to remove");
+        return crate::gate::Removal::default();
+    };
+    let machine = match &options.home {
+        Some(home) => Machine::named(home.clone()),
+        None => match options.home_directory() {
+            Ok(home) => Machine::real(home),
+            Err(error) => {
+                say!("the Gate could not be taken out: {error}");
+                return crate::gate::Removal::default();
+            }
+        },
+    };
+    let config_dirs: BTreeMap<String, PathBuf> = SettingsFile::in_data_directory(&options.data_dir)
+        .read()
+        .map(|settings| {
+            settings
+                .config_dirs
+                .iter()
+                .map(|(agent, dir)| (agent.clone(), dir.path().to_path_buf()))
+                .collect()
+        })
+        .unwrap_or_default();
+    let removal = crate::gate::remove_everywhere(
+        &machine.with_config_dirs(config_dirs),
+        &options.data_dir,
+        keys,
+        command,
+    );
+    if !removal.failed.is_empty() {
+        say!(
+            "the Gate could not be taken out of {}",
+            removal.failed.join(" and ")
+        );
+    }
+    removal
+}
+
 /// Runs the daemon until the process is stopped.
 ///
-/// It never answers with success: the only successful exit is the one a
-/// daemon whose bundle is gone makes, because success is what keeps the
-/// launch agent down. A socket that stopped answering is a failure, and
-/// `KeepAlive` starts the daemon again.
+/// It answers with success only when it started from a bundle in a Trash
+/// folder, after taking the Gate out ([`leave_the_trash`]); the only other
+/// successful exit is the one a daemon whose bundle went away while it ran
+/// makes. Success is what keeps the launch agent down. A socket that stopped
+/// answering is a failure, and `KeepAlive` starts the daemon again.
 ///
 /// A stop by launchd, which is how unregistering the daemon ends it, is a
 /// `SIGTERM`: the daemon unlinks its socket first and then ends by that same
 /// signal, so launchd sees the stop it asked for.
 pub fn run(options: &Options) -> Result<(), Box<dyn Error>> {
     let stop = terminate::block();
+    // Said first, so the log shows the start at once: nothing else is said
+    // until the stores are open and the Rule Pack is compiled, which takes
+    // minutes for a debug build under the load of a login.
+    match std::env::current_exe() {
+        Ok(executable) => say!(
+            "{} starting from {}",
+            agentsweep_core::VERSION,
+            executable.display()
+        ),
+        Err(_) => say!("{} starting", agentsweep_core::VERSION),
+    }
+    if let Some(own) = Own::this_process().filter(Own::is_in_a_trash) {
+        let keys: Box<dyn KeySource> = match options.key_source {
+            KeySourceChoice::Keychain => Box::new(keychain()),
+            KeySourceChoice::Memory => Box::new(MemoryKeySource::empty()),
+        };
+        let command = crate::gate::bundled_command();
+        leave_the_trash(options, &own.bundle, &*keys, command.as_ref());
+        say!("exiting with status 0");
+        return Ok(());
+    }
     let running = start(options)?;
     terminate::clean_up_when_stopped(
         stop,
@@ -2560,7 +2639,7 @@ pub fn run(options: &Options) -> Result<(), Box<dyn Error>> {
 ///
 /// The signal is blocked before any thread starts, so every thread inherits
 /// the block and one thread of its own waits for it with `sigwait`. That
-/// thread unlinks the socket (and after Delete everything the app's temporary
+/// thread unlinks the socket (and after an Uninstall the app's temporary
 /// folder) and then lets the signal take its default course, so the exit
 /// status is the same as it was without this: a stop by signal, which
 /// `KeepAlive` treats as it always did. A test never installs it: it runs

@@ -482,20 +482,45 @@ fn delete_everything_removes_what_agentsweep_made_and_nothing_else() {
     assert_eq!(listing(&temporary), vec![PathBuf::from("beside.txt")]);
 }
 
-/// Keep leaves the web view's temporary folder alone, and the exit unlinks
-/// the socket and nothing else: only Delete everything removes the folder.
+/// Keep removes the web view's temporary folder too: it is a cache, not the
+/// user's data (hand check item 69). What the web view writes until the app
+/// has quit goes at the exit, with the socket, and only what is AgentSweep's
+/// leaves the temporary folder. The report lists nothing as deleted.
 #[test]
-fn the_exit_unlinks_the_socket_and_keeps_the_temporary_folder_unless_everything_was_deleted() {
+fn keep_removes_the_temporary_folder_and_the_exit_removes_it_again() {
     let sandbox = Sandbox::with_documented_socket("keep-exit");
     let daemon = sandbox.start();
     let web_view = sandbox.plant_web_view_files("left");
+    let temporary = sandbox.temporary.clone().expect("a temporary folder");
+    std::fs::write(temporary.join("beside.txt"), b"not AgentSweep's").expect("a file beside");
 
-    sandbox
+    let report = sandbox
         .client()
         .uninstall(UninstallChoice::Keep)
         .expect("an Uninstall");
-    assert!(web_view.join("WebKit/left").is_file());
+    assert!(report.deleted.is_empty(), "{report:?}");
+    assert!(
+        !web_view.exists(),
+        "the web view's temporary folder is gone"
+    );
+    assert!(sandbox.data().root().exists(), "the data stays");
     assert!(sandbox.socket.exists());
+
+    sandbox.plant_web_view_files("late");
+    let stopped = Arc::clone(daemon.daemon());
+    drop(daemon);
+    stopped.clean_up_at_exit(&sandbox.socket);
+    assert!(!sandbox.socket.exists(), "the socket is unlinked");
+    assert_eq!(listing(&temporary), vec![PathBuf::from("beside.txt")]);
+}
+
+/// A daemon that exits without an Uninstall unlinks its socket and leaves
+/// the web view's temporary folder alone: the app may still be running.
+#[test]
+fn an_exit_without_uninstall_keeps_the_temporary_folder() {
+    let sandbox = Sandbox::with_documented_socket("plain-exit");
+    let daemon = sandbox.start();
+    let web_view = sandbox.plant_web_view_files("left");
 
     let stopped = Arc::clone(daemon.daemon());
     drop(daemon);

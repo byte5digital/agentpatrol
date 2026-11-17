@@ -68,6 +68,10 @@ pub fn bundled_command() -> Option<GateCommand> {
 /// Writes the Gate's entries for one Agent, takes away its entries under
 /// another command line interface path, and records every entry written or
 /// taken away.
+///
+/// A command line interface inside a Trash folder is never registered: its
+/// bundle is gone (spec section 9.6), and entries pointing into the Trash
+/// would outlive it. Nothing is written then.
 pub fn register(
     adapter: &dyn SurfaceAdapter,
     host: &Host,
@@ -75,6 +79,13 @@ pub fn register(
     keys: &dyn KeySource,
     command: &GateCommand,
 ) -> Result<GateWrite, GateWriteError> {
+    if crate::bundle_watch::in_a_trash(&command.program) {
+        say!(
+            "the Gate is not registered with {}: its command line interface is in the Trash",
+            adapter.descriptor().agent
+        );
+        return Ok(GateWrite::default());
+    }
     let write = adapter
         .register_gate(host, &AtomicWriter, command)
         .map_err(GateWriteError::Gate)?;
