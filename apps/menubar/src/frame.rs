@@ -18,7 +18,7 @@
 use std::collections::BTreeSet;
 
 use agentsweep_core::finding::{Category, FindingState};
-use agentsweep_core::health::Health;
+use agentsweep_core::health::{Health, Rung};
 use agentsweep_core::overview::Overview;
 use agentsweep_core::settings::{JudgementEngine, Posture};
 use agentsweep_core::state::ScanSummary;
@@ -30,6 +30,7 @@ use crate::actions::card_in;
 use crate::activity::Activity;
 use crate::ai_check;
 use crate::banner::Banner;
+use crate::checking;
 use crate::developer::{ambiguous_card, offers_reveal};
 use crate::findings::{Findings, Follow};
 use crate::gate;
@@ -170,6 +171,25 @@ pub struct Frame {
     queue: Queue,
     /// Where **Check now** stands in this run of the app.
     check_now: CheckNow,
+    /// The first check after onboarding, which the Overview shows as
+    /// running from the moment the wizard closes.
+    first: FirstShown,
+}
+
+/// The first check after onboarding as the Overview shows it (spec section
+/// 8.3): the window opens on "Checking your setup…" at once, before the
+/// daemon answers, and keeps it until the first check's result is ready.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum FirstShown {
+    /// No first check, or its result is ready.
+    #[default]
+    None,
+    /// Turn on protection registered the daemon, which has not answered
+    /// yet: the Overview shows the first check starting in place of
+    /// Protection off.
+    Starting,
+    /// The daemon answers and the first check waits for its Full Scan.
+    Waiting,
 }
 
 /// A follow-up that at least sends the view again.
@@ -363,6 +383,42 @@ impl Frame {
         }
     }
 
+    /// Turn on protection in the wizard registered the daemon: the
+    /// Overview shows the first check from now on, before the daemon
+    /// answers.
+    pub fn first_check_starts(&mut self) -> Follow {
+        self.first = FirstShown::Starting;
+        Follow::Render
+    }
+
+    /// The first check's result is ready, or the daemon did not answer in
+    /// time to stand for it: the Overview shows what the daemon says, and a
+    /// Protection off that stays shows as itself.
+    pub fn first_check_ends(&mut self) -> Follow {
+        match self.first {
+            FirstShown::None => Follow::Nothing,
+            _ => {
+                self.first = FirstShown::None;
+                Follow::Render
+            }
+        }
+    }
+
+    /// The daemon has not answered since the first check started: the
+    /// first check no longer stands in for Protection off.
+    pub fn first_check_unanswered(&mut self) -> Follow {
+        match self.first {
+            FirstShown::Starting => self.first_check_ends(),
+            _ => Follow::Nothing,
+        }
+    }
+
+    /// True while the first check stands in for Protection off: the daemon
+    /// was just registered and has not answered yet.
+    fn first_check_starting(&self) -> bool {
+        self.first == FirstShown::Starting && self.health.protection.is_off()
+    }
+
     /// The Health as the daemon last said it, or Protection off while none
     /// answers.
     pub fn health(&self) -> &Health {
@@ -382,6 +438,9 @@ impl Frame {
             }
             StateEvent::HealthChanged { health } => {
                 self.absent = None;
+                if self.first == FirstShown::Starting {
+                    self.first = FirstShown::Waiting;
+                }
                 let follow = self.findings.apply(event);
                 match self.health == **health {
                     true => follow,
@@ -437,6 +496,19 @@ impl Frame {
         if !view.off {
             view.ai_check = verdict::progress_line(self.queue, self.posture);
             view.permission = permission::view(&self.overview, self.posture, self.check_now);
+        }
+        if self.first_check_starting() {
+            view.banner = None;
+            view.sentence_shown = false;
+            view.checking = Some(checking::starting());
+        } else if self.first != FirstShown::None && !view.off && view.checking.is_none() {
+            // The daemon answers and has not said how far its Full Scan
+            // got: the first check is still looking.
+            if self.health.rung() == Rung::CheckingNow {
+                view.sentence_shown = false;
+            }
+            view.progress = String::new();
+            view.checking = Some(checking::waiting(checking::LOOKING));
         }
         view
     }
@@ -498,6 +570,9 @@ impl Frame {
             }
         }
         value["overview"] = self.overview().to_value();
+        if self.first_check_starting() {
+            value["off"] = Value::Null;
+        }
         value["activity"] = self.activity.view(self.posture);
         value["activity"]["aiCheck"] = verdict::progress_line(self.queue, self.posture)
             .filter(|_| !self.health.protection.is_off())
@@ -787,8 +862,8 @@ mod tests {
                 StateEvent::HealthChanged {
                     health: Box::new(scanning.health.clone()),
                 },
-                StateEvent::ScanProgress { done: 1, total: 4 },
-                StateEvent::ScanProgress { done: 3, total: 4 },
+                crate::findings::tests::progress(1, 4),
+                crate::findings::tests::progress(3, 4),
             ];
             for event in &events {
                 frame.apply(event);
@@ -1143,11 +1218,23 @@ mod tests {
             at: moment(),
         };
         assert_eq!(frame.apply(&started), Follow::Render);
-        let progress = StateEvent::ScanProgress { done: 3, total: 7 };
+        // A Scan that reports no progress is a Change Scan: the line under
+        // the Scan buttons says it, and no block shows.
+        let change = frame.overview();
+        assert!(change.scanning);
+        assert_eq!(change.progress, "Looking for what to check.");
+        assert_eq!(change.checking, None);
+
+        // A Full Scan's progress: the block says it, the line does not
+        // repeat it, and "Checking now." gives way to the block.
+        let progress = crate::findings::tests::progress(3, 7);
         assert_eq!(frame.apply(&progress), Follow::Render);
         let running = frame.overview();
         assert!(running.scanning);
-        assert_eq!(running.progress, "Checked 3 of 7 Items.");
+        assert_eq!(running.progress, "");
+        let block = running.checking.expect("the block");
+        assert_eq!(block.title, crate::checking::TITLE);
+        assert_eq!(block.count, "Checked 3 of 7 Items.");
 
         let checking = Health {
             scanning: true,
@@ -1156,7 +1243,10 @@ mod tests {
         frame.apply(&StateEvent::HealthChanged {
             health: Box::new(checking),
         });
-        assert_eq!(frame.overview().sentence, "Checking now.");
+        let checking = frame.overview();
+        assert_eq!(checking.sentence, "Checking now.");
+        assert!(!checking.sentence_shown);
+        assert!(checking.to_value()["sentence"].is_null());
 
         let summary = finished();
         let ended = StateEvent::ScanFinished {
@@ -1166,12 +1256,90 @@ mod tests {
         let done = frame.overview();
         assert!(!done.scanning);
         assert_eq!(done.progress, "");
+        assert_eq!(done.checking, None, "the block goes when the Scan ends");
         assert_eq!(done.summary, Some(summary_line(&summary)));
         let quiet = StateEvent::HealthChanged {
             health: Box::new(status().health),
         };
         assert_eq!(frame.apply(&quiet), Follow::Render);
         assert_eq!(frame.overview().sentence, status().health.headline());
+    }
+
+    /// After Turn on protection the Overview shows the first check from the
+    /// start: in place of Protection off while the daemon has not answered,
+    /// still looking once it answers, the Full Scan's bar once it reports,
+    /// and what the daemon says once the result is ready.
+    #[test]
+    fn the_first_check_shows_on_the_overview_from_the_start() {
+        let mut frame = Frame::new();
+        frame.view(&View::off(&Off::NotRegistered));
+        assert!(frame.overview().banner.is_some(), "Turn on protection");
+        assert_eq!(frame.first_check_starts(), Follow::Render);
+        frame.view(&View::not_watching("the daemon is starting"));
+
+        let starting = frame.overview();
+        assert_eq!(starting.banner, None);
+        assert_eq!(starting.checking, Some(crate::checking::starting()));
+        let value = frame.to_value();
+        assert!(value["off"].is_null(), "{}", value["off"]);
+        assert!(value["overview"]["sentence"].is_null());
+        assert_eq!(
+            value["overview"]["checking"]["line"],
+            crate::checking::STARTING
+        );
+
+        // The daemon answers, its first Full Scan running.
+        let mut scanning = status();
+        scanning.health.scanning = true;
+        frame.load(&scanning);
+        frame.apply(&StateEvent::HealthChanged {
+            health: Box::new(scanning.health.clone()),
+        });
+        let waiting = frame.overview();
+        assert_eq!(
+            waiting.checking.as_ref().map(|block| block.line.as_str()),
+            Some(crate::checking::LOOKING)
+        );
+        assert!(!waiting.sentence_shown);
+        assert_eq!(waiting.progress, "");
+
+        frame.apply(&crate::findings::tests::progress(40, 682));
+        let checking = frame.overview().checking.expect("the block");
+        assert_eq!(checking.count, "Checked 40 of 682.");
+
+        // The Scan ends; the result is ready.
+        frame.apply(&StateEvent::ScanFinished {
+            summary: Box::new(finished()),
+        });
+        assert!(frame.overview().checking.is_some(), "until the result");
+        assert_eq!(frame.first_check_ends(), Follow::Render);
+        assert_eq!(frame.overview().checking, None);
+        assert_eq!(frame.first_check_ends(), Follow::Nothing);
+    }
+
+    /// A daemon that never answers after Turn on protection is Protection
+    /// off again on the Overview once the first check stops standing in.
+    #[test]
+    fn a_daemon_that_never_answers_is_protection_off_again() {
+        let mut frame = Frame::new();
+        frame.first_check_starts();
+        frame.view(&View::not_watching("the daemon is starting"));
+        assert!(frame.overview().checking.is_some());
+        assert_eq!(frame.first_check_unanswered(), Follow::Render);
+        let off = frame.overview();
+        assert_eq!(off.checking, None);
+        assert!(off.banner.is_some());
+        assert!(!frame.to_value()["off"].is_null());
+
+        // Once a daemon answered, the first check waits for its result.
+        let mut answered = Frame::new();
+        answered.first_check_starts();
+        answered.load(&status());
+        answered.apply(&StateEvent::HealthChanged {
+            health: Box::new(status().health),
+        });
+        assert_eq!(answered.first_check_unanswered(), Follow::Nothing);
+        assert!(answered.overview().checking.is_some());
     }
 
     /// The Overview shows the banner the popover shows: "Not watching right

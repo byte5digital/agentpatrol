@@ -84,8 +84,9 @@
 //!   `onboarding_engine`, `onboarding_claude`, `onboarding_toggle`: the
 //!   onboarding wizard's view and its moves
 //!   ([`crate::onboarding`]); Next on screen 5 registers the daemon and the
-//!   login item and closes the wizard, and the first check waits for the
-//!   first Scan.
+//!   login item, closes the wizard and opens the Findings window on the
+//!   Overview, which shows the first check running until its result is
+//!   ready.
 //! - `first_check`, `first_check_seen`: the first check's result for the
 //!   Findings window, null while there is none, and its close
 //!   ([`crate::first_check`]).
@@ -148,13 +149,14 @@ use agentsweep_ipc::protocol::{Message, StateEvent};
 use crate::ai_check;
 use crate::asking::{ActionRequest, Asking, refusal, scan_now_line};
 use crate::banner::Button;
+use crate::checking;
 use crate::cli_link;
 use crate::developer::offers_reveal;
 use crate::false_alarm::{self, Reports, SystemBrowser};
 use crate::findings::Follow;
 use crate::first_check::{self, FirstCheck};
 use crate::folder;
-use crate::frame::Frame;
+use crate::frame::{Frame, Pane};
 use crate::gate;
 use crate::glyph::{self, Mark};
 use crate::how_to::{self, SystemOpener};
@@ -361,11 +363,19 @@ fn popover(shell: tauri::State<'_, Shell>) -> Value {
         .lock()
         .expect("the frame is not poisoned")
         .posture();
+    let bar = checking::popover_bar(
+        shell
+            .frame
+            .lock()
+            .expect("the frame is not poisoned")
+            .findings()
+            .scan(),
+    );
     let view = shell
         .view
         .lock()
         .expect("the view is not poisoned")
-        .to_value(posture);
+        .to_value_checking(posture, bar);
     updater::into_popover(view, shell.updates.line())
 }
 
@@ -1028,8 +1038,8 @@ fn show_wizard(app: &AppHandle) {
     }
 }
 
-/// Closes the wizard: it is done, and the app is a menu bar app again. The
-/// Findings window that follows it opens on the display it was on.
+/// Closes the wizard: it is done. The Findings window follows it at once,
+/// on the display it was on, so the app stays a regular app.
 fn close_wizard(app: &AppHandle) {
     *app.state::<Shell>()
         .onboarding
@@ -1043,16 +1053,15 @@ fn close_wizard(app: &AppHandle) {
             .closed_on(display);
         let _ = window.hide();
     }
-    present(app, presence(false));
 }
 
 /// Next in the wizard. On screen 5 it registers the daemon and the login
 /// item once, holds the answers until the daemon answers, closes the wizard
-/// at once and asks for notification permission; the first Scan runs in the
-/// background and the first check waits for it (spec section 8.3, screen
-/// 6). The view is then nothing. With `ollama_confirmed`, the Ollama
-/// confirmation Next asked for on screen 4 was given, and the wizard moves
-/// on at once.
+/// at once, opens the Findings window on the Overview and asks for
+/// notification permission; the Overview shows the first Scan running and
+/// the first check waits for it (spec section 8.3, screen 6). The view is
+/// then nothing. With `ollama_confirmed`, the Ollama confirmation Next asked
+/// for on screen 4 was given, and the wizard moves on at once.
 #[tauri::command]
 async fn onboarding_next(app: AppHandle, ollama_confirmed: Option<bool>) -> Result<Value, String> {
     {
@@ -1079,11 +1088,12 @@ async fn onboarding_next(app: AppHandle, ollama_confirmed: Option<bool>) -> Resu
 }
 
 /// Leaves screen 5: registers the daemon and the login item once, holds the
-/// answers for the daemon, starts the first check, closes the wizard, asks
-/// for notification permission, and hands the answers over to a daemon that
-/// already answers, as after a reinstall, rather than at its next Health.
-/// The first check then looks at once, in case the first Scan finished
-/// already.
+/// answers for the daemon, starts the first check, closes the wizard and
+/// opens the Findings window on the Overview, which shows the first check
+/// running, asks for notification permission, and hands the answers over to
+/// a daemon that already answers, as after a reinstall, rather than at its
+/// next Health. The first check then looks at once, in case the first Scan
+/// finished already.
 fn leave_onboarding(app: &AppHandle) {
     let shell = app.state::<Shell>();
     let left = {
@@ -1104,7 +1114,30 @@ fn leave_onboarding(app: &AppHandle) {
         .lock()
         .expect("the first check is not poisoned")
         .start(left.since);
+    shell
+        .frame
+        .lock()
+        .expect("the frame is not poisoned")
+        .first_check_starts();
     close_wizard(app);
+    render(app);
+    show_window(app);
+    let _ = app.emit(PANE_EVENT, Pane::Overview.id());
+    // A daemon that has not answered by the time a re-registered one would
+    // have is Protection off again on the Overview.
+    let handle = app.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(crate::link::REGISTERED_AGAIN);
+        let follow = handle
+            .state::<Shell>()
+            .frame
+            .lock()
+            .expect("the frame is not poisoned")
+            .first_check_unanswered();
+        if follow != Follow::Nothing {
+            render(&handle);
+        }
+    });
     for failure in left.launched.iter().flat_map(|launched| &launched.failures) {
         eprintln!("agentsweep-menubar: {failure}");
     }
@@ -1199,9 +1232,38 @@ fn follow_first_check(app: &AppHandle, event: Option<&StateEvent>) {
         notifications.as_deref(),
         posture,
         event,
+        window_shown(app),
     );
     if ready {
         let _ = app.emit(FIRST_CHECK_EVENT, first_check_view(&shell));
+    }
+    // Once the result is ready the Overview shows what the daemon says.
+    let waits = shell
+        .first_check
+        .lock()
+        .expect("the first check is not poisoned")
+        .holds_notifications();
+    if !waits {
+        let follow = shell
+            .frame
+            .lock()
+            .expect("the frame is not poisoned")
+            .first_check_ends();
+        if follow != Follow::Nothing {
+            render(app);
+        }
+    }
+}
+
+/// Whether the Findings window is open where the user sees it: shown, and
+/// not in the Dock.
+fn window_shown(app: &AppHandle) -> first_check::Window {
+    let open = app.get_webview_window(WINDOW).is_some_and(|window| {
+        window.is_visible().unwrap_or(false) && !window.is_minimized().unwrap_or(false)
+    });
+    match open {
+        true => first_check::Window::Open,
+        false => first_check::Window::Closed,
     }
 }
 

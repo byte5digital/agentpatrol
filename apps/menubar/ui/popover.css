@@ -169,3 +169,11 @@ button:hover {
 [hidden] {
   display: none !important;
 }
+
+/* The bar of a Full Scan that runs. */
+.checking progress {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  accent-color: var(--clear);
+}

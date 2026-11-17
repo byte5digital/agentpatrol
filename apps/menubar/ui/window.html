@@ -40,6 +40,15 @@
                  say. -->
             <p class="statusline" id="overview-protection" hidden></p>
             <p class="sentence" id="overview-sentence"></p>
+            <!-- "Checking your setup…" with the bar and one line naming what
+                 is being checked, while a Full Scan runs (spec section
+                 8.3). -->
+            <div class="checking" id="overview-checking" hidden>
+              <p class="checking-title" id="checking-title"></p>
+              <progress id="checking-bar" aria-labelledby="checking-title"></progress>
+              <p class="muted" id="checking-count"></p>
+              <p id="checking-line"></p>
+            </div>
             <div id="overview-body">
               <!-- The Simple Posture's four count tiles. A Finding tile opens
                    its pane, a project tile the projects it counts. -->

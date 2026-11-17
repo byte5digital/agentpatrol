@@ -23,7 +23,7 @@ use agentsweep_core::health::Health;
 use agentsweep_core::item::Kind;
 use agentsweep_core::settings::Posture;
 use agentsweep_core::state::{RecordedFinding, ScanSummary};
-use agentsweep_ipc::protocol::{StateEvent, Status};
+use agentsweep_ipc::protocol::{InHand, ScanPhase, StateEvent, Status};
 use serde_json::{Value, json};
 
 pub use crate::actions::{Action, trust_confirmation};
@@ -53,6 +53,13 @@ pub struct ScanLine {
     /// How many Items it found to check, zero while it is still looking and
     /// once none runs.
     pub total: usize,
+    /// True once the running Scan reported its progress, which only a Full
+    /// Scan does: the Overview and the popover then show its bar.
+    pub full: bool,
+    /// Whether it still enumerates or runs the Tiers.
+    pub phase: ScanPhase,
+    /// The Agent or the project it has in hand, as it last said.
+    pub in_hand: Option<InHand>,
 }
 
 /// The Findings window's list, kept from the status and the stream.
@@ -117,12 +124,20 @@ impl Findings {
                 };
                 Follow::Render
             }
-            StateEvent::ScanProgress { done, total } => {
+            StateEvent::ScanProgress {
+                done,
+                total,
+                phase,
+                in_hand,
+            } => {
                 self.scan = ScanLine {
                     running: true,
                     line: progress_line(*done, *total),
                     done: *done,
                     total: *total,
+                    full: true,
+                    phase: *phase,
+                    in_hand: in_hand.clone(),
                 };
                 Follow::Render
             }
@@ -403,6 +418,16 @@ pub(crate) mod tests {
     use agentsweep_core::scan_pass::ScanKind;
     use agentsweep_core::state::Trigger;
 
+    /// A Full Scan's progress with nothing in hand, as the stream carries it.
+    pub(crate) fn progress(done: usize, total: usize) -> StateEvent {
+        StateEvent::ScanProgress {
+            done,
+            total,
+            phase: ScanPhase::of_total(total),
+            in_hand: None,
+        }
+    }
+
     fn moment(text: &str) -> Timestamp {
         Timestamp::parse(text).expect("a readable moment")
     }
@@ -649,7 +674,7 @@ pub(crate) mod tests {
         assert_eq!(list.apply(&started), Follow::Render);
         assert!(list.scan().running);
         assert_eq!(list.scan().line, "Looking for what to check.");
-        list.apply(&StateEvent::ScanProgress { done: 3, total: 17 });
+        list.apply(&progress(3, 17));
         assert_eq!(list.scan().line, "Checked 3 of 17 Items.");
         let summary = ScanSummary {
             kind: ScanKind::Full,
@@ -755,10 +780,7 @@ pub(crate) mod tests {
         assert_eq!(list.to_value()["working"], WAITING);
         assert_eq!(list.to_value()["scan"]["running"], true);
         assert_eq!(list.apply(&counted(true)), Follow::Nothing);
-        assert_eq!(
-            list.apply(&StateEvent::ScanProgress { done: 1, total: 4 }),
-            Follow::Render
-        );
+        assert_eq!(list.apply(&progress(1, 4)), Follow::Render);
         assert_eq!(list.to_value()["working"], WAITING);
 
         // The Scan finished, and Health still counts the queue busy: a press
