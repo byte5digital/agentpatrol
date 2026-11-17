@@ -2001,18 +2001,22 @@ pub fn run(start: Start) {
                         show_onboarding(&handle);
                         // Screen 4 offers its engines from the engine answer: the
                         // daemon's, when one already answers, else the same
-                        // look taken on this Mac.
-                        let look = handle
-                            .state::<Shell>()
-                            .asking
-                            .engine()
-                            .unwrap_or_else(|_| onboarding::look_here());
-                        if let Some(wizard) = handle
-                            .state::<Shell>()
-                            .onboarding
-                            .lock()
-                            .expect("the wizard is not poisoned")
-                            .as_mut()
+                        // look taken on this Mac. Without screen 4, while no
+                        // engine passed the eval, nothing is looked at.
+                        let look = agentsweep_core::eval_bar::any_passes().then(|| {
+                            handle
+                                .state::<Shell>()
+                                .asking
+                                .engine()
+                                .unwrap_or_else(|_| onboarding::look_here())
+                        });
+                        if let Some(look) = look
+                            && let Some(wizard) = handle
+                                .state::<Shell>()
+                                .onboarding
+                                .lock()
+                                .expect("the wizard is not poisoned")
+                                .as_mut()
                         {
                             wizard.look(look);
                         }

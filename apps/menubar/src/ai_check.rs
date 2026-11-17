@@ -3,8 +3,9 @@
 //! - **Four cards**: Apple on-device, Ollama on this Mac, Claude over the
 //!   internet and Off, each with one line on what leaves the Mac. Exactly
 //!   one is selected: the engine the daemon answered with. An engine outside
-//!   the eval bar, or not measured, is shown disabled in the Simple Posture
-//!   and enabled with a warning in the Developer Posture.
+//!   the eval bar is not shown in the Simple Posture, and the AI check is
+//!   not shown there at all while no engine can be chosen; the Developer
+//!   Posture shows every engine, an untested one with a warning.
 //! - **The Ollama confirmation** names the model the daemon reports and
 //!   says Ollama is asked on this Mac only.
 //! - **The Claude consent screen**: a what / to whom / when / cost table with
@@ -24,6 +25,7 @@
 //! that touches the Keychain; the app never calls an engine.
 
 use agentsweep_core::apple::AppleAvailability;
+use agentsweep_core::eval_bar::{self, Passing};
 use agentsweep_core::keychain::ClaudeKey;
 use agentsweep_core::ollama::OllamaPresence;
 use agentsweep_core::settings::{
@@ -39,20 +41,34 @@ use crate::asking::{Asking, refusal};
 /// Where an engine stands against the eval bar of spec section 4.4.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Bar {
-    /// Within the bar, or no bar reported for it.
+    /// Within the bar, and Off.
     Within,
-    /// Measured and outside the bar.
-    Outside,
-    /// No measurement for this engine and model.
-    NotMeasured,
+    /// Not tested, or tested and outside the bar.
+    Untested,
 }
 
-/// Where `engine` stands against the eval bar, as the daemon's engine
-/// answer reports it. The answer reports no bar yet (the eval table lands
-/// with the eval runs), so every engine reads as within it and nothing is
-/// held back that the daemon would let through.
-pub fn bar_of(_state: &EngineState, _engine: JudgementEngine) -> Bar {
-    Bar::Within
+/// Where `engine` stands against the eval bar the core holds, with the
+/// model the daemon's answer names for it: the macOS version for Apple, the
+/// Ollama model, the Claude model in use.
+pub fn bar_of(state: &EngineState, engine: JudgementEngine) -> Bar {
+    bar_in(eval_bar::PASSING, state, engine)
+}
+
+/// [`bar_of`] against `table`.
+pub fn bar_in(table: &[Passing], state: &EngineState, engine: JudgementEngine) -> Bar {
+    let model = match engine {
+        JudgementEngine::Off => return Bar::Within,
+        JudgementEngine::Apple => match &state.apple {
+            Some(AppleAvailability::Available { model_version, .. }) => model_version.clone(),
+            _ => String::new(),
+        },
+        JudgementEngine::Ollama => ollama_model(state).unwrap_or_default(),
+        JudgementEngine::Claude => state.claude_model_in_use.clone(),
+    };
+    match eval_bar::passes_in(table, engine, &model) {
+        true => Bar::Within,
+        false => Bar::Untested,
+    }
 }
 
 /// What the Simple Posture says the AI check is.
@@ -90,17 +106,8 @@ pub const CARDS: [(JudgementEngine, &str, &str); 4] = [
     ),
 ];
 
-/// Why an engine outside the bar is not offered in the Simple Posture.
-pub const OUTSIDE_SIMPLE: &str = "Not offered: in AgentSweep's tests it called too many \
-     harmless items malicious.";
-/// The warning on an engine outside the bar in the Developer Posture.
-pub const OUTSIDE_DEVELOPER: &str = "Outside the eval bar: more than 2 % false-malicious on the \
-     benign set. You can still use it.";
-/// Why an engine not measured is not offered in the Simple Posture.
-pub const NOT_MEASURED_SIMPLE: &str = "Not offered: AgentSweep has not tested it yet.";
-/// The warning on an engine not measured in the Developer Posture.
-pub const NOT_MEASURED_DEVELOPER: &str = "Not measured: this engine and model have no eval \
-     result. You can still use it.";
+/// The one warning on an engine outside the bar in the Developer Posture.
+pub const UNTESTED: &str = "Not tested yet. It may flag safe items.";
 
 /// The heading of the consent screen.
 pub const CONSENT_TITLE: &str = "Check unclear items with Claude";
@@ -200,21 +207,13 @@ fn card(
     (engine, title, leaves): (JudgementEngine, &str, &str),
 ) -> Value {
     let developer = posture == Posture::Developer;
-    let mut reason: Option<String> = match engine {
+    let reason: Option<String> = match engine {
         JudgementEngine::Apple => apple_reason(state, posture),
         JudgementEngine::Ollama => ollama_reason(state).map(str::to_string),
         JudgementEngine::Claude | JudgementEngine::Off => None,
     };
-    let mut warning: Option<&str> = None;
-    if reason.is_none() && engine.is_on() {
-        match (bar, developer) {
-            (Bar::Within, _) => {}
-            (Bar::Outside, false) => reason = Some(OUTSIDE_SIMPLE.to_string()),
-            (Bar::Outside, true) => warning = Some(OUTSIDE_DEVELOPER),
-            (Bar::NotMeasured, false) => reason = Some(NOT_MEASURED_SIMPLE.to_string()),
-            (Bar::NotMeasured, true) => warning = Some(NOT_MEASURED_DEVELOPER),
-        }
-    }
+    // The Simple Posture never shows an untested engine (see [`cards`]).
+    let warning = (developer && reason.is_none() && bar == Bar::Untested).then_some(UNTESTED);
     let ask = match engine {
         JudgementEngine::Ollama => "ollama",
         JudgementEngine::Claude => "claude",
@@ -232,9 +231,10 @@ fn card(
     })
 }
 
-/// The four cards, from the daemon's engine answer, the Posture in force,
+/// The cards, from the daemon's engine answer, the Posture in force,
 /// whether the daemon can take a choice, and where each engine stands
-/// against the eval bar.
+/// against the eval bar: all four in the Developer Posture, and in the
+/// Simple one only the engines within the bar, and Off.
 pub fn cards(
     state: &EngineState,
     posture: Posture,
@@ -243,8 +243,16 @@ pub fn cards(
 ) -> Vec<Value> {
     CARDS
         .iter()
+        .filter(|entry| posture == Posture::Developer || bar(entry.0) == Bar::Within)
         .map(|entry| card(state, posture, available, bar(entry.0), *entry))
         .collect()
+}
+
+/// True when the Simple Posture has an engine to offer: one within the bar.
+pub fn simple_offers_an_engine(bar: &dyn Fn(JudgementEngine) -> Bar) -> bool {
+    CARDS
+        .iter()
+        .any(|entry| entry.0.is_on() && bar(entry.0) == Bar::Within)
 }
 
 /// The Ollama confirmation: the model the daemon reports and that Ollama
@@ -368,7 +376,8 @@ fn advanced(state: &EngineState, posture: Posture) -> Value {
 }
 
 /// The AI check as the window renders it, or None before the daemon
-/// answered.
+/// answered, and in the Simple Posture while no engine can be chosen there,
+/// which hides its Settings tab.
 pub fn view(
     state: Option<&EngineState>,
     posture: Posture,
@@ -379,6 +388,9 @@ pub fn view(
         return Value::Null;
     };
     let developer = posture == Posture::Developer;
+    if !developer && !simple_offers_an_engine(bar) {
+        return Value::Null;
+    }
     json!({
         "title": if developer { "AI Judgement" } else { "AI check" },
         "intro": if developer { DEVELOPER_INTRO } else { SIMPLE_INTRO },
@@ -666,37 +678,103 @@ mod tests {
         assert_eq!(cards[3]["enabled"], true);
     }
 
-    /// Spec section 4.4: an engine that misses the eval bar ships disabled
-    /// in the Simple Posture; the Developer Posture can enable it with a
-    /// warning. The same holds for an engine not measured.
+    /// Spec section 4.4: an engine outside the eval bar stays off in the
+    /// Simple Posture, which does not show it at all; the Developer Posture
+    /// shows it, enabled, with one warning line.
     #[test]
-    fn an_engine_outside_the_bar_is_disabled_in_simple_and_warned_in_developer() {
+    fn an_untested_engine_is_hidden_in_simple_and_warned_in_developer() {
         let mut answer = state(JudgementEngine::Off);
         answer.ollama = running_ollama(&[("qwen3:8b", true)]);
         let bar = |engine: JudgementEngine| match engine {
-            JudgementEngine::Ollama => Bar::Outside,
-            JudgementEngine::Apple => Bar::NotMeasured,
+            JudgementEngine::Ollama | JudgementEngine::Apple => Bar::Untested,
             _ => Bar::Within,
         };
 
         let simple = cards(&answer, Posture::Simple, true, &bar);
-        let ollama = by_engine(&simple, "ollama");
-        assert_eq!(ollama["enabled"], false);
-        assert_eq!(ollama["reason"], OUTSIDE_SIMPLE);
-        assert_eq!(ollama["warning"], Value::Null);
-        let apple = by_engine(&simple, "apple");
-        assert_eq!(apple["enabled"], false);
-        assert_eq!(apple["reason"], NOT_MEASURED_SIMPLE);
-        assert_eq!(by_engine(&simple, "claude")["enabled"], true);
+        let engines: Vec<_> = simple.iter().map(|card| card["engine"].clone()).collect();
+        assert_eq!(engines, ["claude", "off"], "nothing untested is named");
 
         let developer = cards(&answer, Posture::Developer, true, &bar);
-        let ollama = by_engine(&developer, "ollama");
-        assert_eq!(ollama["enabled"], true);
-        assert_eq!(ollama["reason"], Value::Null);
-        assert_eq!(ollama["warning"], OUTSIDE_DEVELOPER);
-        let apple = by_engine(&developer, "apple");
-        assert_eq!(apple["enabled"], true);
-        assert_eq!(apple["warning"], NOT_MEASURED_DEVELOPER);
+        assert_eq!(developer.len(), 4);
+        for engine in ["ollama", "apple"] {
+            let card = by_engine(&developer, engine);
+            assert_eq!(card["enabled"], true, "{engine}");
+            assert_eq!(card["reason"], Value::Null, "{engine}");
+            assert_eq!(card["warning"], UNTESTED, "{engine}");
+        }
+        assert_eq!(by_engine(&developer, "claude")["warning"], Value::Null);
+        assert_eq!(UNTESTED, "Not tested yet. It may flag safe items.");
+    }
+
+    /// While no engine can be chosen in the Simple Posture, the AI check is
+    /// not shown there at all, which hides its tab; the Developer Posture
+    /// shows it with every engine.
+    #[test]
+    fn simple_shows_no_ai_check_while_no_engine_passes() {
+        let answer = state(JudgementEngine::Off);
+        let untested = |engine: JudgementEngine| match engine {
+            JudgementEngine::Off => Bar::Within,
+            _ => Bar::Untested,
+        };
+        assert_eq!(
+            view(Some(&answer), Posture::Simple, true, &untested),
+            Value::Null
+        );
+        let developer = view(Some(&answer), Posture::Developer, true, &untested);
+        assert_eq!(developer["cards"].as_array().expect("cards").len(), 4);
+        // The bar the core holds has no row yet: no engine passes.
+        for engine in [
+            JudgementEngine::Apple,
+            JudgementEngine::Ollama,
+            JudgementEngine::Claude,
+        ] {
+            assert_eq!(bar_of(&answer, engine), Bar::Untested);
+        }
+        assert_eq!(bar_of(&answer, JudgementEngine::Off), Bar::Within);
+        assert_eq!(
+            view(Some(&answer), Posture::Simple, true, &|engine| bar_of(
+                &answer, engine
+            )),
+            Value::Null
+        );
+    }
+
+    /// The bar reads each engine's model from the daemon's answer: the macOS
+    /// version for Apple, the Ollama model, the Claude model in use.
+    #[test]
+    fn the_bar_reads_the_model_of_each_engine() {
+        const TABLE: &[Passing] = &[
+            Passing {
+                engine: JudgementEngine::Apple,
+                model: "26",
+            },
+            Passing {
+                engine: JudgementEngine::Ollama,
+                model: "qwen3:8b",
+            },
+        ];
+        let mut answer = state(JudgementEngine::Off);
+        assert_eq!(
+            bar_in(TABLE, &answer, JudgementEngine::Apple),
+            Bar::Untested,
+            "Apple's version unknown"
+        );
+        answer.apple = Some(AppleAvailability::Available {
+            model_version: "26.6.2 (25G83)".to_string(),
+            context_size: Some(4096),
+        });
+        answer.ollama = running_ollama(&[("qwen3:8b", true)]);
+        assert_eq!(bar_in(TABLE, &answer, JudgementEngine::Apple), Bar::Within);
+        assert_eq!(bar_in(TABLE, &answer, JudgementEngine::Ollama), Bar::Within);
+        assert_eq!(
+            bar_in(TABLE, &answer, JudgementEngine::Claude),
+            Bar::Untested
+        );
+        answer.ollama_model = "gemma3:4b".to_string();
+        assert_eq!(
+            bar_in(TABLE, &answer, JudgementEngine::Ollama),
+            Bar::Untested
+        );
     }
 
     /// With the daemon away nothing can be chosen, and the engine in force

@@ -13,10 +13,13 @@
 //! cannot take itself: registering the daemon and the login item (through
 //! the [`Services`] seam) and asking for notification permission.
 //!
-//! - Screen 4, the AI check, says in one line what the AI checks and
-//!   preselects Off. Apple on-device is offered; Ollama is offered when a
-//!   model of 4B or more is present, and in the Developer Posture beside
-//!   Claude, which is never preselected. Ollama needs one confirmation
+//! - Screen 4, the AI check, shows only once an engine passed the eval bar
+//!   of spec section 4.4; until then the wizard skips it and AI Judgement
+//!   stays off. It says in one line what the AI checks and preselects Off.
+//!   The Simple Posture offers only engines within the bar. Apple on-device
+//!   is offered; Ollama is offered when a model of 4B or more is present,
+//!   and in the Developer Posture beside Claude, which is never preselected;
+//!   there an untested engine carries one warning line. Ollama needs one confirmation
 //!   naming the model, and confirming it when Next asked for it moves on;
 //!   Claude needs the consent screen of the Settings pane, whose key is held
 //!   in the hand-over and goes to the daemon once.
@@ -30,6 +33,7 @@
 
 use agentsweep_core::apple::AppleAvailability;
 use agentsweep_core::envelope::Timestamp;
+use agentsweep_core::eval_bar::{self, Passing};
 use agentsweep_core::judgement::{EngineSuggestion, suggested_engine};
 use agentsweep_core::keychain::ClaudeKey;
 use agentsweep_core::location::LocationClass;
@@ -83,13 +87,6 @@ impl Screen {
             Screen::AiCheck => "ai",
             Screen::Background => "background",
         }
-    }
-
-    fn index(self) -> usize {
-        Screen::ALL
-            .iter()
-            .position(|screen| *screen == self)
-            .expect("every screen is listed")
     }
 }
 
@@ -269,6 +266,7 @@ pub struct Answers {
 #[derive(Clone, Debug)]
 pub struct Wizard {
     screen: Screen,
+    bar: &'static [Passing],
     inventory: Inventory,
     posture: Posture,
     look: Option<EngineState>,
@@ -283,8 +281,14 @@ impl Wizard {
     /// simple** is chosen until the user chooses otherwise, and both
     /// background requests are on, as their defaults are.
     pub fn new(inventory: Inventory) -> Wizard {
+        Wizard::under(inventory, eval_bar::PASSING)
+    }
+
+    /// The same under the eval bar `bar`: the engines that passed it.
+    pub fn under(inventory: Inventory, bar: &'static [Passing]) -> Wizard {
         Wizard {
             screen: Screen::Welcome,
+            bar,
             inventory,
             posture: Posture::Simple,
             look: None,
@@ -298,6 +302,30 @@ impl Wizard {
     /// The screen showing.
     pub fn screen(&self) -> Screen {
         self.screen
+    }
+
+    /// The screens this wizard shows, in order: the AI check only once an
+    /// engine passed the eval bar.
+    pub fn screens(&self) -> Vec<Screen> {
+        Screen::ALL
+            .into_iter()
+            .filter(|screen| *screen != Screen::AiCheck || !self.bar.is_empty())
+            .collect()
+    }
+
+    /// Where the screen showing stands among [`Wizard::screens`].
+    fn index(&self) -> usize {
+        self.screens()
+            .iter()
+            .position(|screen| *screen == self.screen)
+            .unwrap_or(0)
+    }
+
+    /// Where `engine` stands against the eval bar on this Mac, from the
+    /// engine answer.
+    fn bar_of(&self, engine: JudgementEngine) -> Bar {
+        let state = self.look.clone().unwrap_or_else(unanswered);
+        ai_check::bar_in(self.bar, &state, engine)
     }
 
     /// The Posture chosen on screen 3.
@@ -325,8 +353,8 @@ impl Wizard {
                 Step::ConfirmOllama
             }
             Screen::Background => Step::Register,
-            screen => {
-                self.screen = Screen::ALL[screen.index() + 1];
+            _ => {
+                self.screen = self.screens()[self.index() + 1];
                 Step::Moved
             }
         }
@@ -345,14 +373,18 @@ impl Wizard {
         if !self.offers_back() {
             return;
         }
-        if let Some(index) = self.screen.index().checked_sub(1) {
-            self.screen = Screen::ALL[index];
+        if let Some(index) = self.index().checked_sub(1) {
+            self.screen = self.screens()[index];
         }
     }
 
-    /// Chooses the Posture on screen 3.
+    /// Chooses the Posture on screen 3. An engine picked before that the
+    /// Simple Posture does not offer is dropped with it.
     pub fn choose(&mut self, posture: Posture) {
         self.posture = posture;
+        if posture == Posture::Simple && self.bar_of(self.pick().engine()) != Bar::Within {
+            self.pick = None;
+        }
     }
 
     /// Takes the engine answer screen 4 offers its choices from.
@@ -372,6 +404,9 @@ impl Wizard {
     /// Claude is chosen through [`Wizard::agree_to_claude`].
     pub fn choose_engine(&mut self, engine: JudgementEngine) -> Result<(), String> {
         let refused = || "That engine cannot be chosen on this Mac.".to_string();
+        if self.posture == Posture::Simple && self.bar_of(engine) != Bar::Within {
+            return Err(refused());
+        }
         let pick = match engine {
             JudgementEngine::Apple => {
                 let unavailable = self
@@ -502,28 +537,31 @@ impl Wizard {
             state.ollama_model = model.clone();
         }
         let developer = self.posture == Posture::Developer;
-        let cards = ai_check::cards(&state, self.posture, true, &|_| Bar::Within);
+        let bar = |engine| ai_check::bar_in(self.bar, &state, engine);
+        let cards = ai_check::cards(&state, self.posture, true, &bar);
+        // The cards the Posture shows: in the Simple Posture none outside
+        // the bar.
         let card = |engine: JudgementEngine| {
             let mut card = cards
                 .iter()
                 .find(|card| card["engine"] == engine.as_str())
-                .cloned()
-                .unwrap_or(Value::Null);
+                .cloned()?;
             if engine == JudgementEngine::Apple {
                 card["leaves"] = Value::from(APPLE_LINE);
             }
-            card
+            Some(card)
         };
-        let mut choices = vec![card(JudgementEngine::Apple)];
+        let mut choices = Vec::new();
         let mut others = Vec::new();
         if offers_ollama(self.look.as_ref()) {
-            choices.insert(0, card(JudgementEngine::Ollama));
+            choices.extend(card(JudgementEngine::Ollama));
         } else if developer {
-            others.push(card(JudgementEngine::Ollama));
+            others.extend(card(JudgementEngine::Ollama));
         }
-        choices.push(card(JudgementEngine::Off));
+        choices.extend(card(JudgementEngine::Apple));
+        choices.extend(card(JudgementEngine::Off));
         if developer {
-            others.push(card(JudgementEngine::Claude));
+            others.extend(card(JudgementEngine::Claude));
         }
         json!({
             "title": if developer { AI_JUDGEMENT_TITLE } else { AI_CHECK_TITLE },
@@ -571,8 +609,8 @@ impl Wizard {
     pub fn to_value(&self) -> Value {
         json!({
             "screen": self.screen.as_str(),
-            "step": self.screen.index() + 1,
-            "steps": Screen::ALL.len(),
+            "step": self.index() + 1,
+            "steps": self.screens().len(),
             "back": self.offers_back(),
             "welcome": {
                 "title": WELCOME_TITLE,
@@ -801,9 +839,30 @@ mod tests {
         })
     }
 
-    /// A wizard moved on to `screen`, in `posture`.
+    /// An eval bar every engine of these tests passes, as it will once
+    /// the eval records its rows.
+    const TESTED: &[Passing] = &[
+        Passing {
+            engine: JudgementEngine::Apple,
+            model: "26",
+        },
+        Passing {
+            engine: JudgementEngine::Ollama,
+            model: "qwen3:4b",
+        },
+        Passing {
+            engine: JudgementEngine::Ollama,
+            model: "qwen3:8b",
+        },
+        Passing {
+            engine: JudgementEngine::Claude,
+            model: "claude-sonnet-5",
+        },
+    ];
+
+    /// A wizard under [`TESTED`] moved on to `screen`, in `posture`.
     fn on(screen: Screen, posture: Posture, inventory: Inventory) -> Wizard {
-        let mut wizard = Wizard::new(inventory);
+        let mut wizard = Wizard::under(inventory, TESTED);
         wizard.choose(posture);
         while wizard.screen() != screen {
             assert_eq!(wizard.forward(), Step::Moved, "{:?}", wizard.screen());
@@ -816,7 +875,7 @@ mod tests {
     /// for the registration only from screen 5.
     #[test]
     fn the_wizard_moves_screen_by_screen_and_keeps_the_posture_answer() {
-        let mut wizard = Wizard::new(inventory());
+        let mut wizard = Wizard::under(inventory(), TESTED);
         assert_eq!(wizard.screen(), Screen::Welcome);
         assert!(!wizard.offers_back());
         wizard.back();
@@ -847,9 +906,73 @@ mod tests {
         assert_eq!(wizard.answers().settings.posture, Some(Posture::Developer));
     }
 
+    /// While no engine passed the eval bar, the wizard has no AI screen:
+    /// screen 3 leads to Keep watching in the background, the steps count
+    /// four, and AI Judgement is handed over off.
+    #[test]
+    fn no_ai_screen_while_no_engine_passes() {
+        let mut wizard = Wizard::new(inventory());
+        assert_eq!(
+            wizard.screens(),
+            [
+                Screen::Welcome,
+                Screen::Found,
+                Screen::Detail,
+                Screen::Background
+            ]
+        );
+        wizard.forward();
+        wizard.forward();
+        wizard.choose(Posture::Developer);
+        assert_eq!(wizard.forward(), Step::Moved);
+        assert_eq!(wizard.screen(), Screen::Background);
+        let view = wizard.to_value();
+        assert_eq!(
+            (view["step"].clone(), view["steps"].clone()),
+            (4.into(), 4.into())
+        );
+        wizard.back();
+        assert_eq!(wizard.screen(), Screen::Detail);
+        assert_eq!(wizard.answers().engine.engine, Some(JudgementEngine::Off));
+    }
+
+    /// In the Simple Posture screen 4 offers only engines within the bar,
+    /// and an engine picked in the Developer Posture that Simple does not
+    /// offer is dropped when the user moves back to Simple. The Developer
+    /// Posture offers an untested engine with one warning line.
+    #[test]
+    fn screen_four_offers_only_tested_engines_in_simple() {
+        const APPLE_ONLY: &[Passing] = &[Passing {
+            engine: JudgementEngine::Apple,
+            model: "26",
+        }];
+        let mut wizard = Wizard::under(inventory(), APPLE_ONLY);
+        while wizard.screen() != Screen::AiCheck {
+            wizard.forward();
+        }
+        wizard.look(look(
+            ollama_with(&[("qwen3:8b", "8.2B", true)]),
+            apple_available(),
+        ));
+        let view = wizard.to_value();
+        assert_eq!(engines(&view, "choices"), vec!["apple", "off"]);
+        assert!(wizard.choose_engine(JudgementEngine::Ollama).is_err());
+
+        wizard.choose(Posture::Developer);
+        let view = wizard.to_value();
+        assert_eq!(engines(&view, "choices"), vec!["ollama", "apple", "off"]);
+        assert_eq!(view["ai"]["choices"][0]["warning"], ai_check::UNTESTED);
+        assert_eq!(view["ai"]["choices"][1]["warning"], Value::Null);
+        wizard
+            .choose_engine(JudgementEngine::Ollama)
+            .expect("Developer picks an untested engine");
+        wizard.choose(Posture::Simple);
+        assert_eq!(wizard.pick(), Pick::Off, "Simple drops it");
+    }
+
     #[test]
     fn the_view_carries_the_screen_its_words_and_the_answer() {
-        let mut wizard = Wizard::new(inventory());
+        let mut wizard = Wizard::under(inventory(), TESTED);
         let view = wizard.to_value();
         assert_eq!(view["screen"], "welcome");
         assert_eq!(view["back"], false);
@@ -930,7 +1053,12 @@ mod tests {
 
         // A 4B model pulled: still Off, whatever Apple says; Ollama is a
         // choice even in Simple, and its confirmation names the model.
-        for apple in [apple_available(), apple_off()] {
+        // Apple switched off names no macOS version the bar could clear, so
+        // Simple does not show it.
+        for (apple, offered) in [
+            (apple_available(), vec!["ollama", "apple", "off"]),
+            (apple_off(), vec!["ollama", "off"]),
+        ] {
             let mut wizard = on(Screen::AiCheck, Posture::Simple, inventory());
             wizard.look(look(
                 ollama_with(&[("qwen3:1.7b", "1.7B", false), ("qwen3:4b", "4.0B", true)]),
@@ -939,7 +1067,7 @@ mod tests {
             assert_eq!(wizard.pick(), Pick::Off);
             let view = wizard.to_value();
             assert_eq!(selected(&view), vec!["off"]);
-            assert_eq!(engines(&view, "choices"), vec!["ollama", "apple", "off"]);
+            assert_eq!(engines(&view, "choices"), offered);
             assert_eq!(view["ai"]["needsConfirmation"], false);
             assert!(
                 view["ai"]["ollama"]["question"]
