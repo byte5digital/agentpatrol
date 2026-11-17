@@ -679,13 +679,6 @@ fn strip_links(text: &str) -> String {
     out.replace(['[', ']'], "")
 }
 
-/// Whether onboarding may suggest Apple on-device. Off until the eval of spec
-/// section 4.4 clears it: in a hand check Apple's on-device model called
-/// every real Item it judged malicious. Apple stays offered and selectable
-/// everywhere; only the suggestion waits. This is the one place to turn it
-/// back on.
-pub const APPLE_SUGGESTED: bool = false;
-
 /// The Judgement Engine onboarding suggests (spec section 4.4): local first.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum EngineSuggestion {
@@ -695,8 +688,8 @@ pub enum EngineSuggestion {
         /// The model to name in the one confirmation.
         model: String,
     },
-    /// Apple on-device, available on this Mac. Suggested only while
-    /// [`APPLE_SUGGESTED`] is true.
+    /// Apple on-device, available on this Mac. Suggested only once the eval
+    /// bar ([`crate::eval_bar`]) clears this Mac's major macOS version.
     Apple,
     /// Nothing to suggest: AI Judgement stays off. The Claude API is never
     /// suggested, only offered.
@@ -707,7 +700,9 @@ pub enum EngineSuggestion {
 /// billion parameters or more (the first such model it lists), else nothing,
 /// so the engine stays off. A smaller model counts as absent, AgentSweep
 /// never pulls one, and the Claude API is never suggested. Apple on-device
-/// is suggested only once [`APPLE_SUGGESTED`] says the eval cleared it.
+/// is suggested only once the eval bar clears this Mac's major macOS
+/// version: in a hand check its model called every real Item it judged
+/// malicious.
 pub fn suggested_engine(
     ollama: &crate::ollama::OllamaPresence,
     apple: &crate::apple::AppleAvailability,
@@ -719,7 +714,9 @@ pub fn suggested_engine(
             model: model.name.clone(),
         };
     }
-    if APPLE_SUGGESTED && apple.is_available() {
+    if let crate::apple::AppleAvailability::Available { model_version, .. } = apple
+        && crate::eval_bar::passes(crate::settings::JudgementEngine::Apple, model_version)
+    {
         return EngineSuggestion::Apple;
     }
     EngineSuggestion::Nothing
