@@ -81,8 +81,8 @@
 //!   zone, each a Folder Scan by the daemon whose answer arrives on
 //!   `agentsweep://folder`; `close_folder`: the dialog was closed.
 //! - `onboarding`, `onboarding_back`, `onboarding_choose`, `onboarding_next`,
-//!   `onboarding_engine`, `onboarding_claude`, `onboarding_toggle`,
-//!   `onboarding_look_there`: the onboarding wizard's view and its moves
+//!   `onboarding_engine`, `onboarding_claude`, `onboarding_toggle`: the
+//!   onboarding wizard's view and its moves
 //!   ([`crate::onboarding`]); Next on screen 5 registers the daemon and the
 //!   login item and closes the wizard, and the first check waits for the
 //!   first Scan.
@@ -1085,7 +1085,7 @@ async fn onboarding_next(app: AppHandle, ollama_confirmed: Option<bool>) -> Resu
 /// for notification permission, and hands the answers over to a daemon that
 /// already answers, as after a reinstall, rather than at its next Health.
 /// The first check then looks at once, in case the first Scan finished
-/// while screen 5 still showed, after its protected-location button.
+/// already.
 fn leave_onboarding(app: &AppHandle) {
     let shell = app.state::<Shell>();
     let left = {
@@ -1182,59 +1182,6 @@ fn onboarding_toggle(
     };
     wizard.toggle(&key, on)?;
     Ok(wizard.to_value())
-}
-
-/// The button of screen 5's protected-location line: registers the daemon
-/// and the login item once, and sends check-now once, as soon as the daemon
-/// answers and its first Full Scan has found the projects that Need
-/// Permission, so the operating system's prompt appears while the user is
-/// looking.
-#[tauri::command]
-fn onboarding_look_there(app: AppHandle) -> Value {
-    let shell = app.state::<Shell>();
-    let launched = {
-        let mut held = shell.onboarding.lock().expect("the wizard is not poisoned");
-        let Some(wizard) = held.as_mut() else {
-            return Value::Null;
-        };
-        if !wizard.look_there() {
-            return wizard.to_value();
-        }
-        let now = Timestamp::now();
-        let launched = wizard.register_once(&*shell.services, now);
-        (wizard.to_value(), launched, now)
-    };
-    let (view, launched, since) = launched;
-    for failure in launched.iter().flat_map(|launched| &launched.failures) {
-        eprintln!("agentsweep-menubar: {failure}");
-    }
-    let asking = Arc::clone(&shell.asking);
-    let _ = std::thread::Builder::new()
-        .name("agentsweep-check-now".to_string())
-        .spawn(move || check_now_when_ready(&asking, since));
-    view
-}
-
-/// Waits, for five minutes at most, until the daemon answers and a Full
-/// Scan that finished after `since` has pooled the projects, then sends
-/// check-now once.
-fn check_now_when_ready(asking: &Asking, since: Timestamp) {
-    for _ in 0..300 {
-        if let Ok(status) = asking.status()
-            && !status.health.scanning
-            && status
-                .scan
-                .as_ref()
-                .is_some_and(|scan| scan.finished_at() >= since)
-        {
-            if let Err(error) = asking.check_now() {
-                eprintln!("agentsweep-menubar: check-now was not taken: {error}");
-            }
-            return;
-        }
-        std::thread::sleep(std::time::Duration::from_secs(1));
-    }
-    eprintln!("agentsweep-menubar: the daemon did not answer, so check-now was not sent");
 }
 
 /// Follows the first check on `event`, or looks at once with none: once
@@ -1919,7 +1866,6 @@ pub fn run(start: Start) {
             onboarding_engine,
             onboarding_claude,
             onboarding_toggle,
-            onboarding_look_there,
             first_check,
             first_check_seen
         ])

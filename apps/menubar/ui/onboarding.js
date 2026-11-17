@@ -188,18 +188,8 @@ function renderBackground(background) {
       return label;
     }),
   );
-  const place = $("protected");
-  const protectedLine = background.protected;
-  place.hidden = protectedLine === null;
-  if (protectedLine !== null) {
-    text("protected-line", protectedLine.line);
-    const button = $("protected-button");
-    button.textContent = protectedLine.button;
-    button.disabled = protectedLine.sent !== null;
-    const sent = $("protected-sent");
-    sent.hidden = protectedLine.sent === null;
-    sent.textContent = protectedLine.sent ?? "";
-  }
+  $("protected").hidden = background.protected === null;
+  text("protected-line", background.protected);
 }
 
 function render(view) {
@@ -251,7 +241,6 @@ next.addEventListener("click", () => {
 for (const choice of document.querySelectorAll("input[name=posture]")) {
   choice.addEventListener("change", () => ask("onboarding_choose", { posture: choice.value }));
 }
-$("protected-button").addEventListener("click", () => ask("onboarding_look_there"));
 $("consent-agree").addEventListener("click", agreeToClaude);
 $("consent-preview").addEventListener("click", showPreview);
 $("consent-cancel").addEventListener("click", () => $("consent").close());

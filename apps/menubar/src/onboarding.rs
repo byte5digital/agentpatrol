@@ -11,8 +11,7 @@
 //! [`Wizard`] is the pure model: which screen is showing, Back and Next, and
 //! the answers. The shell renders its view and carries out the steps it
 //! cannot take itself: registering the daemon and the login item (through
-//! the [`Services`] seam), asking for notification permission and sending
-//! check-now.
+//! the [`Services`] seam) and asking for notification permission.
 //!
 //! - Screen 4, the AI check, says in one line what the AI checks and
 //!   preselects Off. Apple on-device is offered; Ollama is offered when a
@@ -23,9 +22,8 @@
 //!   in the hand-over and goes to the daemon once.
 //! - Screen 5, Keep watching in the background, holds the Rule Feed and app
 //!   update toggles, and, only when the Inventory found a registered project
-//!   in a protected location class, offers the one click that sends
-//!   check-now so the operating system's prompt appears in front of the
-//!   user. Leaving it registers the daemon and the login item once, holds
+//!   in a protected location class, says in one line that macOS will ask
+//!   once. Leaving it registers the daemon and the login item once, holds
 //!   every answer for the daemon and closes the wizard.
 //! - Screen 6 of spec section 8.3 is no screen: the first Scan runs in the
 //!   background, and [`crate::first_check`] says when its result is ready.
@@ -156,11 +154,6 @@ pub const ONBOARDING_DISCLOSURE: &str =
     "New rules and app updates come from GitHub. Nothing about you is sent.";
 /// The button that registers.
 pub const TURN_ON: &str = "Turn on protection";
-/// The button that sends check-now, so macOS asks for the permission.
-pub const LOOK_THERE: &str = "Give permission";
-/// What screen 5 says once that button was pressed.
-pub const LOOK_THERE_SENT: &str = "When macOS asks, click Allow.";
-
 /// The sentence of screen 5 naming where the protected projects are, and
 /// that macOS will ask once. Documents reads as spec section 8.3 words it.
 pub fn protected_line(classes: &[LocationClass]) -> String {
@@ -181,10 +174,7 @@ pub fn protected_line(classes: &[LocationClass]) -> String {
         [one] => (*one).to_string(),
         [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
     };
-    format!(
-        "Some of your projects are {places}. macOS will ask once whether AgentSweep may look \
-         there."
-    )
+    format!("Some projects are {places}. macOS will ask once; click Allow.")
 }
 
 /// The engine chosen on screen 4.
@@ -258,8 +248,8 @@ pub fn unanswered() -> EngineState {
 /// What leaving screen 5 came to.
 #[derive(Debug)]
 pub struct Left {
-    /// The registration, when this call made it; none when the
-    /// protected-location button had made it already.
+    /// The registration, when this call made it; none when an earlier
+    /// call had made it already.
     pub launched: Option<Launched>,
     /// When the daemon was registered: the first check counts only a Full
     /// Scan that finished after it.
@@ -285,7 +275,6 @@ pub struct Wizard {
     pick: Option<Pick>,
     rule_feed: bool,
     update_check: bool,
-    looked_there: bool,
     registered_at: Option<Timestamp>,
 }
 
@@ -302,7 +291,6 @@ impl Wizard {
             pick: None,
             rule_feed: true,
             update_check: true,
-            looked_there: false,
             registered_at: None,
         }
     }
@@ -445,21 +433,10 @@ impl Wizard {
         self.inventory.protected.iter().copied().collect()
     }
 
-    /// The button of screen 5's protected-location line was pressed. True
-    /// the first time only, and only while that line shows: the shell then
-    /// sends check-now once, as soon as the daemon can take it.
-    pub fn look_there(&mut self) -> bool {
-        if self.screen != Screen::Background || self.protected().is_empty() || self.looked_there {
-            return false;
-        }
-        self.looked_there = true;
-        true
-    }
-
     /// Registers the daemon and the login item through `services`, once:
     /// a second call registers nothing and answers None. `now` is when, so
     /// the first check reports only a Full Scan that finished after it.
-    pub fn register_once(&mut self, services: &dyn Services, now: Timestamp) -> Option<Launched> {
+    fn register_once(&mut self, services: &dyn Services, now: Timestamp) -> Option<Launched> {
         if self.registered_at.is_some() {
             return None;
         }
@@ -585,11 +562,7 @@ impl Wizard {
                     self.update_check
                 ),
             ],
-            "protected": (!protected.is_empty()).then(|| json!({
-                "line": protected_line(&protected),
-                "button": LOOK_THERE,
-                "sent": self.looked_there.then_some(LOOK_THERE_SENT),
-            })),
+            "protected": (!protected.is_empty()).then(|| protected_line(&protected)),
             "button": TURN_ON,
         })
     }
@@ -1079,52 +1052,43 @@ mod tests {
         );
         assert!(lines.iter().any(|line| line.contains("update regularly")));
         assert!(lines.len() <= 2, "two lines and the promise");
-        for line in lines
-            .iter()
-            .chain([&AI_CHECK_LINE, &AI_JUDGEMENT_LINE, &LOOK_THERE_SENT])
-        {
+        for line in lines.iter().chain([&AI_CHECK_LINE, &AI_JUDGEMENT_LINE]) {
             assert!(line.len() <= 80, "short: {line}");
         }
         assert!(view["ai"].get("later").is_none(), "no extra line");
     }
 
     /// Screen 5 names the protected location only when the Inventory found
-    /// a registered project in one, and its button sends check-now once.
+    /// a registered project in one, in one line and with no button: macOS
+    /// asks on the first read.
     #[test]
-    fn screen_five_offers_the_protected_location_line_only_when_needed_and_sends_once() {
-        let mut wizard = on(Screen::Background, Posture::Simple, inventory());
+    fn screen_five_says_macos_will_ask_only_when_needed_without_a_button() {
+        let wizard = on(Screen::Background, Posture::Simple, inventory());
         let view = wizard.to_value();
         assert_eq!(view["background"]["protected"], Value::Null);
         assert_eq!(view["background"]["lines"][1], BACKGROUND_LINES[1]);
         assert_eq!(view["background"]["lines"][0], BACKGROUND_LINES[0]);
         assert_eq!(view["background"]["disclosure"], ONBOARDING_DISCLOSURE);
         assert_eq!(view["background"]["button"], TURN_ON);
-        assert!(!wizard.look_there(), "no line, no check-now");
 
         let mut wizard = on(Screen::AiCheck, Posture::Simple, in_documents());
-        assert!(!wizard.look_there(), "only on screen 5");
         wizard.forward();
         let view = wizard.to_value();
         assert_eq!(
-            view["background"]["protected"]["line"],
-            "Some of your projects are in Documents. macOS will ask once whether AgentSweep may \
-             look there."
+            view["background"]["protected"],
+            "Some projects are in Documents. macOS will ask once; click Allow."
         );
-        assert_eq!(view["background"]["protected"]["button"], LOOK_THERE);
-        assert_eq!(view["background"]["protected"]["sent"], Value::Null);
-        assert!(wizard.look_there());
-        assert!(!wizard.look_there(), "check-now goes once");
-        assert!(!wizard.look_there());
-        assert_eq!(
-            wizard.to_value()["background"]["protected"]["sent"],
-            LOOK_THERE_SENT
-        );
-
         assert_eq!(
             protected_line(&[LocationClass::Desktop, LocationClass::Downloads]),
-            "Some of your projects are on the Desktop and in Downloads. macOS will ask once \
-             whether AgentSweep may look there."
+            "Some projects are on the Desktop and in Downloads. macOS will ask once; click Allow."
         );
+
+        let page = include_str!("../ui/onboarding.html");
+        assert!(page.contains(r#"<p id="protected-line"></p>"#));
+        assert!(!page.contains("protected-button"), "no button");
+        let script = include_str!("../ui/onboarding.js");
+        assert!(!script.contains("protected-button"), "no button");
+        assert!(!script.contains("onboarding_look_there"));
     }
 
     /// A stand-in for the link to the daemon: it does not answer until told
@@ -1198,20 +1162,19 @@ mod tests {
         wizard.toggle("update_check", false).expect("a toggle");
         assert!(wizard.toggle("telemetry", true).is_err());
 
-        // The protected-location button registers first, then leaving
-        // registers nothing more.
-        assert!(wizard.look_there());
-        let now = moment("2026-10-19T10:00:00.000Z");
-        assert!(wizard.register_once(&services, now).is_some());
-        assert_eq!(
-            services.calls(),
-            vec!["register agent", "register login item"]
-        );
-
         let mut handover = Handover::default();
         let link = FakeLink::default();
         assert!(handover.deliver(&link).is_none(), "nothing is held yet");
         assert_eq!(wizard.forward(), Step::Register);
+        let now = moment("2026-10-19T10:00:00.000Z");
+        let left = wizard
+            .leave_background(&services, &mut handover, now)
+            .expect("left screen 5");
+        assert!(left.launched.is_some(), "registered now");
+        assert_eq!(
+            services.calls(),
+            vec!["register agent", "register login item"]
+        );
         let later = moment("2026-10-19T10:05:00.000Z");
         let left = wizard
             .leave_background(&services, &mut handover, later)
@@ -1221,10 +1184,6 @@ mod tests {
             left.since, now,
             "the first check counts from the registration"
         );
-        let left = wizard
-            .leave_background(&services, &mut handover, later)
-            .expect("left screen 5");
-        assert!(left.launched.is_none());
         assert_eq!(
             services.calls(),
             vec!["register agent", "register login item"],
@@ -1258,8 +1217,7 @@ mod tests {
         assert!(link.keys.borrow().is_empty());
     }
 
-    /// Leaving screen 5 without the protected-location button registers
-    /// once too.
+    /// Leaving screen 5 with no protected location registers once too.
     #[test]
     fn leaving_screen_five_registers_the_daemon_and_the_login_item() {
         let services = Recorded::with(ServiceState::NotFound, ServiceState::NotRegistered);
