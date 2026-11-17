@@ -401,7 +401,8 @@ mod tests {
             assert_eq!(buttons.len(), 1, "{value}");
             assert_eq!(buttons[0]["label"], "Turn on protection");
             assert_eq!(buttons[0]["command"], "turn_on_protection");
-            assert_eq!(buttons[0]["working"], crate::banner::STARTING);
+            assert_eq!(buttons[0]["working"], crate::banner::STARTING_PROTECTION);
+            assert_eq!(buttons[0]["givesWay"], true);
         }
     }
 

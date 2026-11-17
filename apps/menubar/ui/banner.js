@@ -8,6 +8,10 @@ import { nextPress } from "./press.js";
 
 const { invoke } = window.__TAURI__.core;
 
+// The banners whose button gave way to its working line, each with the key
+// of the buttons that were pressed.
+const givenWay = new WeakMap();
+
 // Fills the banner elements under `root` (each found by its class) with
 // `banner`, or hides `root` when there is none. A click names the press and
 // calls the button's command; from the click until the answer the button
@@ -15,9 +19,17 @@ const { invoke } = window.__TAURI__.core;
 // Start it), then says what it answered, or why it failed. The buttons keep
 // their nodes while the banner shows the same ones, so a render cannot
 // swallow a click.
+//
+// A button that gives way (Turn on protection) is not greyed out: from the
+// click the banner shows its line ("Starting protection…") and no button,
+// for as long as it is the banner that was pressed. The buttons come back
+// when the press fails, when the banner turns to another one (such as "Not
+// watching right now", which then shows its own buttons), or when it went
+// away and comes again.
 export function renderBanner(root, banner) {
   root.hidden = banner === null;
   if (banner === null) {
+    givenWay.delete(root);
     return;
   }
   const part = (name) => root.querySelector(`.${name}`);
@@ -33,7 +45,9 @@ export function renderBanner(root, banner) {
     line.textContent = text;
     line.hidden = text === "";
   };
-  keep(part("banner-buttons"), JSON.stringify(banner.buttons), () =>
+  const buttons = part("banner-buttons");
+  const key = JSON.stringify(banner.buttons);
+  keep(buttons, key, () =>
     banner.buttons.map((button, index) => {
       const node = document.createElement("button");
       node.type = "button";
@@ -42,17 +56,29 @@ export function renderBanner(root, banner) {
         node.className = "primary";
       }
       node.addEventListener("click", async () => {
-        node.disabled = true;
+        if (button.givesWay) {
+          givenWay.set(root, key);
+          buttons.hidden = true;
+        } else {
+          node.disabled = true;
+        }
         say(button.working);
         try {
           const answer = await invoke(button.command, { press: nextPress() });
           say(typeof answer === "string" ? answer : "");
         } catch (why) {
           say(String(why));
+          givenWay.delete(root);
+          buttons.hidden = false;
         }
         node.disabled = false;
       });
       return node;
     }),
   );
+  if (givenWay.has(root) && givenWay.get(root) !== key) {
+    givenWay.delete(root);
+    say("");
+  }
+  buttons.hidden = givenWay.has(root);
 }
