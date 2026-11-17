@@ -155,7 +155,7 @@ pub const ONBOARDING_DISCLOSURE: &str =
 /// The button that registers.
 pub const TURN_ON: &str = "Turn on protection";
 /// The sentence of screen 5 naming where the protected projects are, and
-/// that macOS will ask once. Documents reads as spec section 8.3 words it.
+/// when to click Allow. Documents reads as spec section 8.3 words it.
 pub fn protected_line(classes: &[LocationClass]) -> String {
     let places: Vec<&str> = classes
         .iter()
@@ -174,7 +174,7 @@ pub fn protected_line(classes: &[LocationClass]) -> String {
         [one] => (*one).to_string(),
         [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
     };
-    format!("Some projects are {places}. macOS will ask once; click Allow.")
+    format!("Some projects are {places}. When macOS asks, click Allow.")
 }
 
 /// The engine chosen on screen 4.
@@ -1076,11 +1076,11 @@ mod tests {
         let view = wizard.to_value();
         assert_eq!(
             view["background"]["protected"],
-            "Some projects are in Documents. macOS will ask once; click Allow."
+            "Some projects are in Documents. When macOS asks, click Allow."
         );
         assert_eq!(
             protected_line(&[LocationClass::Desktop, LocationClass::Downloads]),
-            "Some projects are on the Desktop and in Downloads. macOS will ask once; click Allow."
+            "Some projects are on the Desktop and in Downloads. When macOS asks, click Allow."
         );
 
         let page = include_str!("../ui/onboarding.html");
