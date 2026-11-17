@@ -6,6 +6,7 @@
 
 import { renderBanner } from "./banner.js";
 import { nextPress } from "./press.js";
+import { inLocalTime } from "./when.js";
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -36,7 +37,7 @@ function render(view) {
   root.dataset.orb = view.orb;
   // A banner replaces the sentence and the line under it (spec section 8.6).
   said.hidden = view.sentence === null;
-  sentence.textContent = view.sentence ?? "";
+  sentence.textContent = inLocalTime(view.sentence ?? "");
   detail.textContent = view.detail;
   detail.hidden = view.detail === "";
   renderBanner(banner, view.banner);

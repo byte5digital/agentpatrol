@@ -25,6 +25,7 @@ import { isDeveloper, onPostureChange, takePosture } from "./posture.js";
 import { lookAtAiCheck, renderAiCheck } from "./ai_check.js";
 import { keep } from "./keep.js";
 import { nextPress } from "./press.js";
+import { inLocalTime, when } from "./when.js";
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -873,15 +874,6 @@ function renderFindingPane(id, cards, loaded) {
   });
 }
 
-// A moment in local time, as the popover writes it.
-function when(text) {
-  const moment = new Date(text);
-  if (Number.isNaN(moment.getTime())) {
-    return text;
-  }
-  return moment.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
-
 // A moment as the Simple Overview's watching line says it: "today, 09:12",
 // or the date and the time on another day.
 function lastCheck(text) {
@@ -916,7 +908,7 @@ function renderOverview(overview) {
   $("overview-protection").hidden = (overview.protection ?? null) === null;
   $("overview-protection").textContent = overview.protection ?? "";
   $("overview-sentence").hidden = overview.sentence === null;
-  $("overview-sentence").textContent = overview.sentence ?? "";
+  $("overview-sentence").textContent = inLocalTime(overview.sentence ?? "");
   $("overview-body").hidden = overview.off;
   $("overview-scan").hidden = !overview.actions;
   const tiled = renderTiles(overview);
