@@ -46,10 +46,6 @@
             let node = SchemaNode.object(
                 description: nil,
                 properties: [
-                    .init(
-                        name: "verdict", schema: .choice(description: nil, values: ["malicious", "benign", "unsure"]),
-                        isOptional: false),
-                    .init(name: "category", schema: .choice(description: nil, values: ["none"]), isOptional: false),
                     .init(name: "reason", schema: .string(description: "why"), isOptional: false),
                     .init(
                         name: "evidence",
@@ -57,6 +53,10 @@
                             description: nil, items: .string(description: nil), minimumElements: nil,
                             maximumElements: nil),
                         isOptional: false),
+                    .init(
+                        name: "verdict", schema: .choice(description: nil, values: ["benign", "malicious", "unsure"]),
+                        isOptional: false),
+                    .init(name: "category", schema: .choice(description: nil, values: ["none"]), isOptional: false),
                     .init(name: "score", schema: .integer(description: nil), isOptional: true),
                 ])
             _ = try GenerationSchema(root: node.dynamic(path: "answer"), dependencies: [])
