@@ -87,7 +87,8 @@ fn every_part_with_buttons_is_kept_through_a_render() {
         assert!(pane.contains(held), "the detail's key holds {held}");
     }
     let banner = read("ui/banner.js");
-    assert!(banner.contains("keep(part(\"banner-buttons\")"));
+    assert!(banner.contains("const buttons = part(\"banner-buttons\");"));
+    assert!(banner.contains("keep(buttons, JSON.stringify(banner.buttons)"));
     assert!(!banner.contains("part(\"banner-buttons\").replaceChildren"));
     let ai_check = read("ui/ai_check.js");
     assert!(ai_check.contains("keep(place.querySelector(\".cards\")"));

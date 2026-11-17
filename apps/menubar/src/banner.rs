@@ -153,10 +153,19 @@ impl Button {
     /// What its banner says from the click until the app answers.
     pub fn working(self) -> &'static str {
         match self {
-            Button::StartIt | Button::TurnOnProtection => STARTING,
+            Button::StartIt => STARTING,
+            Button::TurnOnProtection => STARTING_PROTECTION,
             Button::Reopen => REOPENING,
             _ => crate::findings::WORKING,
         }
+    }
+
+    /// True for the button that gives way to its working line from the
+    /// click until the press fails: **Turn on protection**, whose banner may
+    /// turn to "Not watching right now" while protection starts. Every other
+    /// button stays and waits for its answer.
+    pub fn gives_way(self) -> bool {
+        self == Button::TurnOnProtection
     }
 
     /// True for the four buttons of the integrity states, which open the
@@ -203,6 +212,7 @@ impl Shown {
                         "label": button.label(),
                         "command": button.command(),
                         "working": button.working(),
+                        "givesWay": button.gives_way(),
                     })
                 })
                 .collect::<Vec<_>>(),
@@ -216,10 +226,13 @@ pub const PROTECTION_OFF: &str = "Protection is off";
 /// The title of the banner of a registered daemon that is not running.
 pub const NOT_WATCHING: &str = "Not watching right now";
 
-/// What "Not watching right now" says from a click on **Start it**, and
-/// Protection off from a click on **Turn on protection**, until the daemon
-/// answers.
+/// What "Not watching right now" says from a click on **Start it** until the
+/// daemon answers.
 pub const STARTING: &str = "Starting AgentSweep…";
+
+/// What Protection off says in place of **Turn on protection** from a click
+/// on it until the daemon answers.
+pub const STARTING_PROTECTION: &str = "Starting protection…";
 
 /// The title of the banner of an app older than its daemon.
 pub const REOPEN: &str = "AgentSweep was updated. Reopen it.";
@@ -373,6 +386,27 @@ mod tests {
         }
     }
 
+    /// Only Turn on protection gives way to its line while it starts; every
+    /// other button stays and waits.
+    #[test]
+    fn only_turn_on_protection_gives_way_to_its_line() {
+        assert_eq!(STARTING_PROTECTION, "Starting protection…");
+        assert!(Button::TurnOnProtection.gives_way());
+        for button in [
+            Button::OpenLoginItems,
+            Button::StartIt,
+            Button::StartFreshRecord,
+            Button::LookAtRecords,
+            Button::ShowWhatChanged,
+            Button::ScanAgainTrustingNothing,
+            Button::Reopen,
+        ] {
+            assert!(!button.gives_way(), "{button:?}");
+        }
+        let shown = Banner::NotWatching.shown(Posture::Simple).to_value();
+        assert_eq!(shown["buttons"][0]["givesWay"], false);
+    }
+
     /// Each of the four states has its banner, its colour and its buttons.
     #[test]
     fn each_of_the_four_states_has_its_banner_and_buttons() {
@@ -517,7 +551,8 @@ mod tests {
         let value = shown.to_value();
         assert_eq!(value["buttons"][0]["label"], "Turn on protection");
         assert_eq!(value["buttons"][0]["command"], "turn_on_protection");
-        assert_eq!(value["buttons"][0]["working"], STARTING);
+        assert_eq!(value["buttons"][0]["working"], STARTING_PROTECTION);
+        assert_eq!(value["buttons"][0]["givesWay"], true);
         assert_eq!(banner.in_popover(Posture::Simple), shown);
 
         let off = choose(&health, &Daemon::Off).expect("a banner");

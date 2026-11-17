@@ -1,6 +1,8 @@
-//! The popover as the shell sets it (spec section 8.1): every show makes
-//! AgentSweep the active app and focuses the popover, so a click outside
-//! takes the focus away and hides it.
+//! The popover as the shell and the banner script set it (spec sections 8.1
+//! and 8.6): every show makes AgentSweep the active app and focuses the
+//! popover, so a click outside takes the focus away and hides it; and
+//! **Turn on protection** gives way to "Starting protection…" from the click
+//! until it fails.
 //!
 //! The suite runs no window server and no webview, so this reads the files
 //! as they ship. The click outside and the press are a hand check (section
@@ -48,4 +50,36 @@ fn every_show_activates_the_app_and_focuses_the_popover() {
     assert!(app.contains(
         "if let WindowEvent::Focused(false) = event {\n                        let _ = hide.hide();"
     ));
+}
+
+/// A press of a button that gives way hides the banner's buttons and says
+/// its working line before it is asked; they come back only when it fails,
+/// stay hidden through every render meanwhile, also when the banner turns to
+/// another one, and are offered again once the banner went away.
+#[test]
+fn turn_on_protection_gives_way_to_its_line_until_it_fails() {
+    let banner = read("ui/banner.js");
+    let render = function(&banner, "renderBanner");
+    let gave_way = at(render, "givenWay.add(root)");
+    let said = at(render, "say(button.working)");
+    let asked = at(render, "await invoke(button.command");
+    let failed = at(render, "catch (why)");
+    let back = at(
+        render,
+        "givenWay.delete(root);\n          buttons.hidden = false;",
+    );
+    assert!(gave_way < said && said < asked && asked < failed && failed < back);
+    assert!(render[gave_way..said].contains("buttons.hidden = true"));
+    assert!(render[..gave_way].contains("if (button.givesWay)"));
+    // Every render keeps them hidden while it stands, after `keep`.
+    let kept = at(render, "keep(buttons,");
+    let hidden = render
+        .rfind("buttons.hidden = givenWay.has(root)")
+        .expect("every render");
+    assert!(kept < hidden, "{render}");
+    // A banner that went away offers its buttons again when it comes back.
+    let gone = at(render, "if (banner === null) {");
+    assert!(render[gone..].starts_with("if (banner === null) {\n    givenWay.delete(root);"));
+    // No button greys out to give way: the others still wait as they did.
+    assert!(render.contains("node.disabled = true"));
 }
