@@ -692,6 +692,13 @@ dialog {
   width: 100%;
 }
 
+/* The field and its Save button share one line. */
+#settings-advanced-ai .dir .entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* The AI check's four cards and the consent screen. */
 
 .setting .cards {

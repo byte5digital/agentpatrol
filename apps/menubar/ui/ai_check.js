@@ -163,16 +163,26 @@ function renderCard(card) {
   return button;
 }
 
+// One field under Advanced. It saves the way the settings folders do: with
+// its Save button or Return, never while the user types or leaves it.
 function field(entry, key) {
-  const row = el("label", "dir");
-  row.append(el("span", "label", entry.label));
+  const row = el("form", "dir");
   const input = el("input");
   input.type = "text";
   input.value = entry.value;
   input.placeholder = entry.default;
   input.disabled = !current.available;
-  input.addEventListener("change", () => ask("change_engine", { change: { [key]: input.value } }));
-  row.append(input, el("span", "muted", entry.line));
+  input.setAttribute("aria-label", entry.label);
+  const save = el("button", "", "Save");
+  save.type = "submit";
+  save.disabled = !current.available;
+  row.addEventListener("submit", (event) => {
+    event.preventDefault();
+    ask("change_engine", { change: { [key]: input.value } });
+  });
+  const line = el("span", "entry");
+  line.append(input, save);
+  row.append(el("span", "label", entry.label), line, el("span", "muted", entry.line));
   return row;
 }
 
