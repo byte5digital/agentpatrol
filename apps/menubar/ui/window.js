@@ -504,8 +504,8 @@ function renderLines(node, lines) {
 
 // One Finding in the Developer Posture: `<Kind> · <name>` with chips for
 // Severity, Tier, category, Probation, Scope and Activation, the body lines,
-// the technical table shown always, the actions and, on a quarantined Item
-// with a payload, Reveal in Finder.
+// the actions with, on a quarantined Item with a payload, Reveal in Finder,
+// and under them the technical table shown always.
 function renderDeveloperCard(card) {
   const developer = card.developer;
   const node = el("article", "card");
@@ -519,7 +519,6 @@ function renderDeveloperCard(card) {
   }
   node.append(chips);
   renderLines(node, developer.lines ?? card.simple.lines);
-  node.append(renderTechnical(card));
   const actions = renderActions(card);
   if (card.reveal) {
     const reveal = el("button", "", "Reveal in Finder");
@@ -545,6 +544,7 @@ function renderDeveloperCard(card) {
     node.append(actions);
   }
   node.append(howTo);
+  node.append(renderTechnical(card));
   return node;
 }
 
