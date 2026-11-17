@@ -402,9 +402,6 @@ pub struct Daemon {
     /// `uninstall` from then on, until it is unregistered or its bundle is
     /// gone (spec section 9.6).
     uninstalled: AtomicBool,
-    /// Set by Uninstall with Delete everything, so the exit removes the app's
-    /// temporary folder once more.
-    pub(crate) deleted_everything: AtomicBool,
     /// The app's folder in the per-user temporary directory, beside the
     /// documented socket; absent for a socket of another name.
     pub(crate) temporary: Option<PathBuf>,
@@ -641,7 +638,6 @@ impl Daemon {
             told: Mutex::new(None),
             leaving: AtomicBool::new(false),
             uninstalled: AtomicBool::new(false),
-            deleted_everything: AtomicBool::new(false),
             temporary: crate::uninstall::temporary_folder(&options.socket),
             checking: AtomicBool::new(false),
         });
@@ -2643,7 +2639,7 @@ pub fn run(options: &Options) -> Result<(), Box<dyn Error>> {
 ///
 /// The signal is blocked before any thread starts, so every thread inherits
 /// the block and one thread of its own waits for it with `sigwait`. That
-/// thread unlinks the socket (and after Delete everything the app's temporary
+/// thread unlinks the socket (and after an Uninstall the app's temporary
 /// folder) and then lets the signal take its default course, so the exit
 /// status is the same as it was without this: a stop by signal, which
 /// `KeepAlive` treats as it always did. A test never installs it: it runs

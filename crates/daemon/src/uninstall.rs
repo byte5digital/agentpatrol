@@ -19,17 +19,18 @@
 //!    owner's decision of 2026-10-14): the data directory with the
 //!    quarantined payloads, both Keychain items, the log directory, the
 //!    caches, the app's preferences and the web view's temporary folder.
+//!    Keep and Restore all remove the web view's temporary folder too: it is
+//!    a cache, not the user's data (hand check item 69).
 //!
 //! Unregistering the daemon and the login item and moving the app to the
 //! Trash are the app's. The daemon stays up and idle until then, or until its
 //! bundle is gone, which stops it for good (spec section 9.5). Either way it
-//! unlinks its socket as it exits, and after Delete everything it removes the
+//! unlinks its socket as it exits, and after an Uninstall it removes the
 //! temporary folder once more, since the app's web view may write to it until
 //! the app has quit ([`Daemon::clean_up_at_exit`]).
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 
 use agentsweep_core::BUNDLE_ID;
 use agentsweep_core::quarantine::Conflict;
@@ -132,6 +133,9 @@ impl Daemon {
             UninstallChoice::RestoreAll => self.restore_all(&mut report),
             UninstallChoice::DeleteEverything => self.delete_everything(&mut report),
         }
+        // The web view's temporary folder is a cache, so it goes on every
+        // choice; Delete everything has removed and reported it already.
+        self.remove_the_temporary_folder();
         if !report.gate_failed.is_empty() {
             report.message.push_str(&format!(
                 " AgentSweep's hooks could not be taken out of {}; remove them by hand.",
@@ -205,7 +209,6 @@ impl Daemon {
     /// with it. Nothing outside [`what_delete_everything_removes`] is
     /// touched.
     fn delete_everything(&self, report: &mut UninstallReport) {
-        self.deleted_everything.store(true, Ordering::SeqCst);
         for (name, path) in what_delete_everything_removes(
             self.directory.root(),
             self.machine.home(),
@@ -245,12 +248,21 @@ impl Daemon {
         };
     }
 
+    /// Removes the app's temporary folder, when the daemon has one.
+    fn remove_the_temporary_folder(&self) {
+        if let Some(temporary) = &self.temporary
+            && let Err(error) = remove(temporary)
+        {
+            say!("uninstalling: the temporary files could not be removed: {error}");
+        }
+    }
+
     /// What the daemon leaves tidy as it exits, stopped by launchd or gone
-    /// with its bundle: it unlinks its socket, and after Delete everything it
+    /// with its bundle: it unlinks its socket, and after an Uninstall it
     /// removes the app's temporary folder once more.
     pub fn clean_up_at_exit(&self, socket: &Path) {
         let _ = std::fs::remove_file(socket);
-        if self.deleted_everything.load(Ordering::SeqCst)
+        if self.is_uninstalled()
             && let Some(temporary) = &self.temporary
         {
             let _ = remove(temporary);
