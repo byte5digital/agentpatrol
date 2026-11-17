@@ -32,7 +32,7 @@ use agentsweep_core::scan_pass::ScanKind;
 use agentsweep_core::state::Trigger;
 
 use crate::actions::Acting;
-use crate::full_scan::{Covering, Judgement, ScanError, ScanRun, pool, survey};
+use crate::full_scan::{Covering, Judgement, ScanError, ScanRun, Unwatched, pool, survey};
 use crate::machine::{Machine, adapters};
 use crate::permission::Access;
 use crate::watcher::Batch;
@@ -164,6 +164,9 @@ impl ChangeScan<'_> {
             judge: self.judge,
             workers: self.workers,
             acting: self.acts.then_some(&acting),
+            // A Change Scan shows no progress: it is over before anyone
+            // could follow it.
+            progress: &Unwatched,
         }
         .over(&mut survey.enumeration, began)?;
 

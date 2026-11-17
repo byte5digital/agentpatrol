@@ -48,7 +48,7 @@ use agentsweep_core::pack::Manifest;
 use agentsweep_core::packs::LoadedPack;
 use agentsweep_core::paths::DataDirectory;
 use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan_pass::{BACKGROUND_WORKERS, ScanKind, ScanPass};
+use agentsweep_core::scan_pass::{BACKGROUND_WORKERS, ScanKind, ScanPass, Watch};
 use agentsweep_core::state::{ScanSummary, Trigger};
 use agentsweep_core::verdicts::{VerdictCache, VerdictCacheView};
 
@@ -154,10 +154,17 @@ pub struct ScanRun {
     pub notes: Vec<Note>,
 }
 
-/// What a Scan reports as it goes.
-pub trait Progress {
-    /// The Scan looked at `done` of `total` Items.
-    fn at(&self, done: usize, total: usize);
+/// What a Full Scan reports as it goes: what it enumerates, then how many
+/// Items the Tiers are done with. The Tiers run on several worker threads,
+/// so it is told from each of them.
+pub trait Progress: Sync {
+    /// The Scan is enumerating: the Surfaces of the adapter `agent` names, or
+    /// nothing in particular yet when there is none.
+    fn enumerating(&self, agent: Option<&Descriptor>);
+
+    /// The Scan looked at `done` of `total` Items, `item` the last one the
+    /// Tiers were done with, none at the start and at the end.
+    fn at(&self, done: usize, total: usize, item: Option<&Item>);
 }
 
 /// A Scan nobody is watching.
@@ -165,7 +172,18 @@ pub trait Progress {
 pub struct Unwatched;
 
 impl Progress for Unwatched {
-    fn at(&self, _done: usize, _total: usize) {}
+    fn enumerating(&self, _agent: Option<&Descriptor>) {}
+
+    fn at(&self, _done: usize, _total: usize, _item: Option<&Item>) {}
+}
+
+/// The pass's watcher, telling a Scan's [`Progress`].
+struct Passing<'a>(&'a dyn Progress);
+
+impl Watch for Passing<'_> {
+    fn checked(&self, done: usize, total: usize, item: &Item) {
+        self.0.at(done, total, Some(item));
+    }
 }
 
 /// Runs one Full Scan over one machine and writes what it decided.
@@ -251,6 +269,7 @@ impl FullScan<'_> {
     pub fn run(&self, trigger: Trigger) -> Result<ScanRun, ScanError> {
         let started_at = Timestamp::now();
         let began = std::time::Instant::now();
+        self.progress.enumerating(None);
 
         let inventory = pool(self.machine, &self.access);
         // The registration check runs after detection and before the
@@ -263,13 +282,14 @@ impl FullScan<'_> {
             check_the_gate(self.machine, &inventory, self.directory, self.keys, command)
         });
         let adapters = adapters();
-        let mut survey = survey(
+        let mut survey = survey_watched(
             self.machine,
             &adapters,
             &inventory.roots,
             Covering::Everything(&inventory),
+            self.progress,
         );
-        self.progress.at(0, survey.enumeration.items.len());
+        self.progress.at(0, survey.enumeration.items.len(), None);
 
         let descriptors: Vec<Descriptor> = adapters
             .iter()
@@ -294,11 +314,13 @@ impl FullScan<'_> {
             judge: self.judge,
             workers: self.workers,
             acting: self.acts.then_some(&acting),
+            progress: self.progress,
         }
         .over(&mut survey.enumeration, began)?;
         self.progress.at(
             survey.enumeration.items.len(),
             survey.enumeration.items.len(),
+            None,
         );
         let mut overview = of_the_full_scan(
             &inventory.detected,
@@ -455,12 +477,29 @@ pub fn survey(
     roots: &[PathBuf],
     covering: Covering<'_>,
 ) -> Survey {
+    survey_watched(machine, adapters, roots, covering, &Unwatched)
+}
+
+/// The same, telling `progress` which adapter's Surfaces it enumerates: the
+/// workspace adapter's while it reads the git files of every root, then each
+/// adapter's in turn.
+pub fn survey_watched(
+    machine: &Machine,
+    adapters: &[Box<dyn SurfaceAdapter>],
+    roots: &[PathBuf],
+    covering: Covering<'_>,
+    progress: &dyn Progress,
+) -> Survey {
     let host = machine.host(roots.to_vec());
     let workspace = agentsweep_adapter_workspace::Workspace::new();
+    if let Some(first) = adapters.first() {
+        progress.enumerating(Some(first.descriptor()));
+    }
     let provenances = workspace.provenances(&host, roots);
 
     let mut survey = Survey::default();
     for adapter in adapters {
+        progress.enumerating(Some(adapter.descriptor()));
         let found = adapter.enumerate(&host, roots);
         let mut declared = adapter.watch_roots(&found);
         for root in declared.recursive.drain(..) {
@@ -583,6 +622,8 @@ pub struct Judgement<'a> {
     pub workers: usize,
     /// Where the pass may act by itself, absent when it may not.
     pub acting: Option<&'a Acting<'a>>,
+    /// Who is told how far the Tiers have got.
+    pub progress: &'a dyn Progress,
 }
 
 impl Judgement<'_> {
@@ -633,6 +674,7 @@ impl Judgement<'_> {
             .caching(self.cache, rule_pack, &label)
             .judging(verdicts)
             .with_workers(self.workers)
+            .watched(&Passing(self.progress))
             .at(self.at)
             .over(enumeration)
             .map_err(|error| ScanError::Pass(error.to_string()))?;

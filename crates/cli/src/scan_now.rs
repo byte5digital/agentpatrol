@@ -115,6 +115,7 @@ pub fn follow(
 ) -> Result<Option<ScanSummary>, ClientError> {
     let mut ours_began = !started;
     let mut width = 0;
+    let mut said = String::new();
     loop {
         let Some(event) = next()? else {
             if terminal && width > 0 {
@@ -129,8 +130,14 @@ pub fn follow(
             } => {
                 ours_began = true;
             }
-            StateEvent::ScanProgress { done, total } => {
+            StateEvent::ScanProgress { done, total, .. } => {
+                // Every Agent the Scan enumerates is an event of its own; the
+                // line says the same for each of them.
                 let line = progress_line(done, total);
+                if line == said {
+                    continue;
+                }
+                said.clone_from(&line);
                 if terminal {
                     width = width.max(line.len());
                     let _ = write!(out, "\r{line:<width$}");
@@ -214,6 +221,15 @@ mod tests {
         })
     }
 
+    fn progress(done: usize, total: usize) -> StateEvent {
+        StateEvent::ScanProgress {
+            done,
+            total,
+            phase: agentsweep_ipc::protocol::ScanPhase::of_total(total),
+            in_hand: None,
+        }
+    }
+
     fn started(trigger: Trigger) -> StateEvent {
         StateEvent::ScanStarted {
             trigger,
@@ -248,20 +264,22 @@ mod tests {
         assert!(parse(&words(&["--all"])).is_err());
     }
 
-    /// Off a terminal, every progress event is a line of its own, and the
-    /// stream is read up to the Full Scan this command started.
+    /// Off a terminal, every progress event that says something new is a
+    /// line of its own, and the stream is read up to the Full Scan this
+    /// command started.
     #[test]
     fn progress_is_one_line_per_event_off_a_terminal() {
         let (printed, summary) = played(
             vec![
                 started(Trigger::ScanNow),
-                StateEvent::ScanProgress { done: 0, total: 0 },
-                StateEvent::ScanProgress { done: 0, total: 3 },
-                StateEvent::ScanProgress { done: 3, total: 3 },
+                progress(0, 0),
+                progress(0, 0),
+                progress(0, 3),
+                progress(3, 3),
                 StateEvent::ScanFinished {
                     summary: summary(ScanKind::Full, Trigger::ScanNow),
                 },
-                StateEvent::ScanProgress { done: 9, total: 9 },
+                progress(9, 9),
             ],
             true,
             false,
@@ -280,8 +298,8 @@ mod tests {
         let (printed, _) = played(
             vec![
                 started(Trigger::ScanNow),
-                StateEvent::ScanProgress { done: 0, total: 0 },
-                StateEvent::ScanProgress { done: 3, total: 3 },
+                progress(0, 0),
+                progress(3, 3),
                 StateEvent::ScanFinished {
                     summary: summary(ScanKind::Full, Trigger::ScanNow),
                 },

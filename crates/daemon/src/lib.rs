@@ -73,6 +73,7 @@ pub mod overview;
 pub mod peer_check;
 pub mod permission;
 pub mod preview;
+pub mod progress;
 pub mod rule_feed;
 pub mod service;
 pub mod sessions;

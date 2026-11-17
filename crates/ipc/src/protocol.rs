@@ -40,6 +40,7 @@ pub use crate::engine::{EngineChange, EngineState};
 pub use crate::gate::{GateEvent, GateReason, GateRequest, GateTool, GateVerdict, McpServerRef};
 pub use crate::judge::{JudgeAnswer, JudgeOutcome, JudgeRequest};
 pub use crate::preview::{PreviewOutcome, RequestPreview};
+pub use crate::progress::{InHand, ScanPhase};
 pub use crate::settings::{SettingsChange, SettingsState};
 pub use crate::uninstall::{UninstallChoice, UninstallReport};
 
@@ -717,12 +718,18 @@ pub enum StateEvent {
         /// When.
         at: Timestamp,
     },
-    /// A Scan got this far.
+    /// A Full Scan got this far. Sent during every Full Scan, a few times a
+    /// second at most; a Change Scan sends none (spec section 6.3).
     ScanProgress {
         /// How many Items it has looked at.
         done: usize,
         /// How many it has, zero while it is still enumerating.
         total: usize,
+        /// Whether it is still enumerating or runs the Tiers. Additive: an
+        /// event without it is read from its total.
+        phase: ScanPhase,
+        /// The Agent or the project in hand, absent when there is none.
+        in_hand: Option<InHand>,
     },
     /// The AI Judgement queue got this far: the line "AI check: 3 of 12"
     /// that the Developer Posture and the Activity show (spec section 6.4).
@@ -1914,9 +1921,18 @@ impl Message {
                         map.insert("trigger".to_string(), Value::from(trigger.as_str()));
                         map.insert("at".to_string(), Value::from(at.to_string()));
                     }
-                    StateEvent::ScanProgress { done, total } => {
+                    StateEvent::ScanProgress {
+                        done,
+                        total,
+                        phase,
+                        in_hand,
+                    } => {
                         map.insert("done".to_string(), Value::from(*done as u64));
                         map.insert("total".to_string(), Value::from(*total as u64));
+                        map.insert("phase".to_string(), Value::from(phase.as_str()));
+                        if let Some(in_hand) = in_hand {
+                            map.insert("in_hand".to_string(), in_hand.to_value());
+                        }
                     }
                     StateEvent::JudgementProgress { done, total } => {
                         map.insert("done".to_string(), Value::from(*done as u64));
@@ -2008,10 +2024,18 @@ impl Message {
                         trigger: Trigger::parse(text("trigger")?)?,
                         at: Timestamp::parse(text("at")?)?,
                     },
-                    "scan-progress" => StateEvent::ScanProgress {
-                        done: count("done")? as usize,
-                        total: count("total")? as usize,
-                    },
+                    "scan-progress" => {
+                        let total = count("total")? as usize;
+                        StateEvent::ScanProgress {
+                            done: count("done")? as usize,
+                            total,
+                            phase: match text("phase") {
+                                Some(phase) => ScanPhase::parse(phase)?,
+                                None => ScanPhase::of_total(total),
+                            },
+                            in_hand: value.get("in_hand").and_then(InHand::from_value),
+                        }
+                    }
                     "judgement-progress" => StateEvent::JudgementProgress {
                         done: count("done")? as usize,
                         total: count("total")? as usize,
@@ -2120,6 +2144,29 @@ mod tests {
         assert_eq!(Message::from_value(&value), Some(message), "{value}");
     }
 
+    /// A progress event from before the phase and the Item in hand reads
+    /// its phase from its total and names nothing in hand.
+    #[test]
+    fn a_progress_event_without_its_phase_reads_from_its_total() {
+        for (total, phase) in [(0, ScanPhase::Enumerating), (4, ScanPhase::Checking)] {
+            let value = serde_json::json!({
+                "type": "event",
+                "event": "scan-progress",
+                "done": 0,
+                "total": total,
+            });
+            assert_eq!(
+                Message::from_value(&value),
+                Some(Message::Event(StateEvent::ScanProgress {
+                    done: 0,
+                    total,
+                    phase,
+                    in_hand: None,
+                }))
+            );
+        }
+    }
+
     #[test]
     fn every_message_of_the_protocol_round_trips() {
         round_trip(Message::Hello(Hello::of(Role::Cli)));
@@ -2150,8 +2197,30 @@ mod tests {
             at: moment("2026-09-24T08:00:00.000Z"),
         }));
         round_trip(Message::Event(StateEvent::ScanProgress {
+            done: 0,
+            total: 0,
+            phase: ScanPhase::Enumerating,
+            in_hand: None,
+        }));
+        round_trip(Message::Event(StateEvent::ScanProgress {
+            done: 0,
+            total: 0,
+            phase: ScanPhase::Enumerating,
+            in_hand: Some(InHand {
+                agent: "claude-code".to_string(),
+                display_name: "Claude Code".to_string(),
+                project: None,
+            }),
+        }));
+        round_trip(Message::Event(StateEvent::ScanProgress {
             done: 3,
             total: 17,
+            phase: ScanPhase::Checking,
+            in_hand: Some(InHand {
+                agent: "codex".to_string(),
+                display_name: "Codex".to_string(),
+                project: Some("/tmp/project.invalid/app".to_string()),
+            }),
         }));
         round_trip(Message::Event(StateEvent::JudgementProgress {
             done: 3,
