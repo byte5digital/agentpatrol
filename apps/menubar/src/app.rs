@@ -1983,9 +1983,13 @@ pub fn run(start: Start) {
                 .spawn(move || {
                     // A launch where the daemon is not registered shows the
                     // onboarding wizard and registers nothing; its screen 2
-                    // is the Inventory, which the app runs itself. Any other
-                    // launch by the user opens the window (spec section 8.1).
-                    let unregistered = supervision::shows_onboarding(&*services);
+                    // is the Inventory, which the app runs itself. A
+                    // reinstall over kept data skips it and waits for Turn
+                    // on protection. Any other launch by the user opens the
+                    // window (spec section 8.1).
+                    let earlier = DataDirectory::for_user()
+                        .is_some_and(|directory| supervision::earlier_install(&directory));
+                    let unregistered = supervision::shows_onboarding(&*services, earlier);
                     if start.opens_window(unregistered) {
                         show_window(&handle);
                     }

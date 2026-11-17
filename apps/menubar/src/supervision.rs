@@ -12,6 +12,8 @@
 use std::fmt;
 use std::time::{Duration, Instant};
 
+use agentsweep_core::paths::DataDirectory;
+
 use crate::popover::Off;
 
 /// Where one SMAppService registration stands, as the operating system says.
@@ -89,21 +91,32 @@ fn unregistered(state: ServiceState) -> bool {
     matches!(state, ServiceState::NotRegistered | ServiceState::NotFound)
 }
 
-/// Whether this launch shows the onboarding wizard: whenever the daemon is
-/// not registered (the owner's decision of 2026-10-14). Onboarding is done
-/// when the daemon is registered, so no flag is kept, and a reinstall after
-/// Uninstall shows it again. A developer run supervises nothing and never
-/// shows it.
-pub fn shows_onboarding(services: &dyn Services) -> bool {
-    services.supervises() && unregistered(services.agent())
+/// Whether the data directory holds the settings of an earlier install,
+/// which the daemon writes once onboarding handed them over. Only whether
+/// the file exists is looked at, never what it holds. Delete everything
+/// removes the directory, and with it this answer.
+pub fn earlier_install(directory: &DataDirectory) -> bool {
+    directory.settings_file().exists()
 }
 
-/// What every launch of the app does. A launch that shows the onboarding
-/// wizard registers nothing: onboarding screen 5 does (spec section 6.8).
-/// Any other launch registers the login item when it is not registered and
-/// leaves alone what is.
+/// Whether this launch shows the onboarding wizard: whenever the daemon is
+/// not registered (the owner's decision of 2026-10-14), unless
+/// `earlier_install` says the data of an earlier install was kept, as after
+/// Uninstall with Keep my data (the owner's decision of 2026-11-17). Then
+/// Protection off offers Turn on protection instead. Onboarding is done when
+/// the daemon is registered, so no flag is kept. A developer run supervises
+/// nothing and never shows it.
+pub fn shows_onboarding(services: &dyn Services, earlier_install: bool) -> bool {
+    services.supervises() && unregistered(services.agent()) && !earlier_install
+}
+
+/// What every launch of the app does. A launch while the daemon is not
+/// registered registers nothing: onboarding screen 5 does (spec section
+/// 6.8), or Turn on protection after a reinstall over kept data. Any other
+/// launch registers the login item when it is not registered and leaves
+/// alone what is.
 pub fn on_launch(services: &dyn Services) -> Launched {
-    if shows_onboarding(services) {
+    if services.supervises() && unregistered(services.agent()) {
         return Launched::default();
     }
     register(services)
@@ -778,10 +791,45 @@ pub(crate) mod tests {
     fn a_launch_that_shows_the_wizard_registers_nothing() {
         for state in [ServiceState::NotRegistered, ServiceState::NotFound] {
             let services = Recorded::with(state, state);
-            assert!(shows_onboarding(&services), "{state}");
+            assert!(shows_onboarding(&services, false), "{state}");
             assert_eq!(on_launch(&services), Launched::default());
             assert!(services.calls().is_empty(), "{state}");
         }
+    }
+
+    /// A reinstall over kept data shows no wizard and registers nothing:
+    /// Protection off offers Turn on protection instead.
+    #[test]
+    fn a_reinstall_over_kept_data_skips_the_wizard_and_registers_nothing() {
+        for state in [ServiceState::NotRegistered, ServiceState::NotFound] {
+            let services = Recorded::with(state, state);
+            assert!(!shows_onboarding(&services, true), "{state}");
+            assert_eq!(on_launch(&services), Launched::default());
+            assert!(services.calls().is_empty(), "{state}");
+            assert_eq!(
+                off_while_silent(&services),
+                Some(Off::NotRegistered),
+                "{state}"
+            );
+        }
+        // Kept data changes nothing once the daemon is registered.
+        let services = Recorded::with(ServiceState::Enabled, ServiceState::Enabled);
+        assert!(!shows_onboarding(&services, true));
+    }
+
+    /// An earlier install is told by the settings file the daemon wrote. An
+    /// empty or missing data directory, as after Delete everything, is none.
+    #[test]
+    fn an_earlier_install_is_told_by_its_settings_file() {
+        let home = tempfile::tempdir().expect("a temporary directory");
+        let directory = DataDirectory::under_home(home.path());
+        assert!(!earlier_install(&directory));
+        std::fs::create_dir_all(directory.root()).expect("the data directory");
+        assert!(!earlier_install(&directory));
+        std::fs::write(directory.settings_file(), b"{}").expect("a settings file");
+        assert!(earlier_install(&directory));
+        std::fs::remove_dir_all(directory.root()).expect("Delete everything");
+        assert!(!earlier_install(&directory));
     }
 
     /// Screen 5 registers the daemon and the login item.
@@ -796,7 +844,7 @@ pub(crate) mod tests {
             services.calls(),
             vec!["register agent", "register login item"]
         );
-        assert!(!shows_onboarding(&services));
+        assert!(!shows_onboarding(&services, false));
     }
 
     /// SMAppService says "not found" for an agent that was never registered,
@@ -817,7 +865,7 @@ pub(crate) mod tests {
     #[test]
     fn a_launch_that_does_not_show_the_wizard_registers_as_before() {
         let services = Recorded::with(ServiceState::Enabled, ServiceState::NotRegistered);
-        assert!(!shows_onboarding(&services));
+        assert!(!shows_onboarding(&services, false));
         let launched = on_launch(&services);
         assert!(!launched.registered_agent && launched.registered_login_item);
         assert_eq!(services.calls(), vec!["register login item"]);
@@ -826,7 +874,7 @@ pub(crate) mod tests {
     #[test]
     fn a_later_launch_leaves_what_is_registered_alone() {
         let services = Recorded::with(ServiceState::Enabled, ServiceState::Enabled);
-        assert!(!shows_onboarding(&services));
+        assert!(!shows_onboarding(&services, false));
         assert_eq!(on_launch(&services), Launched::default());
         assert!(services.calls().is_empty());
     }
@@ -1126,7 +1174,8 @@ pub(crate) mod tests {
     /// Protection to what the socket says.
     #[test]
     fn a_developer_run_supervises_nothing() {
-        assert!(!shows_onboarding(&Unsupervised));
+        assert!(!shows_onboarding(&Unsupervised, false));
+        assert!(!shows_onboarding(&Unsupervised, true));
         assert_eq!(on_launch(&Unsupervised), Launched::default());
         assert_eq!(register(&Unsupervised), Launched::default());
         assert_eq!(off_by_registration(Unsupervised.agent()), None);
