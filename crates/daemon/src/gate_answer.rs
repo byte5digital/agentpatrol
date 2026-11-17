@@ -10,9 +10,11 @@
 //!
 //! - On a turn, the project `cwd` resolves to (the deepest pooled root that is
 //!   `cwd` or lies above it) while it has an open Threat Finding on a
-//!   Project-scope Item; that check alone needs a pooled root.
-//! - On a turn, wherever `cwd` is, one of the Agent's User-scope instruction
-//!   files with an open Threat Finding.
+//!   Project-scope Item, or on a User-scope Item of the Agent that serves that
+//!   project alone, such as the memory the Agent keeps for it; that check
+//!   alone needs a pooled root.
+//! - On a turn, wherever `cwd` is, one of the Agent's main instruction files
+//!   with an open Threat Finding.
 //! - On any event, wherever `cwd` is, a User-scope Item with an open Threat
 //!   Finding that the request names: by skill name, by MCP server name and
 //!   source (the name alone when no source is given), or by a path token that
@@ -65,8 +67,14 @@ pub fn verdict(
         if let Some(root) = &project {
             let count = facts
                 .iter()
-                .filter(|facts| facts.scope == "project")
-                .filter(|facts| facts.project_root.as_deref().map(fold).as_ref() == Some(root))
+                .filter(|facts| match facts.scope.as_str() {
+                    "project" => facts.project_root.as_deref().map(fold).as_ref() == Some(root),
+                    "user" => {
+                        facts.agent == request.agent
+                            && facts.written_for.iter().any(|served| &fold(served) == root)
+                    }
+                    _ => false,
+                })
                 .count();
             if count > 0 {
                 return GateVerdict::Block {
@@ -225,6 +233,7 @@ mod tests {
             resolved: None,
             script: None,
             names: Vec::new(),
+            written_for: Vec::new(),
         }
     }
 
@@ -350,6 +359,64 @@ mod tests {
                 &request(GateEvent::UserPromptSubmit, "/work/one", None)
             ),
             GateVerdict::Clear
+        );
+    }
+
+    /// A memory file the Agent keeps for one project blocks the turns of
+    /// that Agent in that project alone, as part of the project's count, and
+    /// nothing anywhere else; the main instruction files still block every
+    /// turn.
+    #[test]
+    fn a_memory_file_blocks_only_the_turns_of_its_own_project() {
+        let mut memory = user(
+            Kind::InstructionFile,
+            "/home/u/.claude/projects/-work-one/memory/MEMORY.md",
+        );
+        memory.written_for = vec![PathBuf::from("/work/one")];
+        let turn = |cwd: &str| request(GateEvent::UserPromptSubmit, cwd, None);
+        for cwd in ["/work/one", "/work/one/src"] {
+            assert_eq!(
+                ask(vec![memory.clone()], &turn(cwd)),
+                block(1, GateReason::Project),
+                "{cwd}"
+            );
+        }
+        // A nested project of its own, and no project at all.
+        assert_eq!(
+            ask(vec![memory.clone()], &turn("/work/one/inner")),
+            GateVerdict::Clear
+        );
+        assert_eq!(
+            ask(vec![memory.clone()], &turn("/tmp/elsewhere")),
+            GateVerdict::Unknown
+        );
+        // Another Agent's turn in the same project.
+        let mut codex = turn("/work/one");
+        codex.agent = "codex".to_string();
+        assert_eq!(ask(vec![memory.clone()], &codex), GateVerdict::Clear);
+        // A tool call in the project is not a turn.
+        assert_eq!(
+            ask(vec![memory.clone()], &call("/work/one", tokens(&["x"]))),
+            GateVerdict::Clear
+        );
+        // A memory file of a project no pooled root is blocks nothing.
+        let mut unplaced = memory.clone();
+        unplaced.written_for = Vec::new();
+        assert_eq!(ask(vec![unplaced], &turn("/work/one")), GateVerdict::Clear);
+        // It counts with the project's own Findings.
+        let mut project = user(Kind::InstructionFile, "/work/one/CLAUDE.md");
+        project.scope = "project".to_string();
+        project.project_root = Some(PathBuf::from("/work/one"));
+        assert_eq!(
+            ask(vec![memory.clone(), project], &turn("/work/one")),
+            block(2, GateReason::Project)
+        );
+        // The main instruction file blocks wherever the turn is.
+        let mut instructions = user(Kind::InstructionFile, "/home/u/.claude/CLAUDE.md");
+        instructions.user_instruction_file = true;
+        assert_eq!(
+            ask(vec![memory, instructions], &turn("/work/one/inner")),
+            block(1, GateReason::UserInstructions)
         );
     }
 
