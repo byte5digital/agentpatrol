@@ -662,9 +662,22 @@ impl ClaudeCode {
     /// injects at the start of every session. Its Provenance is AgentWritten,
     /// which is what keeps a file the Agent rewrites every day out of Drift
     /// (spec section 4.6.5) while every Tier still reads it.
+    ///
+    /// A memory file serves its own project alone. The folder is named after
+    /// the project root the way [`slug_of`] names it, so the pooled roots
+    /// named the same are the project it was written for; a folder no pooled
+    /// root is named after serves none of them.
     fn memory_files(&self, host: &Host, config_dir: &Path, enumeration: &mut Enumeration) {
         let placement = Placement::user().from(Provenance::AgentWritten);
         for project in tree::directories_in(host, &config_dir.join(PROJECTS_DIRECTORY)) {
+            let folder = project.file_name().unwrap_or_default().to_string_lossy();
+            let roots: Vec<PathBuf> = host
+                .project_roots()
+                .iter()
+                .filter(|root| slug_of(&root.display().to_string()) == folder)
+                .cloned()
+                .collect();
+            let first = enumeration.items.len();
             files::instruction_files_in(
                 host,
                 &placement,
@@ -672,6 +685,9 @@ impl ClaudeCode {
                 true,
                 enumeration,
             );
+            for item in &mut enumeration.items[first..] {
+                item.written_for = Some(roots.clone());
+            }
         }
     }
 
@@ -2530,6 +2546,9 @@ mod tests {
         assert_eq!(item(&enumeration, "~/.claude/CLAUDE.md").scope, Scope::User);
         let memory = item(&enumeration, "/memory/MEMORY.md");
         assert_eq!(memory.provenance, Provenance::AgentWritten);
+        // A memory folder no pooled root is named after serves no project.
+        assert_eq!(memory.written_for, Some(Vec::new()));
+        assert_eq!(item(&enumeration, "~/.claude/CLAUDE.md").written_for, None);
         assert_eq!(
             item(&enumeration, "/instruction-file/.claude/rules/tests.md").scope,
             Scope::Project(machine.project())
@@ -2537,6 +2556,42 @@ mod tests {
         assert_eq!(
             item(&enumeration, "/instruction-file/CLAUDE.local.md").kind,
             Kind::InstructionFile
+        );
+    }
+
+    /// The memory Claude Code keeps for one project serves that project
+    /// alone: its folder is named after the project root, and the pooled root
+    /// it is named after is the project it was written for.
+    #[test]
+    fn a_memory_file_is_written_for_the_pooled_root_its_folder_is_named_after() {
+        let machine = Machine::new("memory");
+        let slug = slug_of(&machine.project().display().to_string());
+        machine.write(
+            &format!("home/.claude/projects/{slug}/memory/MEMORY.md"),
+            "- the user prefers prose\n",
+        );
+        machine.write(
+            &format!("home/.claude/projects/{slug}/memory/topics/style.md"),
+            "- short sentences\n",
+        );
+        machine.write(
+            "home/.claude/projects/-elsewhere/memory/MEMORY.md",
+            "- another project\n",
+        );
+
+        let enumeration = machine.enumerate();
+
+        for ends_with in [
+            &format!("{slug}/memory/MEMORY.md"),
+            &format!("{slug}/memory/topics/style.md"),
+        ] {
+            let memory = item(&enumeration, ends_with);
+            assert_eq!(memory.scope, Scope::User);
+            assert_eq!(memory.written_for, Some(vec![machine.project()]));
+        }
+        assert_eq!(
+            item(&enumeration, "-elsewhere/memory/MEMORY.md").written_for,
+            Some(Vec::new())
         );
     }
 

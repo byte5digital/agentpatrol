@@ -5,11 +5,13 @@
 //! flagged has to be written down beside the Findings: which project roots are
 //! pooled, and for every open Threat Finding the facts spec section 7.1
 //! matches on. Those are the Agent, the Scope with its project root, the kind,
-//! whether the Item is a User-scope instruction file, the Item's place on disk
-//! and the names the Agent invokes it by.
+//! whether the Item is one of the Agent's main instruction files, the projects
+//! a User-scope Item serves alone, the Item's place on disk and the names the
+//! Agent invokes it by.
 //!
-//! The names are the Surface Adapter's ([`Item::invocations`]); nothing here
-//! works one out. Nothing here is a sensitive value either: a place on disk is
+//! The names are the Surface Adapter's ([`Item::invocations`]), and so are the
+//! projects a memory file serves ([`Item::written_for`]); nothing here works
+//! one out. Nothing here is a sensitive value either: a place on disk is
 //! a path and a name is a name, and no env, header, token or `.env` content is
 //! ever read into a fact. The facts are written only for open Threat Findings
 //! and leave with the Finding when it is stopped, trusted, acknowledged or
@@ -36,7 +38,8 @@ pub struct GateFacts {
     pub project_root: Option<PathBuf>,
     /// The Surface kind.
     pub kind: Kind,
-    /// True for a User-scope instruction file, which blocks every turn.
+    /// True for one of the Agent's main instruction files, a User-scope
+    /// instruction file that serves every project, which blocks every turn.
     pub user_instruction_file: bool,
     /// Where the Item sits on disk: the tree root for a tree, the file for a
     /// file, the file an entry is written in for an entry, and the link's own
@@ -51,6 +54,11 @@ pub struct GateFacts {
     pub script: Option<PathBuf>,
     /// The names the Agent invokes the Item by.
     pub names: Vec<Invocation>,
+    /// The pooled project roots a User-scope Item serves alone, such as the
+    /// memory an Agent keeps for one project, whose turns it blocks. Empty
+    /// for an Item that serves every project, and for one whose project no
+    /// pooled root is.
+    pub written_for: Vec<PathBuf>,
 }
 
 impl GateFacts {
@@ -72,7 +80,9 @@ impl GateFacts {
             scope: item.scope.as_str().to_string(),
             project_root: item.scope.root().map(PathBuf::from),
             kind: item.kind,
-            user_instruction_file: item.kind == Kind::InstructionFile && item.scope == Scope::User,
+            user_instruction_file: item.kind == Kind::InstructionFile
+                && item.scope == Scope::User
+                && item.written_for.is_none(),
             path: item.path.clone(),
             resolved: match item.is_symlink && !item.link_target.is_empty() {
                 true => Some(PathBuf::from(&item.link_target)),
@@ -80,6 +90,7 @@ impl GateFacts {
             },
             script,
             names: item.invocations.clone(),
+            written_for: item.written_for.clone().unwrap_or_default(),
         }
     }
 
@@ -128,10 +139,21 @@ impl GateFacts {
             "user_instruction_file".to_string(),
             Value::from(self.user_instruction_file),
         );
+        map.insert(
+            "written_for".to_string(),
+            Value::Array(
+                self.written_for
+                    .iter()
+                    .map(|root| Value::from(root.display().to_string()))
+                    .collect(),
+            ),
+        );
         Value::Object(map)
     }
 
-    /// Reads back what [`GateFacts::to_value`] wrote.
+    /// Reads back what [`GateFacts::to_value`] wrote. Facts written before a
+    /// memory file carried its projects have none, and read as serving every
+    /// project, the way they were written.
     pub fn from_value(value: &Value) -> Option<GateFacts> {
         let text = |field: &str| value.get(field).and_then(Value::as_str);
         let path = |field: &str| -> Option<Option<PathBuf>> {
@@ -152,6 +174,14 @@ impl GateFacts {
                 })
             })
             .collect::<Option<Vec<_>>>()?;
+        let written_for = match value.get("written_for") {
+            None => Vec::new(),
+            Some(roots) => roots
+                .as_array()?
+                .iter()
+                .map(|root| root.as_str().map(PathBuf::from))
+                .collect::<Option<Vec<_>>>()?,
+        };
         Some(GateFacts {
             agent: text("agent")?.to_string(),
             scope: text("scope")?.to_string(),
@@ -162,6 +192,7 @@ impl GateFacts {
             resolved: path("resolved")?,
             script: path("script")?,
             names,
+            written_for,
         })
     }
 }
@@ -343,6 +374,36 @@ mod tests {
         assert_eq!(facts.project_root, Some(PathBuf::from("/work/p")));
     }
 
+    /// A memory file the Agent keeps for one project is a User-scope
+    /// instruction file that serves that project alone: it carries the roots
+    /// it was written for and is none of the main instruction files that
+    /// block every turn.
+    #[test]
+    fn a_memory_file_carries_its_projects_and_blocks_no_turn_elsewhere() {
+        let memory = |roots: Vec<PathBuf>| {
+            Item::file(
+                "claude-code",
+                Scope::User,
+                Kind::InstructionFile,
+                "~/.claude/projects/-work-p/memory/MEMORY.md",
+                PathBuf::from("/home/u/.claude/projects/-work-p/memory/MEMORY.md"),
+                Provenance::AgentWritten,
+                Activation::Active,
+                b"x".to_vec(),
+            )
+            .written_for(roots)
+        };
+        let facts = GateFacts::of(&memory(vec![PathBuf::from("/work/p")]));
+        assert!(!facts.user_instruction_file);
+        assert_eq!(facts.scope, "user");
+        assert_eq!(facts.project_root, None);
+        assert_eq!(facts.written_for, vec![PathBuf::from("/work/p")]);
+        // A memory file of a project no pooled root is serves no project.
+        let facts = GateFacts::of(&memory(Vec::new()));
+        assert!(!facts.user_instruction_file);
+        assert!(facts.written_for.is_empty());
+    }
+
     #[test]
     fn a_hook_entry_carries_the_script_its_adapter_resolved() {
         let view = HookView {
@@ -403,6 +464,38 @@ mod tests {
         );
         let read = GateRecord::from_value(&record.to_value()).expect("a record");
         assert_eq!(read, record);
+    }
+
+    #[test]
+    fn the_projects_a_memory_file_serves_round_trip() {
+        let memory = Item::file(
+            "claude-code",
+            Scope::User,
+            Kind::InstructionFile,
+            "~/.claude/projects/-work-p/memory/MEMORY.md",
+            PathBuf::from("/home/u/.claude/projects/-work-p/memory/MEMORY.md"),
+            Provenance::AgentWritten,
+            Activation::Active,
+            b"x".to_vec(),
+        )
+        .written_for(vec![PathBuf::from("/work/p"), PathBuf::from("/work-p")]);
+        let facts = GateFacts::of(&memory);
+        assert_eq!(GateFacts::from_value(&facts.to_value()), Some(facts));
+    }
+
+    /// Facts written before a memory file carried its projects read back as
+    /// serving no project in particular.
+    #[test]
+    fn older_facts_without_the_projects_still_read() {
+        let mut older = GateFacts::of(&skill()).to_value();
+        older
+            .as_object_mut()
+            .expect("an object")
+            .remove("written_for")
+            .expect("the projects were written");
+        let read = GateFacts::from_value(&older).expect("older facts read");
+        assert!(read.written_for.is_empty());
+        assert_eq!(read, GateFacts::of(&skill()));
     }
 
     /// Sensitive values never become a fact: the facts of an MCP server with
