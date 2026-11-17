@@ -212,3 +212,16 @@ fn the_two_advanced_fields_take_the_pane_width() {
         "the layout follows no Posture"
     );
 }
+
+/// The bar above the panes shows only while it says something: Protection
+/// off. Otherwise it is hidden, with its padding and its rule.
+#[test]
+fn no_empty_bar_stands_above_the_panes() {
+    let page = ui("window.html");
+    assert!(page.contains("<header id=\"off-bar\" hidden>"), "the bar");
+    let script = ui("window.js");
+    assert!(
+        script.contains("$(\"off-bar\").hidden = list.off === null;"),
+        "the bar follows Protection off"
+    );
+}

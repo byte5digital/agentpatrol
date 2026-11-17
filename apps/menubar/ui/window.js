@@ -1385,7 +1385,7 @@ for (const tab of $("settings-tabs").querySelectorAll("[role=tab]")) {
 function render(list) {
   view = list;
   takePosture(list.posture);
-  $("off").hidden = list.off === null;
+  $("off-bar").hidden = list.off === null;
   $("off").textContent = list.off === null ? "" : `Protection is off: ${list.off}.`;
   renderOverview(list.overview);
   renderSettings(list.settings);
