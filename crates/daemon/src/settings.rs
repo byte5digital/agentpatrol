@@ -8,6 +8,9 @@
 //! this request, the `rule-feed` request or the `engine` requests, every
 //! subscriber is told where every choice stands now.
 //!
+//! Moving the Posture to Simple switches off an engine outside the eval bar
+//! (spec section 4.4), with an `engine-changed` event of its own.
+//!
 //! The config-dir override takes effect on the next Full Scan: every Host
 //! the daemon builds after the change carries it, and the Surface Adapters
 //! read the overridden directory in place of their default one.
@@ -16,8 +19,9 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use agentsweep_core::eventlog::Actor;
 use agentsweep_core::settings::{
-    CONFIG_DIRS, ChoiceRefused, ConfigDir, SettingsFile, SettingsWriter,
+    CONFIG_DIRS, ChoiceRefused, ConfigDir, Posture, SettingsFile, SettingsWriter,
 };
 use agentsweep_ipc::protocol::{RequestError, SettingsChange, SettingsState, StateEvent};
 
@@ -168,6 +172,11 @@ impl Daemon {
         };
         if wrote || feed_moved {
             self.tell_settings();
+        }
+        // The Simple Posture runs no engine outside the eval bar: moving to
+        // it switches such an engine off, with its own event.
+        if change.posture == Some(Posture::Simple) {
+            self.keep_the_engine_within_the_bar(Actor::User);
         }
         // The first choice handed over releases a first Rule Feed fetch
         // still held for it; the toggle has moved by now, so a feed switched

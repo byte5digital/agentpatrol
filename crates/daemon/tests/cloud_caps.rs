@@ -217,6 +217,8 @@ impl Sandbox {
         sandbox.write(".claude.json", "{\"projects\": {}}\n");
         let settings = Settings {
             judgement,
+            // An engine outside the eval bar runs in the Developer Posture only.
+            posture: settings::Posture::Developer,
             ..Settings::default()
         };
         SettingsWriter::write(&SettingsFile::in_data_directory(&sandbox.data()), &settings)

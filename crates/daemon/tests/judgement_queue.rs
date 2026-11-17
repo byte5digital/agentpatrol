@@ -271,6 +271,8 @@ impl Sandbox {
         sandbox.write(".claude.json", "{\"projects\": {}}\n");
         let mut settings = Settings::default();
         settings.judgement.engine = engine;
+        // An engine outside the eval bar runs in the Developer Posture only.
+        settings.posture = settings::Posture::Developer;
         settings.judgement.ollama_model = "qwen3:8b".to_string();
         SettingsWriter::write(&SettingsFile::in_data_directory(&sandbox.data()), &settings)
             .expect("the settings are written");
@@ -979,6 +981,7 @@ fn ollama_verdicts_are_cached_and_kept_under_the_tag_and_digest() {
     );
     let mut settings = Settings::default();
     settings.judgement.engine = settings::JudgementEngine::Ollama;
+    settings.posture = settings::Posture::Developer;
     settings.judgement.ollama_model = "qwen3:8b".to_string();
     settings.judgement.ollama_address =
         settings::OllamaAddress::parse(&ollama.address().to_string()).expect("loopback");

@@ -73,6 +73,13 @@ fn ollama_host_and_anthropic_api_key_in_the_environment_change_nothing() {
         "the environment's key is not a key"
     );
 
+    // An engine outside the eval bar runs in the Developer Posture only.
+    client
+        .change_settings(agentsweep_ipc::protocol::SettingsChange {
+            posture: Some(agentsweep_core::settings::Posture::Developer),
+            ..Default::default()
+        })
+        .expect("the Developer Posture");
     let state = client
         .change_engine(EngineChange {
             engine: Some(JudgementEngine::Ollama),
