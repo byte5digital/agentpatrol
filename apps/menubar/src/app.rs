@@ -1711,9 +1711,25 @@ fn toggle(app: &AppHandle, anchor: Rect) {
     if let Some(notifications) = app.try_state::<Notifications>() {
         notifications.seen();
     }
+    activate(app);
     let _ = window.show();
     let _ = window.set_focus();
 }
+
+/// Makes AgentSweep the active app. A click on the menu bar icon does not,
+/// and a window of an app that is not active never loses the focus, so the
+/// popover would not hide on a click outside it.
+#[cfg(target_os = "macos")]
+fn activate(app: &AppHandle) {
+    let _ = app.run_on_main_thread(|| {
+        if let Some(main) = objc2::MainThreadMarker::new() {
+            objc2_app_kit::NSApplication::sharedApplication(main).activate();
+        }
+    });
+}
+
+#[cfg(not(target_os = "macos"))]
+fn activate(_app: &AppHandle) {}
 
 /// A window's outer size in points.
 fn size_of(window: &WebviewWindow) -> placement::Size {
