@@ -13,9 +13,9 @@ use agentsweep_core::item::{
     Activation, InactiveReason, Item, Kind, Provenance, Scope, canonical_entry,
 };
 use agentsweep_core::judgement::{
-    CATEGORIES, Category, EngineError, JudgementEngine, NoVerdict, PROMPT_VERSION, Prompt,
-    REASON_CHARS, ScriptedEngine, Verdict, check_flagged, judge, judgement_severity, parse_answer,
-    verdict_schema,
+    CATEGORIES, Category, EngineError, JudgementEngine, NO_CATEGORY, NoVerdict, PROMPT_VERSION,
+    Prompt, REASON_CHARS, SYSTEM_PROMPT, ScriptedEngine, Verdict, check_flagged, judge,
+    judgement_severity, parse_answer, verdict_schema,
 };
 use agentsweep_core::judgement_request::{
     ByteEstimate, JudgementRequest, Normalisation, RequestBuilder,
@@ -97,10 +97,10 @@ fn plain_suspicion() -> (JudgementRequest, Vec<FiredHeuristic>) {
 
 fn answer(verdict: &str, reason: &str, evidence: &[&str]) -> String {
     json!({
-        "verdict": verdict,
-        "category": "instruction_file_injection",
         "reason": reason,
         "evidence": evidence,
+        "verdict": verdict,
+        "category": "instruction_file_injection",
     })
     .to_string()
 }
@@ -158,30 +158,92 @@ fn the_engine_is_handed_the_prompt_and_the_one_schema() {
     assert_eq!(seen[0].schema(), verdict_schema());
 }
 
+/// The engine reasons before it answers: an engine that generates in the
+/// order of `required` writes the reason and the evidence before it picks a
+/// verdict, and the first verdict it can pick is benign.
 #[test]
-fn the_schema_names_the_four_fields_and_the_six_defended_classes() {
+fn the_schema_asks_for_the_reason_and_evidence_before_the_verdict() {
     let schema = verdict_schema();
     assert_eq!(schema["additionalProperties"], json!(false));
     assert_eq!(
         schema["required"],
-        json!(["verdict", "category", "reason", "evidence"])
+        json!(["reason", "evidence", "verdict", "category"])
+    );
+    let properties: Vec<&str> = schema["properties"]
+        .as_object()
+        .expect("the properties")
+        .keys()
+        .map(String::as_str)
+        .collect();
+    assert_eq!(
+        properties,
+        vec!["reason", "evidence", "verdict", "category"]
     );
     assert_eq!(
         schema["properties"]["verdict"]["enum"],
-        json!(["malicious", "benign", "unsure"])
+        json!(["benign", "malicious", "unsure"])
     );
-    let categories: Vec<&str> = CATEGORIES
-        .iter()
-        .map(|category| category.as_str())
-        .collect();
-    assert_eq!(schema["properties"]["category"]["enum"], json!(categories));
-    assert_eq!(CATEGORIES.len(), 6);
-    let classes: Vec<u8> = CATEGORIES.iter().map(|category| category.class()).collect();
-    assert_eq!(classes, vec![1, 2, 3, 4, 5, 6]);
     assert_eq!(
         schema["properties"]["evidence"]["items"]["type"],
         json!("string")
     );
+    let at = |field: &str| {
+        SYSTEM_PROMPT
+            .find(field)
+            .expect("the prompt names the field")
+    };
+    assert!(at("- reason:") < at("- evidence:"));
+    assert!(at("- evidence:") < at("- verdict:"));
+    assert!(at("- verdict:") < at("- category:"));
+    assert!(SYSTEM_PROMPT.contains("\"none\""));
+}
+
+/// The category is one of the six defended classes or `none`, the answer
+/// for an Item that is no threat.
+#[test]
+fn the_schema_names_the_six_defended_classes_and_none() {
+    let schema = verdict_schema();
+    let mut categories: Vec<&str> = CATEGORIES
+        .iter()
+        .map(|category| category.as_str())
+        .collect();
+    categories.push(NO_CATEGORY);
+    assert_eq!(schema["properties"]["category"]["enum"], json!(categories));
+    assert_eq!(CATEGORIES.len(), 6);
+    let classes: Vec<u8> = CATEGORIES.iter().map(|category| category.class()).collect();
+    assert_eq!(classes, vec![1, 2, 3, 4, 5, 6]);
+    assert_eq!(NO_CATEGORY, "none");
+    assert_eq!(Category::parse(NO_CATEGORY), None);
+}
+
+/// A benign or unsure answer may name no category; a malicious one must
+/// name a defended class, or it does not follow the schema.
+#[test]
+fn the_category_none_goes_only_with_a_benign_or_an_unsure_verdict() {
+    let (request, fired) = plain_suspicion();
+    let with_none = |verdict: &str, evidence: &[&str]| {
+        json!({
+            "reason": "",
+            "evidence": evidence,
+            "verdict": verdict,
+            "category": "none",
+        })
+        .to_string()
+    };
+    assert_eq!(
+        judged(Ok(with_none("benign", &[])), &request, &fired),
+        Ok(Verdict::Benign)
+    );
+    assert_eq!(
+        judged(Ok(with_none("unsure", &[])), &request, &fired),
+        Ok(Verdict::Unsure)
+    );
+    assert!(matches!(
+        judged(Ok(with_none("malicious", &[PIPE])), &request, &fired),
+        Err(NoVerdict::Unparsable(_))
+    ));
+    let parsed = parse_answer(&with_none("benign", &[])).expect("parses");
+    assert_eq!(parsed.category, None);
 }
 
 #[test]
@@ -471,7 +533,7 @@ fn an_engine_error_where_0525_fired_is_still_no_verdict_never_benign() {
 #[test]
 fn the_parser_reads_every_field_of_a_well_formed_answer() {
     let parsed = parse_answer(&answer("unsure", "hm", &["a"])).expect("parses");
-    assert_eq!(parsed.category, Category::InstructionFileInjection);
+    assert_eq!(parsed.category, Some(Category::InstructionFileInjection));
     assert_eq!(parsed.reason, "hm");
     assert_eq!(parsed.evidence, vec!["a".to_string()]);
 }
