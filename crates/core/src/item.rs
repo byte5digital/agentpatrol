@@ -561,6 +561,11 @@ pub struct Item {
     /// The names the Agent invokes the Item by, as its Surface Adapter worked
     /// them out. Empty for a kind nothing is invoked as by name.
     pub invocations: Vec<Invocation>,
+    /// The pooled project roots a User-scope Item was written for, where its
+    /// Surface Adapter knows it serves those projects alone: the memory an
+    /// Agent keeps for one project. Empty when no pooled root is that
+    /// project; absent for an Item every project sees.
+    pub written_for: Option<Vec<PathBuf>>,
 }
 
 impl Item {
@@ -599,6 +604,7 @@ impl Item {
             content,
             tree: Tree::default(),
             invocations: Vec::new(),
+            written_for: None,
         }
     }
 
@@ -669,6 +675,13 @@ impl Item {
         if !invocation.name.is_empty() && !self.invocations.contains(&invocation) {
             self.invocations.push(invocation);
         }
+        self
+    }
+
+    /// Records that the Item serves the projects at these pooled roots alone,
+    /// none of them when no pooled root is the project it was written for.
+    pub fn written_for(mut self, roots: Vec<PathBuf>) -> Item {
+        self.written_for = Some(roots);
         self
     }
 

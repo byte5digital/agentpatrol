@@ -1053,6 +1053,7 @@ mod tests {
             resolved: None,
             script: None,
             names: vec![crate::item::Invocation::skill("setup")],
+            written_for: Vec::new(),
         };
         let mut gate = GateRecord {
             roots: vec![PathBuf::from("/work/one"), PathBuf::from("/work/two")],
