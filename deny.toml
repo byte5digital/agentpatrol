@@ -38,6 +38,7 @@ ignore = [
     "RUSTSEC-2025-0081", # unic-char-property, unmaintained, through Tauri's urlpattern
     "RUSTSEC-2025-0098", # unic-ucd-version, unmaintained, through Tauri's urlpattern
     "RUSTSEC-2025-0100", # unic-ucd-ident, unmaintained, through Tauri's urlpattern
+    "RUSTSEC-2026-0543", # chrono, unmaintained, only at build time through YARA-X's yara-x-proto (still in 1.23.0)
 ]
 
 [licenses]
