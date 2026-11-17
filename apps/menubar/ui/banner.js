@@ -8,8 +8,9 @@ import { nextPress } from "./press.js";
 
 const { invoke } = window.__TAURI__.core;
 
-// The banners whose button gave way to its working line.
-const givenWay = new WeakSet();
+// The banners whose button gave way to its working line, each with the key
+// of the buttons that were pressed.
+const givenWay = new WeakMap();
 
 // Fills the banner elements under `root` (each found by its class) with
 // `banner`, or hides `root` when there is none. A click names the press and
@@ -21,8 +22,10 @@ const givenWay = new WeakSet();
 //
 // A button that gives way (Turn on protection) is not greyed out: from the
 // click the banner shows its line ("Starting protection…") and no button,
-// also when it turns to "Not watching right now" meanwhile. The buttons come
-// back when the press fails, or when the banner went away and comes again.
+// for as long as it is the banner that was pressed. The buttons come back
+// when the press fails, when the banner turns to another one (such as "Not
+// watching right now", which then shows its own buttons), or when it went
+// away and comes again.
 export function renderBanner(root, banner) {
   root.hidden = banner === null;
   if (banner === null) {
@@ -43,7 +46,8 @@ export function renderBanner(root, banner) {
     line.hidden = text === "";
   };
   const buttons = part("banner-buttons");
-  keep(buttons, JSON.stringify(banner.buttons), () =>
+  const key = JSON.stringify(banner.buttons);
+  keep(buttons, key, () =>
     banner.buttons.map((button, index) => {
       const node = document.createElement("button");
       node.type = "button";
@@ -53,7 +57,7 @@ export function renderBanner(root, banner) {
       }
       node.addEventListener("click", async () => {
         if (button.givesWay) {
-          givenWay.add(root);
+          givenWay.set(root, key);
           buttons.hidden = true;
         } else {
           node.disabled = true;
@@ -72,5 +76,9 @@ export function renderBanner(root, banner) {
       return node;
     }),
   );
+  if (givenWay.has(root) && givenWay.get(root) !== key) {
+    givenWay.delete(root);
+    say("");
+  }
   buttons.hidden = givenWay.has(root);
 }

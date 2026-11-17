@@ -161,9 +161,8 @@ impl Button {
     }
 
     /// True for the button that gives way to its working line from the
-    /// click until the press fails: **Turn on protection**, whose banner may
-    /// turn to "Not watching right now" while protection starts. Every other
-    /// button stays and waits for its answer.
+    /// click while its banner stands, until the press fails: **Turn on
+    /// protection**. Every other button stays and waits for its answer.
     pub fn gives_way(self) -> bool {
         self == Button::TurnOnProtection
     }

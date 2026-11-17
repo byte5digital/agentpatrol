@@ -53,14 +53,15 @@ fn every_show_activates_the_app_and_focuses_the_popover() {
 }
 
 /// A press of a button that gives way hides the banner's buttons and says
-/// its working line before it is asked; they come back only when it fails,
-/// stay hidden through every render meanwhile, also when the banner turns to
-/// another one, and are offered again once the banner went away.
+/// its working line before it is asked. They stay hidden through every
+/// render while the banner shows the buttons that were pressed, and come
+/// back when the press fails, when the banner turns to another one (its own
+/// buttons show, and the line is cleared), and once the banner went away.
 #[test]
 fn turn_on_protection_gives_way_to_its_line_until_it_fails() {
     let banner = read("ui/banner.js");
     let render = function(&banner, "renderBanner");
-    let gave_way = at(render, "givenWay.add(root)");
+    let gave_way = at(render, "givenWay.set(root, key)");
     let said = at(render, "say(button.working)");
     let asked = at(render, "await invoke(button.command");
     let failed = at(render, "catch (why)");
@@ -71,12 +72,20 @@ fn turn_on_protection_gives_way_to_its_line_until_it_fails() {
     assert!(gave_way < said && said < asked && asked < failed && failed < back);
     assert!(render[gave_way..said].contains("buttons.hidden = true"));
     assert!(render[..gave_way].contains("if (button.givesWay)"));
-    // Every render keeps them hidden while it stands, after `keep`.
-    let kept = at(render, "keep(buttons,");
+    // The pressed banner is known by its buttons, the key `keep` builds by.
+    let key = at(render, "const key = JSON.stringify(banner.buttons);");
+    let kept = at(render, "keep(buttons, key,");
+    assert!(key < kept, "{render}");
+    // A banner that turned to another one shows its own buttons again and
+    // drops the working line.
+    let turned = at(
+        render,
+        "if (givenWay.has(root) && givenWay.get(root) !== key) {\n    givenWay.delete(root);\n    say(\"\");\n  }",
+    );
     let hidden = render
         .rfind("buttons.hidden = givenWay.has(root)")
         .expect("every render");
-    assert!(kept < hidden, "{render}");
+    assert!(kept < turned && turned < hidden, "{render}");
     // A banner that went away offers its buttons again when it comes back.
     let gone = at(render, "if (banner === null) {");
     assert!(render[gone..].starts_with("if (banner === null) {\n    givenWay.delete(root);"));
