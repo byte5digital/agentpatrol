@@ -93,21 +93,25 @@ fn a_simple_finding_reads_in_three_parts() {
     assert!(folder.contains("renderSimpleCard(card, `folder ${card.id}`"));
 }
 
-/// The Developer Posture's card is unchanged: its heading with Report false
-/// positive beside it, its chips, the body lines, the technical table and
-/// the how-to among its buttons.
+/// The Developer Posture's card: its heading with Report false positive
+/// beside it, its chips, the body lines, then its buttons with the how-to
+/// under them, and the technical table last.
 #[test]
-fn the_developer_finding_is_unchanged() {
+fn the_developer_finding_puts_its_actions_above_the_table() {
     let script = ui("window.js");
     let card = function(&script, "renderDeveloperCard");
-    for kept in [
-        "renderHeader(card, developer.title)",
-        "renderLines(node, developer.lines ?? card.simple.lines)",
-        "node.append(renderTechnical(card))",
-        "addHowTo(card, howTo, actions)",
-    ] {
-        assert!(card.contains(kept), "{kept}");
-    }
+    let order = positions(
+        card,
+        &[
+            "renderHeader(card, developer.title)",
+            "renderLines(node, developer.lines ?? card.simple.lines)",
+            "addHowTo(card, howTo, actions)",
+            "node.append(actions)",
+            "node.append(howTo)",
+            "node.append(renderTechnical(card))",
+        ],
+    );
+    assert!(order.windows(2).all(|pair| pair[0] < pair[1]), "{order:?}");
     assert!(!card.contains("parts"), "{card}");
     let header = function(&script, "renderHeader");
     assert!(header.contains("renderReport(card)"));

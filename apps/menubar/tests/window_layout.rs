@@ -193,8 +193,8 @@ fn the_window_switches_the_settings_tabs() {
 }
 
 /// The Ollama address and, in the Developer Posture, the Claude model id
-/// take the pane's width: label above, field beneath at full width, in
-/// either Posture.
+/// take the pane's width: label above, field beneath at full width beside
+/// its Save button, in either Posture.
 #[test]
 fn the_two_advanced_fields_take_the_pane_width() {
     let css = ui("window.css");
@@ -211,4 +211,38 @@ fn the_two_advanced_fields_take_the_pane_width() {
         !css.contains("[data-posture"),
         "the layout follows no Posture"
     );
+}
+
+/// The bar above the panes shows only while it says something: Protection
+/// off. Otherwise it is hidden, with its padding and its rule.
+#[test]
+fn no_empty_bar_stands_above_the_panes() {
+    let page = ui("window.html");
+    assert!(page.contains("<header id=\"off-bar\" hidden>"), "the bar");
+    let script = ui("window.js");
+    assert!(
+        script.contains("$(\"off-bar\").hidden = list.off === null;"),
+        "the bar follows Protection off"
+    );
+}
+
+/// Every field under Advanced saves the same way: a Save button beside it,
+/// the folders and the two AI fields alike, and nothing is sent while the
+/// user types or leaves the field.
+#[test]
+fn every_advanced_field_saves_with_its_button() {
+    let window = ui("window.js");
+    assert!(window.contains("const row = el(\"form\", \"dir\");"));
+    let ai = ui("ai_check.js");
+    let start = ai.find("function field(").expect("the AI field");
+    let field = &ai[start..start + ai[start..].find("\n}\n").expect("its end")];
+    assert!(field.contains("el(\"form\", \"dir\")"), "{field}");
+    assert!(field.contains("el(\"button\", \"\", \"Save\")"), "{field}");
+    assert!(field.contains("save.type = \"submit\";"), "{field}");
+    assert!(field.contains("\"submit\""), "{field}");
+    assert!(field.contains("event.preventDefault();"), "{field}");
+    assert!(!field.contains("\"change\""), "{field}");
+    let css = ui("window.css");
+    let entry = rule(&css, "#settings-advanced-ai .dir .entry");
+    assert!(entry.contains("display: flex;"), "{entry}");
 }

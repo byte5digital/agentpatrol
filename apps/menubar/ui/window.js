@@ -25,6 +25,7 @@ import { isDeveloper, onPostureChange, takePosture } from "./posture.js";
 import { lookAtAiCheck, renderAiCheck } from "./ai_check.js";
 import { keep } from "./keep.js";
 import { nextPress } from "./press.js";
+import { inLocalTime, when } from "./when.js";
 
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -503,8 +504,8 @@ function renderLines(node, lines) {
 
 // One Finding in the Developer Posture: `<Kind> · <name>` with chips for
 // Severity, Tier, category, Probation, Scope and Activation, the body lines,
-// the technical table shown always, the actions and, on a quarantined Item
-// with a payload, Reveal in Finder.
+// the actions with, on a quarantined Item with a payload, Reveal in Finder,
+// and under them the technical table shown always.
 function renderDeveloperCard(card) {
   const developer = card.developer;
   const node = el("article", "card");
@@ -518,7 +519,6 @@ function renderDeveloperCard(card) {
   }
   node.append(chips);
   renderLines(node, developer.lines ?? card.simple.lines);
-  node.append(renderTechnical(card));
   const actions = renderActions(card);
   if (card.reveal) {
     const reveal = el("button", "", "Reveal in Finder");
@@ -544,6 +544,7 @@ function renderDeveloperCard(card) {
     node.append(actions);
   }
   node.append(howTo);
+  node.append(renderTechnical(card));
   return node;
 }
 
@@ -873,15 +874,6 @@ function renderFindingPane(id, cards, loaded) {
   });
 }
 
-// A moment in local time, as the popover writes it.
-function when(text) {
-  const moment = new Date(text);
-  if (Number.isNaN(moment.getTime())) {
-    return text;
-  }
-  return moment.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
-
 // A moment as the Simple Overview's watching line says it: "today, 09:12",
 // or the date and the time on another day.
 function lastCheck(text) {
@@ -916,7 +908,7 @@ function renderOverview(overview) {
   $("overview-protection").hidden = (overview.protection ?? null) === null;
   $("overview-protection").textContent = overview.protection ?? "";
   $("overview-sentence").hidden = overview.sentence === null;
-  $("overview-sentence").textContent = overview.sentence ?? "";
+  $("overview-sentence").textContent = inLocalTime(overview.sentence ?? "");
   $("overview-body").hidden = overview.off;
   $("overview-scan").hidden = !overview.actions;
   const tiled = renderTiles(overview);
@@ -1393,7 +1385,7 @@ for (const tab of $("settings-tabs").querySelectorAll("[role=tab]")) {
 function render(list) {
   view = list;
   takePosture(list.posture);
-  $("off").hidden = list.off === null;
+  $("off-bar").hidden = list.off === null;
   $("off").textContent = list.off === null ? "" : `Protection is off: ${list.off}.`;
   renderOverview(list.overview);
   renderSettings(list.settings);
