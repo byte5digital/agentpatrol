@@ -10,6 +10,12 @@
 //! still empty at exit is gone. The version handshake the app makes at
 //! every launch is the backstop for anything this misses.
 //!
+//! A bundle in a Trash folder is gone too, although it is there: launchd
+//! follows a bundle dragged to the Trash and starts the daemon from it again
+//! at the next login (spec section 9.6). [`in_a_trash`] says so from the path
+//! alone, at start and in the watch, and a bundle there is never taken for
+//! replaced.
+//!
 //! Two things live here, kept apart the way the Scan watcher keeps them.
 //! [`judge`] is plain logic: two [`Snapshot`]s go in and a [`Change`] comes out,
 //! and it is unit-tested against a temporary directory. [`watch`] is the thin
@@ -77,6 +83,11 @@ impl Own {
         Own::of(&std::env::current_exe().ok()?)
     }
 
+    /// True when the bundle sits in a Trash folder, which makes it gone.
+    pub fn is_in_a_trash(&self) -> bool {
+        in_a_trash(&self.bundle)
+    }
+
     /// The bundle's `Info.plist`, which carries its version.
     pub fn info_plist(&self) -> PathBuf {
         self.bundle.join("Contents").join("Info.plist")
@@ -90,6 +101,20 @@ impl Own {
             info_plist: std::fs::read(self.info_plist()).ok(),
         }
     }
+}
+
+/// True when `bundle` sits inside a Trash folder: the user's `~/.Trash`, or
+/// a volume's `.Trashes`, at any depth below it and under whatever name the
+/// Finder gave it there. The path alone decides; nothing is read.
+pub fn in_a_trash(bundle: &Path) -> bool {
+    bundle
+        .parent()
+        .into_iter()
+        .flat_map(Path::components)
+        .any(|component| {
+            let name = component.as_os_str();
+            name == ".Trash" || name == ".Trashes"
+        })
 }
 
 /// Which file a path names: its device and inode. A replaced file is a new
@@ -163,10 +188,11 @@ pub fn settle(first: Change, grace: Duration, mut look_again: impl FnMut() -> Ch
 /// Full Scan in hand runs, which on a debug build takes minutes: a rebuild in
 /// place removes the bundle for longer than the grace and then puts the new
 /// one at the same path. A bundle back at its path by the time the daemon
-/// exits was replaced, and only a path still empty means gone. Replaced stays
-/// replaced and same stays same.
+/// exits was replaced, and only a path still empty means gone. A bundle in a
+/// Trash folder stays gone, there or not. Replaced stays replaced and same
+/// stays same.
 pub fn at_exit(change: Change, bundle: &Path) -> Change {
-    if change == Change::Gone && FileId::of(bundle).is_some() {
+    if change == Change::Gone && !in_a_trash(bundle) && FileId::of(bundle).is_some() {
         return Change::Replaced;
     }
     change
@@ -199,7 +225,8 @@ impl std::fmt::Debug for BundleWatch {
 
 /// Watches `own` and calls `then` once, with the first change that is not
 /// [`Change::Same`]. The thread ends after that: a daemon whose bundle changed
-/// is on its way out.
+/// is on its way out. A bundle in a Trash folder is gone from the start, and
+/// `then` is called with that at once.
 pub fn watch(
     own: Own,
     grace: Duration,
@@ -237,6 +264,10 @@ pub fn watch(
     let thread = std::thread::Builder::new()
         .name("agentsweep-bundle-watch".to_string())
         .spawn(move || {
+            if own.is_in_a_trash() {
+                then(Change::Gone);
+                return;
+            }
             loop {
                 match receiver.recv_timeout(backstop) {
                     Ok(()) | Err(RecvTimeoutError::Timeout) => {}
@@ -447,6 +478,73 @@ mod tests {
         assert_eq!(Change::Replaced.exit_status(), Some(75));
         assert_eq!(at_exit(Change::Same, &missing), Change::Same);
         assert_eq!(Change::Same.exit_status(), None);
+    }
+
+    /// A bundle in the user's Trash, or in a volume's, is in a Trash folder,
+    /// whatever name the Finder gave it there. A folder that only looks like
+    /// one is not.
+    #[test]
+    fn a_bundle_inside_a_trash_folder_is_in_the_trash() {
+        for trashed in [
+            "/Users/someone/.Trash/AgentSweep.app",
+            "/Users/someone/.Trash/AgentSweep 12.50.04.app",
+            "/Volumes/Disk/.Trashes/501/AgentSweep.app",
+            "/Volumes/Disk/.Trashes/501/Folder/AgentSweep.app",
+        ] {
+            assert!(in_a_trash(Path::new(trashed)), "{trashed}");
+        }
+        for kept in [
+            "/Applications/AgentSweep.app",
+            "/Users/someone/Applications/AgentSweep.app",
+            "/Users/someone/Trash/AgentSweep.app",
+            "/Users/someone/.Trashcan/AgentSweep.app",
+            "/Users/someone/.Trash.app",
+        ] {
+            assert!(!in_a_trash(Path::new(kept)), "{kept}");
+        }
+        let own = Own::of(Path::new(
+            "/Users/someone/.Trash/AgentSweep 12.50.04.app/Contents/MacOS/agentsweepd",
+        ))
+        .expect("a bundle");
+        assert!(own.is_in_a_trash());
+    }
+
+    /// A bundle in a Trash folder is there, at its path, yet gone: the last
+    /// look never turns it into a replaced bundle, which would exit 75 and
+    /// have `KeepAlive` start it again from the Trash.
+    #[test]
+    fn a_bundle_in_a_trash_folder_stays_gone_at_exit() {
+        let folder = tempfile::tempdir().expect("a temporary directory");
+        let trash = folder.path().join(".Trash");
+        fs::create_dir_all(&trash).expect("a trash");
+        let own = bundle_in(&trash, "0.1.0");
+        assert!(own.bundle.exists());
+        let last = at_exit(Change::Gone, &own.bundle);
+        assert_eq!(last, Change::Gone);
+        assert_eq!(last.exit_status(), Some(0));
+    }
+
+    /// A watch on a bundle in a Trash folder reports it gone at once, without
+    /// waiting for an event or the backstop.
+    #[test]
+    fn the_watch_reports_a_bundle_in_a_trash_folder_gone_at_once() {
+        let folder = tempfile::tempdir().expect("a temporary directory");
+        let trash = folder.path().join(".Trash");
+        fs::create_dir_all(&trash).expect("a trash");
+        let own = bundle_in(&trash, "0.1.0");
+        let (sender, receiver) = mpsc::channel();
+        let _watch = watch(
+            own,
+            Duration::from_millis(1),
+            Duration::from_secs(3600),
+            move |change| {
+                let _ = sender.send(change);
+            },
+        );
+        let change = receiver
+            .recv_timeout(Duration::from_secs(10))
+            .expect("a change within ten seconds");
+        assert_eq!(change, Change::Gone);
     }
 
     /// The watch itself, end to end on a temporary bundle: a replacement is
