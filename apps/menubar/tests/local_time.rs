@@ -24,7 +24,10 @@ fn one_module_writes_a_sentence_in_local_time() {
     );
     assert!(module.contains("dateStyle: \"medium\", timeStyle: \"short\""));
     // The form the daemon writes: 2026-11-10T08:12:44.000Z.
-    assert!(module.contains(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"), "{module}");
+    assert!(
+        module.contains(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"),
+        "{module}"
+    );
     assert!(!module.contains("innerHTML"));
 }
 
