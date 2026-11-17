@@ -145,6 +145,9 @@ pub struct ScanRun {
     /// The Items it looked at that await judgement, which is what the AI
     /// Judgement queue is fed with: every one not marked answered.
     pub awaiting: Vec<Awaiting>,
+    /// The Items it looked at whose only Finding a cached malicious Verdict
+    /// opened, which a switch of engine judges again.
+    pub judged_malicious: Vec<Awaiting>,
     /// The lines the Activity keeps that no record stands behind: a
     /// consistent plugin update, content that changed back (spec section
     /// 4.6.5).
@@ -328,6 +331,7 @@ impl FullScan<'_> {
             gate_lines,
             project_hooks: survey.enumeration.project_hooks,
             awaiting: judged.awaiting,
+            judged_malicious: judged.judged_malicious,
             notes: judged.notes,
         })
     }
@@ -541,6 +545,9 @@ pub struct Judged {
     /// The Items it looked at that await judgement, an unsure Verdict from
     /// the cache marked answered.
     pub awaiting: Vec<Awaiting>,
+    /// The Items it looked at whose only Finding a cached malicious Verdict
+    /// opened.
+    pub judged_malicious: Vec<Awaiting>,
     /// The lines the Activity keeps that are not Findings: a consistent
     /// plugin update, content that changed back.
     pub notes: Vec<Note>,
@@ -752,6 +759,13 @@ impl Judgement<'_> {
             baseline_held,
             self.at,
         );
+        let judged_malicious = judged_malicious(
+            &outcome,
+            &enumeration.items,
+            &raised,
+            baseline_held,
+            self.at,
+        );
 
         let bands = count_bands(&outcome);
         let summary = ScanSummary {
@@ -799,6 +813,7 @@ impl Judgement<'_> {
             ambiguous,
             checked,
             awaiting,
+            judged_malicious,
             notes: outcome.notes.clone(),
         })
     }
@@ -830,17 +845,63 @@ fn awaiting(
         .filter(|assessment| !flagged.contains(&assessment.item_id))
         .filter_map(|assessment| {
             let item = items.iter().find(|item| item.id == assessment.item_id)?;
-            let changed_at = baseline
-                .record(&item.id)
-                .filter(|record| record.accepted_hash == item.content_hash)
-                .map(|record| record.accepted_at)
-                .unwrap_or(at);
             Some(Awaiting {
                 item: item.clone(),
                 fired: assessment.fired.clone(),
                 score: assessment.score,
-                changed_at,
+                changed_at: changed_at(item, baseline, at),
                 answered: answered.contains(&item.id),
+            })
+        })
+        .collect()
+}
+
+/// When an Item's content last changed, as the Baseline knows it.
+fn changed_at(
+    item: &Item,
+    baseline: &agentsweep_core::baseline::BaselineView,
+    at: Timestamp,
+) -> Timestamp {
+    baseline
+        .record(&item.id)
+        .filter(|record| record.accepted_hash == item.content_hash)
+        .map(|record| record.accepted_at)
+        .unwrap_or(at)
+}
+
+/// The Items a cached malicious Verdict flagged and nothing else did: every
+/// Finding raised about them is the T3 one. They await judgement again
+/// once that Verdict is no longer in force.
+fn judged_malicious(
+    outcome: &agentsweep_core::scan_pass::ScanOutcome,
+    items: &[Item],
+    raised: &[Finding],
+    baseline: &agentsweep_core::baseline::BaselineView,
+    at: Timestamp,
+) -> Vec<Awaiting> {
+    outcome
+        .judged
+        .iter()
+        .filter(|applied| matches!(applied.verdict, Verdict::Malicious { .. }))
+        .filter(|applied| {
+            raised
+                .iter()
+                .filter(|finding| finding.item_id == applied.item_id)
+                .all(|finding| finding.tier == Tier::AiJudgement)
+        })
+        .filter_map(|applied| {
+            let item = items.iter().find(|item| item.id == applied.item_id)?;
+            let assessment = outcome
+                .report
+                .assessments
+                .iter()
+                .find(|assessment| assessment.item_id == applied.item_id)?;
+            Some(Awaiting {
+                item: item.clone(),
+                fired: assessment.fired.clone(),
+                score: assessment.score,
+                changed_at: changed_at(item, baseline, at),
+                answered: false,
             })
         })
         .collect()

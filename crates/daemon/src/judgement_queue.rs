@@ -20,6 +20,14 @@
 //! it. An engine error is no Verdict and is handed over as such; nothing of
 //! it is cached and the Item is fed again by the next Scan.
 //!
+//! A Finding a malicious Verdict alone opened stands only while that Verdict
+//! counts: while it is cached under the engine, the model and the prompt
+//! version in force. When the engine is switched or switched off, every such
+//! Finding whose Verdict no longer counts closes at once, its Item goes back
+//! to the Ambiguous Band and is judged again under the engine now in force,
+//! and the Activity says so in one line. A Finding with a deterministic
+//! reason beside it never closes this way.
+//!
 //! Before each request to the Claude engine starts, the queue asks its
 //! [`Landing`] whether the cloud caps let it (see [`crate::cloud_caps`]). A
 //! request that would start past a cap is not sent: the queue holds back
@@ -40,7 +48,7 @@ use std::time::Instant;
 use agentsweep_core::apple_engine::{AppleEngine, AppleHelper};
 use agentsweep_core::claude_engine::ClaudeEngine;
 use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::finding::{FindingId, FindingState, FiredHeuristic, Standing};
+use agentsweep_core::finding::{FindingId, FindingState, FiredHeuristic, Standing, Tier};
 use agentsweep_core::finding_facts::FindingFacts;
 use agentsweep_core::gate_facts::GateFacts;
 use agentsweep_core::item::{Item, ItemId};
@@ -858,20 +866,21 @@ impl Daemon {
     pub(crate) fn feed_the_queue(
         self: &Arc<Daemon>,
         awaiting: Vec<Awaiting>,
+        judged_malicious: Vec<Awaiting>,
         in_force: Option<InForce>,
         trigger: Trigger,
         looked_at: Option<&BTreeSet<ItemId>>,
     ) {
-        {
-            let mut held = self
-                .awaiting
-                .lock()
-                .expect("the awaiting Items are not poisoned");
+        for (held, now) in [
+            (&self.awaiting, &awaiting),
+            (&self.judged_malicious, &judged_malicious),
+        ] {
+            let mut held = held.lock().expect("the awaiting Items are not poisoned");
             match looked_at {
                 None => held.clear(),
                 Some(items) => held.retain(|kept| !items.contains(&kept.item.id)),
             }
-            held.extend(awaiting.iter().cloned());
+            held.extend(now.iter().cloned());
         }
         let Some(asking) = in_force.and_then(|in_force| in_force.asking) else {
             return;
@@ -923,19 +932,24 @@ impl Daemon {
     pub(crate) fn withdraw_from_judgement(self: &Arc<Daemon>, item: &ItemId) {
         let landing = Landed(Arc::downgrade(self));
         self.judgement_queue.withdraw(item, &landing);
-        self.awaiting
-            .lock()
-            .expect("the awaiting Items are not poisoned")
-            .retain(|kept| &kept.item.id != item);
+        for held in [&self.awaiting, &self.judged_malicious] {
+            held.lock()
+                .expect("the awaiting Items are not poisoned")
+                .retain(|kept| &kept.item.id != item);
+        }
     }
 
     /// Feeds the Items that await judgement to the queue again under the
     /// engine now active: what a switch of engine does (spec section 4.4).
-    /// A Verdict the cache already holds under the new engine is applied at
-    /// once, as a late one would be; the rest are asked. Switching AI
-    /// Judgement off drops whatever was pending.
+    /// First every Finding a malicious Verdict alone opened whose Verdict no
+    /// longer counts closes, and its Item awaits judgement again. A Verdict
+    /// the cache already holds under the new engine is applied at once, as a
+    /// late one would be; the rest are asked. Switching AI Judgement off
+    /// drops whatever was pending.
     pub(crate) fn judge_again(self: &Arc<Daemon>) {
-        let Some(in_force) = self.engine_in_force() else {
+        let in_force = self.engine_in_force();
+        self.drop_the_verdicts_no_longer_in_force(in_force.as_ref().map(|engine| &engine.judge));
+        let Some(in_force) = in_force else {
             self.judgement_queue.reset();
             self.note_the_cap(None);
             return;
@@ -1060,11 +1074,159 @@ impl Daemon {
             .retain(|kept| kept.item.id != item);
     }
 
+    /// Closes every Finding a malicious Verdict alone opened whose Verdict is
+    /// no longer in force under `judge`: none counts while AI Judgement is
+    /// off, and under an engine only a malicious Verdict it cached under the
+    /// prompt version in force does. Each such Item goes back to the
+    /// Ambiguous Band and awaits judgement again; the Activity keeps one line
+    /// for all of them. A Finding that still counts names the engine it now
+    /// counts under. An Item with any other open Finding is left alone: a
+    /// deterministic reason never closes this way.
+    fn drop_the_verdicts_no_longer_in_force(self: &Arc<Daemon>, judge: Option<&Judge>) {
+        let held = self
+            .judged_malicious
+            .lock()
+            .expect("the awaiting Items are not poisoned")
+            .clone();
+        if held.is_empty() {
+            return;
+        }
+        let view = read_the_verdicts(&self.directory, &*self.keys);
+        let counting = |awaiting: &Awaiting| -> Option<Verdict> {
+            let judge = judge?;
+            let request = judge.request(&awaiting.item, &awaiting.fired).ok()?;
+            view.lookup(request.hash(), &judge.engine, &judge.model)
+                .filter(|verdict| matches!(verdict, Verdict::Malicious { .. }))
+        };
+
+        let _writing = self.writing.lock().expect("the write lock is not poisoned");
+        // Uninstall may have deleted the stores meanwhile, and nothing is
+        // written after it.
+        if self.is_uninstalled() {
+            return;
+        }
+        let mut changed = Vec::new();
+        let mut back = Vec::new();
+        let overview = {
+            let mut state = self.state.lock().expect("the state is not poisoned");
+            let ambiguous_before = state.overview.ambiguous.len();
+            for awaiting in &held {
+                let item = &awaiting.item.id;
+                let Some(at) = state.findings.iter().position(|finding| {
+                    &finding.item_id == item
+                        && finding.tier == Tier::AiJudgement
+                        && finding.state == FindingState::Open
+                }) else {
+                    continue;
+                };
+                if state.findings.iter().any(|finding| {
+                    &finding.item_id == item
+                        && finding.tier != Tier::AiJudgement
+                        && finding.state != FindingState::Gone
+                }) {
+                    continue;
+                }
+                match counting(awaiting) {
+                    Some(verdict) => {
+                        // It still counts, under the engine now in force.
+                        let judge = judge.expect("a Verdict counts only under an engine");
+                        let finding = &mut state.findings[at];
+                        if finding.facts.judgement_engine != judge.engine
+                            || finding.facts.judgement_model != judge.model
+                        {
+                            finding.facts.judgement_engine = judge.engine.clone();
+                            finding.facts.judgement_model = judge.model.clone();
+                            if let Verdict::Malicious { reason, .. } = &verdict {
+                                finding.facts.judgement_reason = reason.clone();
+                            }
+                            changed.push((
+                                finding.id.clone(),
+                                finding.state.to_string(),
+                                Some(Box::new(finding.clone())),
+                            ));
+                        }
+                    }
+                    None => {
+                        let gone = state.findings.remove(at);
+                        changed.push((gone.id.clone(), "gone".to_string(), None));
+                        if !state
+                            .overview
+                            .ambiguous
+                            .iter()
+                            .any(|entry| &entry.item_id == item)
+                        {
+                            state
+                                .overview
+                                .ambiguous
+                                .push(crate::overview::ambiguous_item(
+                                    &awaiting.item,
+                                    awaiting.score,
+                                    &awaiting.fired,
+                                ));
+                        }
+                        back.push(awaiting.clone());
+                    }
+                }
+            }
+            if changed.is_empty() {
+                return;
+            }
+            state.prune_gate_facts();
+            self.write_state(&state);
+            self.health
+                .lock()
+                .expect("the health is not poisoned")
+                .count_open(&state);
+            (state.overview.ambiguous.len() != ambiguous_before)
+                .then(|| Box::new(state.overview.clone()))
+        };
+        let dropped: BTreeSet<&ItemId> = back.iter().map(|awaiting| &awaiting.item.id).collect();
+        self.raised
+            .lock()
+            .expect("the last Scan is not poisoned")
+            .retain(|finding| {
+                !(dropped.contains(&finding.item_id) && finding.tier == Tier::AiJudgement)
+            });
+        self.judged_malicious
+            .lock()
+            .expect("the awaiting Items are not poisoned")
+            .retain(|kept| !dropped.contains(&kept.item.id));
+        {
+            let mut awaiting = self
+                .awaiting
+                .lock()
+                .expect("the awaiting Items are not poisoned");
+            awaiting.retain(|kept| !dropped.contains(&kept.item.id));
+            awaiting.extend(back.iter().cloned());
+        }
+        for (id, state, finding) in changed {
+            self.publish(StateEvent::FindingChanged { id, state, finding });
+        }
+        if let Some(overview) = overview {
+            self.publish(StateEvent::OverviewChanged { overview });
+        }
+        if !back.is_empty() {
+            say!(
+                "{} Findings of AI Judgement closed: their Verdicts no longer count",
+                back.len()
+            );
+            // The engine change that caused it is in the Activity first.
+            self.follow_the_event_log();
+            self.keep_activity(crate::activity::of_verdicts_dropped(
+                back.len(),
+                Timestamp::now(),
+            ));
+        }
+        self.tell_health();
+    }
+
     /// Opens the T3 `score` Finding a malicious Verdict stands behind, at the
     /// moment it arrives, under the write lock the caller holds: in the state
     /// file with its Gate facts, un-notified so the app raises the needs-you
     /// notification, with one `FindingChanged` to every subscriber. The
-    /// summary of the Scan that fed the queue is left as it was.
+    /// summary of the Scan that fed the queue is left as it was. The Item no
+    /// longer awaits judgement; it is held among the ones a malicious
+    /// Verdict alone flagged.
     fn open_judgement_finding(
         self: &Arc<Daemon>,
         awaiting: &Awaiting,
@@ -1073,6 +1235,18 @@ impl Daemon {
         verdict: &Verdict,
     ) {
         let item = &awaiting.item;
+        self.awaiting
+            .lock()
+            .expect("the awaiting Items are not poisoned")
+            .retain(|kept| kept.item.id != item.id);
+        {
+            let mut judged = self
+                .judged_malicious
+                .lock()
+                .expect("the awaiting Items are not poisoned");
+            judged.retain(|kept| kept.item.id != item.id);
+            judged.push(awaiting.clone());
+        }
         let finding = judgement_finding(item, awaiting.score, &awaiting.fired);
         let standing = Standing {
             id: FindingId::of(&finding),
