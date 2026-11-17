@@ -10,7 +10,7 @@ struct FakeModel: LanguageModelPort {
     var modelVersion = "26.6.2 (25G83)"
     var tokens: Result<Int, HelperError> = .success(42)
     var answer: Result<String, HelperError> = .success(
-        #"{"verdict":"benign","category":"none","reason":"fixed","evidence":[]}"#)
+        #"{"reason":"fixed","evidence":[],"verdict":"benign","category":"none"}"#)
 
     func availability() -> Availability { state }
 
@@ -36,12 +36,12 @@ private func reply(_ text: String, _ model: FakeModel = FakeModel()) async -> (
 
 private let verdictSchema = """
     {"type":"object","additionalProperties":false,
-     "required":["verdict","category","reason","evidence"],
+     "required":["reason","evidence","verdict","category"],
      "properties":{
-       "verdict":{"type":"string","enum":["malicious","benign","unsure"]},
-       "category":{"type":"string","enum":["none","data_exfiltration"]},
        "reason":{"type":"string"},
-       "evidence":{"type":"array","items":{"type":"string"}}}}
+       "evidence":{"type":"array","items":{"type":"string"}},
+       "verdict":{"type":"string","enum":["benign","malicious","unsure"]},
+       "category":{"type":"string","enum":["exposure","none"]}}}
     """
 
 @Suite struct Check {

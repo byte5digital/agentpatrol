@@ -9,35 +9,37 @@ private func parse(_ text: String) throws(HelperError) -> SchemaNode {
 }
 
 @Suite struct Schema {
+    /// The reason and the evidence come before the verdict, so the model
+    /// reasons before it answers.
     @Test func theVerdictSchemaIsReadInTheOrderOfItsRequiredList() throws {
         let node = try parse(
             """
             {"type":"object","additionalProperties":false,"description":"a Verdict",
-             "required":["verdict","category","reason","evidence"],
+             "required":["reason","evidence","verdict","category"],
              "properties":{
+               "category":{"type":"string","enum":["exposure","none"]},
+               "verdict":{"enum":["benign","malicious","unsure"]},
                "evidence":{"type":"array","items":{"type":"string"},"maxItems":5},
-               "reason":{"type":"string","description":"why"},
-               "category":{"type":"string","enum":["none","data_exfiltration"]},
-               "verdict":{"enum":["malicious","benign","unsure"]}}}
+               "reason":{"type":"string","description":"why"}}}
             """)
         #expect(
             node
                 == .object(
                     description: "a Verdict",
                     properties: [
-                        .init(
-                            name: "verdict", schema: .choice(description: nil, values: ["malicious", "benign", "unsure"]),
-                            isOptional: false),
-                        .init(
-                            name: "category",
-                            schema: .choice(description: nil, values: ["none", "data_exfiltration"]),
-                            isOptional: false),
                         .init(name: "reason", schema: .string(description: "why"), isOptional: false),
                         .init(
                             name: "evidence",
                             schema: .array(
                                 description: nil, items: .string(description: nil), minimumElements: nil,
                                 maximumElements: 5),
+                            isOptional: false),
+                        .init(
+                            name: "verdict", schema: .choice(description: nil, values: ["benign", "malicious", "unsure"]),
+                            isOptional: false),
+                        .init(
+                            name: "category",
+                            schema: .choice(description: nil, values: ["exposure", "none"]),
                             isOptional: false),
                     ]))
     }

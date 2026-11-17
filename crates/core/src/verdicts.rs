@@ -768,6 +768,37 @@ mod tests {
         );
     }
 
+    /// A Verdict cached under an older prompt version is a miss, malicious
+    /// or not, whether its key or only its own field names that version: it
+    /// was given to a Prompt no longer in force.
+    #[test]
+    fn a_verdict_of_an_older_prompt_version_is_never_applied() {
+        assert_ne!(PROMPT_VERSION, "1", "ticket 134 raised the prompt version");
+        let directory = TempDir::new().expect("a temporary data directory");
+        let data = DataDirectory::at(directory.path());
+        let keys = MemoryKeySource::holding(ChainKey::generate().expect("a key"));
+        let cache = VerdictCache::in_data_directory(&data);
+        let malicious = Verdict::Malicious {
+            category: Category::InstructionFileInjection,
+            reason: "It tells the agent its rules no longer apply.".to_string(),
+            evidence: vec!["no longer bind you".to_string()],
+        };
+        {
+            let mut writer = VerdictCacheWriter::open(&cache, &keys).expect("the cache opens");
+            let mut old = CachedVerdict::of("r1", "apple", "26.1", moment(), &malicious);
+            old.key = cache_key("r1", "apple", "26.1", "1");
+            old.prompt_version = "1".to_string();
+            writer.append(&old).expect("a record is written");
+            let mut relabelled = CachedVerdict::of("r2", "apple", "26.1", moment(), &malicious);
+            relabelled.prompt_version = "1".to_string();
+            writer.append(&relabelled).expect("a record is written");
+        }
+        let view = cache.read(&keys).expect("the cache reads");
+        assert_eq!(view.len(), 2);
+        assert_eq!(view.lookup("r1", "apple", "26.1"), None);
+        assert_eq!(view.lookup("r2", "apple", "26.1"), None);
+    }
+
     /// A reason read back is contained again, whatever the file held.
     #[test]
     fn a_reason_read_back_is_contained() {
