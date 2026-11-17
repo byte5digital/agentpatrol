@@ -104,6 +104,7 @@ struct FakeEngine {
     now: AtomicUsize,
     most: AtomicUsize,
     asked: Mutex<Vec<String>>,
+    hashes: Mutex<Vec<String>>,
 }
 
 impl FakeEngine {
@@ -115,6 +116,7 @@ impl FakeEngine {
             now: AtomicUsize::new(0),
             most: AtomicUsize::new(0),
             asked: Mutex::new(Vec::new()),
+            hashes: Mutex::new(Vec::new()),
         })
     }
 
@@ -125,6 +127,11 @@ impl FakeEngine {
 
     fn asked(&self) -> Vec<String> {
         self.asked.lock().expect("the list").clone()
+    }
+
+    /// The hash of every Judgement Request it was asked about, in order.
+    fn request_hashes(&self) -> Vec<String> {
+        self.hashes.lock().expect("the list").clone()
     }
 
     fn most_at_once(&self) -> usize {
@@ -147,6 +154,10 @@ impl JudgementEngine for FakeEngine {
         self.most.fetch_max(now, Ordering::SeqCst);
         let marker = marker_of(prompt.user());
         self.asked.lock().expect("the list").push(marker.clone());
+        self.hashes
+            .lock()
+            .expect("the list")
+            .push(request_hash_of(prompt));
         let mut shut = self.shut.lock().expect("the gate");
         while *shut {
             shut = self.opened.wait(shut).expect("the gate");
@@ -161,26 +172,38 @@ impl JudgementEngine for FakeEngine {
         }
         let verdict = match marker.split('-').next() {
             Some("malicious") => serde_json::json!({
-                "verdict": "malicious",
-                "category": "instruction_file_injection",
                 "reason": "It tells the agent its rules no longer apply.",
                 "evidence": [QUOTE],
+                "verdict": "malicious",
+                "category": "instruction_file_injection",
             }),
             Some("benign") => serde_json::json!({
-                "verdict": "benign",
-                "category": "instruction_file_injection",
                 "reason": "",
                 "evidence": [],
+                "verdict": "benign",
+                "category": "none",
             }),
             _ => serde_json::json!({
-                "verdict": "unsure",
-                "category": "instruction_file_injection",
                 "reason": "",
                 "evidence": [],
+                "verdict": "unsure",
+                "category": "none",
             }),
         };
         Ok(verdict.to_string())
     }
+}
+
+/// The hash of the Judgement Request a Prompt carries: the sha256 of the
+/// serialised request inside the block, which is the hash the Verdict cache
+/// keys on.
+fn request_hash_of(prompt: &Prompt) -> String {
+    let open = format!("BEGIN UNTRUSTED ITEM {}\n", prompt.nonce());
+    let close = format!("\nEND UNTRUSTED ITEM {}\n", prompt.nonce());
+    let user = prompt.user();
+    let start = user.find(&open).map(|at| at + open.len()).unwrap_or(0);
+    let end = user.rfind(&close).unwrap_or(user.len());
+    agentsweep_core::item::sha256_hex(&user.as_bytes()[start..end])
 }
 
 /// The engine seam: every engine the settings name is the one fake, under a
@@ -799,6 +822,69 @@ fn an_engine_error_leaves_the_item_ambiguous_and_the_next_scan_asks_again() {
         vec!["failing-helper".to_string(), "failing-helper".to_string()]
     );
     assert!(sandbox.cached().is_empty());
+}
+
+/// Ticket 134 raised the prompt version. A Verdict cached under the older
+/// version is not applied, malicious as it is: the Item stays Ambiguous and
+/// the engine is asked again. The same Verdict cached under the version in
+/// force is applied without asking.
+#[test]
+fn a_verdict_cached_under_an_older_prompt_version_opens_nothing() {
+    use agentsweep_core::judgement::{Category, Verdict};
+    use agentsweep_core::verdicts::{CachedVerdict, VerdictCacheWriter, cache_key};
+
+    let sandbox = Sandbox::new(
+        "old-prompt",
+        settings::JudgementEngine::Ollama,
+        FakeEngine::new(Duration::ZERO, false),
+    );
+    sandbox.ambiguous_skill("failing-helper");
+    let daemon = sandbox.start();
+    wait_until("the request", || sandbox.engine.asked().len() == 1);
+    wait_for_the_queue(&daemon);
+    let hash = sandbox.engine.request_hashes()[0].clone();
+    let model = "ollama-fake@sha256:0";
+    let malicious = Verdict::Malicious {
+        category: Category::InstructionFileInjection,
+        reason: "It tells the agent its rules no longer apply.".to_string(),
+        evidence: vec![QUOTE.to_string()],
+    };
+    let cache = VerdictCache::in_data_directory(&sandbox.data());
+    let append = |record: &CachedVerdict| {
+        VerdictCacheWriter::open(&cache, &sandbox.keys)
+            .expect("the cache opens")
+            .append(record)
+            .expect("a record is written");
+    };
+    let open = |sandbox: &Sandbox| {
+        findings_on(&sandbox.status(), "failing-helper")
+            .iter()
+            .filter(|finding| finding.tier == Tier::AiJudgement && finding.is_open())
+            .count()
+    };
+
+    let mut old = CachedVerdict::of(&hash, "ollama", model, Timestamp::now(), &malicious);
+    old.key = cache_key(&hash, "ollama", model, "1");
+    old.prompt_version = "1".to_string();
+    append(&old);
+    sandbox.scan_now(&daemon);
+    wait_for_the_queue(&daemon);
+    assert_eq!(sandbox.engine.asked().len(), 2, "the engine is asked again");
+    assert_eq!(sandbox.engine.request_hashes()[1], hash);
+    assert_eq!(open(&sandbox), 0, "the old Verdict opens nothing");
+    assert!(ambiguous_names(&sandbox.status()).contains("failing-helper"));
+
+    append(&CachedVerdict::of(
+        &hash,
+        "ollama",
+        model,
+        Timestamp::now(),
+        &malicious,
+    ));
+    sandbox.scan_now(&daemon);
+    wait_for_the_queue(&daemon);
+    assert_eq!(sandbox.engine.asked().len(), 2, "the cache answered");
+    assert_eq!(open(&sandbox), 1, "the Verdict in force is applied");
 }
 
 /// Switching the engine feeds the Items that await judgement to the queue
