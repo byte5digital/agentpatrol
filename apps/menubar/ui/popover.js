@@ -1,10 +1,11 @@
 // The popover (spec section 8.1). It renders the view the app hands over and
 // calls the app's commands; it decides nothing. It stays minimal: the orb,
 // one sentence or the banner that replaces it, the last check and four
-// buttons. While a Scan runs the sentence says "Checking now." and nothing
-// more is shown here.
+// buttons. While a Scan runs the sentence says "Checking now."; while a Full
+// Scan runs it says "Checking…" over the bar the Overview shows.
 
 import { renderBanner } from "./banner.js";
+import { renderBar } from "./checking.js";
 import { nextPress } from "./press.js";
 import { inLocalTime } from "./when.js";
 
@@ -15,6 +16,9 @@ const root = document.querySelector(".popover");
 const said = document.getElementById("said");
 const sentence = document.getElementById("sentence");
 const detail = document.getElementById("detail");
+const checking = document.getElementById("checking");
+const checkingLabel = document.getElementById("checking-label");
+const checkingBar = document.getElementById("checking-bar");
 const banner = document.getElementById("banner");
 const lastCheck = document.getElementById("last-check");
 const asking = document.getElementById("asking");
@@ -40,6 +44,13 @@ function render(view) {
   sentence.textContent = inLocalTime(view.sentence ?? "");
   detail.textContent = view.detail;
   detail.hidden = view.detail === "";
+  const scan = view.checking ?? null;
+  checking.hidden = scan === null;
+  if (scan !== null) {
+    checkingLabel.textContent = scan.label;
+    checkingLabel.hidden = scan.label === "";
+    renderBar(checkingBar, scan.done, scan.total);
+  }
   renderBanner(banner, view.banner);
   if (view.lastCheck) {
     lastCheck.textContent = `Last check: ${when(view.lastCheck)}`;

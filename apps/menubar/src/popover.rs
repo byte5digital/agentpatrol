@@ -2,9 +2,10 @@
 //! sentence by precedence, the last check time, and for the integrity and
 //! Protection states the coloured banner that replaces the sentence
 //! ([`crate::banner`]); an integrity banner is one line pointing to the
-//! window, whose buttons are only there. Nothing else: no Finding list, no
-//! Finding action and no progress count in either Posture; while a Scan runs
-//! the sentence is "Checking now." and nothing more.
+//! window, whose buttons are only there. Nothing else: no Finding list and
+//! no Finding action in either Posture. While a Scan runs the sentence is
+//! "Checking now."; while a Full Scan runs it is "Checking…" with the bar
+//! the Overview shows ([`crate::checking`]), and no count.
 //!
 //! The sentence is [`Health::headline_in`] the Posture, so the app and the
 //! command line interface say the same thing about the same machine; only
@@ -16,6 +17,7 @@ use agentsweep_core::settings::Posture;
 use serde_json::{Value, json};
 
 use crate::banner::{self, Banner, Daemon};
+use crate::checking::{self, Bar};
 use crate::supervision::Stale;
 
 /// The state the orb and the menu bar glyph show.
@@ -92,6 +94,9 @@ pub struct View {
     pub detail: String,
     /// The banner that replaces the sentence, when one stands.
     pub banner: Option<Banner>,
+    /// True when the sentence is "Checking now.": a Full Scan's bar then
+    /// says it as "Checking…".
+    pub checking_now: bool,
 }
 
 impl View {
@@ -126,6 +131,7 @@ impl View {
                 (_, 1) => "1 Finding is open.".to_string(),
                 (_, many) => format!("{many} Findings are open."),
             },
+            checking_now: health.rung() == Rung::CheckingNow,
         }
     }
 
@@ -151,6 +157,7 @@ impl View {
                     false => &Daemon::Off,
                 },
             ),
+            checking_now: false,
         }
     }
 
@@ -170,6 +177,7 @@ impl View {
             login_items: false,
             detail: reason.to_string(),
             banner: banner::choose(&health, &Daemon::NotRunning),
+            checking_now: false,
         }
     }
 
@@ -185,6 +193,7 @@ impl View {
             login_items: false,
             detail: String::new(),
             banner: None,
+            checking_now: false,
         }
     }
 
@@ -205,6 +214,7 @@ impl View {
                 app: app.to_string(),
                 daemon: daemon.to_string(),
             }),
+            checking_now: false,
         }
     }
 
@@ -228,6 +238,7 @@ impl View {
                 }
             },
             banner: None,
+            checking_now: false,
         }
     }
 
@@ -249,14 +260,38 @@ impl View {
     /// sentence and the line under it, so neither is sent beside one; an
     /// integrity banner is the one line that points to the window.
     pub fn to_value(&self, posture: Posture) -> Value {
+        self.to_value_checking(posture, None)
+    }
+
+    /// The same, with the bar of a Full Scan that runs: "Checking…" over
+    /// the bar, which says it in place of "Checking now." when that is the
+    /// sentence. A banner leaves no room for the bar.
+    pub fn to_value_checking(&self, posture: Posture, bar: Option<Bar>) -> Value {
         let banner = self
             .banner
             .as_ref()
             .map(|banner| banner.in_popover(posture));
         let replaced = banner.is_some();
+        let bar = bar.filter(|_| !replaced);
+        let sentence = match (bar.is_some() && self.checking_now, replaced) {
+            (_, true) => None,
+            (true, false) => Some(checking::POPOVER_TITLE),
+            (false, false) => Some(self.sentence_in(posture)),
+        };
+        let checking = bar.map(|bar| {
+            json!({
+                "label": match self.checking_now {
+                    true => "",
+                    false => checking::POPOVER_TITLE,
+                },
+                "done": bar.done,
+                "total": bar.total,
+            })
+        });
         json!({
             "orb": self.orb.as_str(),
-            "sentence": (!replaced).then_some(self.sentence_in(posture)),
+            "sentence": sentence,
+            "checking": checking,
             "lastCheck": self.last_check,
             "protectionOff": self.protection_off,
             "loginItems": self.login_items,
@@ -556,7 +591,7 @@ mod tests {
     /// progress count in either Posture: its value has these fields and no
     /// others, and its page listens to nothing but its own view.
     #[test]
-    fn the_popover_shows_no_finding_and_no_progress_in_either_posture() {
+    fn the_popover_shows_no_finding_and_no_count_in_either_posture() {
         let health = Health {
             open_threats: 2,
             open_exposures: 1,
@@ -577,6 +612,7 @@ mod tests {
                     keys,
                     [
                         "banner",
+                        "checking",
                         "detail",
                         "lastCheck",
                         "loginItems",
@@ -593,17 +629,65 @@ mod tests {
         }
         let page = include_str!("../ui/index.html");
         let script = include_str!("../ui/popover.js");
-        for word in ["finding", "progress", "quarantine", "restore", "trust"] {
+        for word in ["finding", "quarantine", "restore", "trust"] {
             assert!(!page.to_lowercase().contains(word), "the page names {word}");
         }
         assert!(!script.contains("agentsweep://findings"));
-        assert!(!script.to_lowercase().contains("progress"));
+        assert!(!script.contains("count"), "no count of Items");
         let listened: Vec<&str> = script
             .lines()
             .filter_map(|line| line.split("listen(\"").nth(1))
             .filter_map(|rest| rest.split('"').next())
             .collect();
         assert_eq!(listened, ["agentsweep://view"]);
+    }
+
+    /// A Full Scan shows "Checking…" over its bar: as the sentence when
+    /// that is "Checking now.", above the bar under a sentence that ranks
+    /// higher; a banner leaves no room for it, and without a Full Scan there
+    /// is none.
+    #[test]
+    fn a_full_scan_shows_checking_with_its_bar() {
+        let bar = Bar {
+            done: 12,
+            total: 43,
+        };
+        let checking = Health {
+            scanning: true,
+            ..Health::running()
+        };
+        let view = View::of(&checking);
+        assert!(view.checking_now);
+        for posture in [Posture::Simple, Posture::Developer] {
+            let value = view.to_value_checking(posture, Some(bar));
+            assert_eq!(value["sentence"], "Checking…");
+            assert_eq!(
+                value["checking"],
+                json!({ "label": "", "done": 12, "total": 43 })
+            );
+            assert!(view.to_value(posture)["checking"].is_null());
+            assert_eq!(view.to_value(posture)["sentence"], "Checking now.");
+        }
+
+        let permission = Health {
+            scanning: true,
+            projects_need_permission: 2,
+            ..Health::running()
+        };
+        let value = View::of(&permission).to_value_checking(Posture::Simple, Some(bar));
+        assert_eq!(value["sentence"], permission.headline());
+        assert_eq!(value["checking"]["label"], "Checking…");
+
+        let value = View::not_watching("x").to_value_checking(Posture::Simple, Some(bar));
+        assert!(value["checking"].is_null());
+        assert!(value["sentence"].is_null());
+
+        // The page draws the bar through the module the Overview uses.
+        let page = include_str!("../ui/index.html");
+        let script = include_str!("../ui/popover.js");
+        assert!(page.contains(r#"<progress id="checking-bar""#));
+        assert!(script.contains(r#"import { renderBar } from "./checking.js";"#));
+        assert!(script.contains("renderBar(checkingBar, scan.done, scan.total);"));
     }
 
     /// Placeholder wording still keeps the house style: no em-dashes.

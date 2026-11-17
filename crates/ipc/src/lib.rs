@@ -24,6 +24,7 @@ pub mod judge;
 pub mod notifications;
 pub mod peer;
 pub mod preview;
+pub mod progress;
 pub mod protocol;
 pub mod settings;
 pub mod socket;

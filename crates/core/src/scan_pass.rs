@@ -163,6 +163,21 @@ impl ScanOutcome {
     }
 }
 
+/// Who is told, Item by Item, how far the Tiers have got. The Tiers run on
+/// several worker threads, so it is told from each of them.
+pub trait Watch: Sync {
+    /// The Tiers are done with `item`, which makes `done` of `total`.
+    fn checked(&self, done: usize, total: usize, item: &Item);
+}
+
+/// A pass nobody watches.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Unwatched;
+
+impl Watch for Unwatched {
+    fn checked(&self, _done: usize, _total: usize, _item: &Item) {}
+}
+
 /// One pass of a Scan: what it runs with, and what it already knows.
 #[derive(Clone, Copy)]
 pub struct ScanPass<'a> {
@@ -199,6 +214,8 @@ pub struct ScanPass<'a> {
     pub workers: usize,
     /// The moment the Scan stands at.
     pub at: Timestamp,
+    /// Who is told how far the Tiers have got.
+    pub watch: &'a dyn Watch,
 }
 
 impl fmt::Debug for ScanPass<'_> {
@@ -254,6 +271,7 @@ impl<'a> ScanPass<'a> {
             verdicts: &NoVerdicts,
             workers: BACKGROUND_WORKERS,
             at: Timestamp::now(),
+            watch: &Unwatched,
         }
     }
 
@@ -309,6 +327,13 @@ impl<'a> ScanPass<'a> {
     /// The same pass over a given number of worker threads.
     pub fn with_workers(mut self, workers: usize) -> ScanPass<'a> {
         self.workers = workers.max(1);
+        self
+    }
+
+    /// The same pass telling `watch` about every Item the Tiers are done
+    /// with.
+    pub fn watched(mut self, watch: &'a dyn Watch) -> ScanPass<'a> {
+        self.watch = watch;
         self
     }
 
@@ -473,12 +498,22 @@ impl<'a> ScanPass<'a> {
     /// hundred entries and a slice of Items is not a slice of work.
     fn assess_every(&self, items: &[Item]) -> Result<Vec<Assessment>, ScanFailure> {
         let workers = self.workers.max(1).min(items.len());
+        let total = items.len();
+        let checked = AtomicUsize::new(0);
+        let tell = |item: &Item| {
+            let done = checked.fetch_add(1, Ordering::Relaxed) + 1;
+            self.watch.checked(done, total, item);
+        };
         if workers <= 1 {
             let mut scanners = Scanners::with_bands(self.pack, self.bands);
             let allowlist = Allowlist::over(self.trusted).with_gate_entries(self.known);
             return items
                 .iter()
-                .map(|item| self.assess_one(&allowlist, &mut scanners, item))
+                .map(|item| {
+                    let assessment = self.assess_one(&allowlist, &mut scanners, item);
+                    tell(item);
+                    assessment
+                })
                 .collect();
         }
 
@@ -500,7 +535,10 @@ impl<'a> ScanPass<'a> {
                             break;
                         };
                         match self.assess_one(&allowlist, &mut scanners, item) {
-                            Ok(assessment) => mine.push((at, assessment)),
+                            Ok(assessment) => {
+                                tell(item);
+                                mine.push((at, assessment));
+                            }
                             Err(error) => {
                                 failed.store(true, Ordering::Relaxed);
                                 *failure.lock().expect("the failure is not poisoned") = Some(error);
@@ -1445,6 +1483,56 @@ mod tests {
         };
         assert_eq!(sources(&one), sources(&four));
         assert!(!sources(&one).is_empty(), "the planted content is found");
+    }
+
+    /// What a watcher of the pass is told: every Item once, from every worker,
+    /// counted up to the total.
+    #[derive(Default)]
+    struct Recording(Mutex<Vec<(usize, usize, String)>>);
+
+    impl Watch for Recording {
+        fn checked(&self, done: usize, total: usize, item: &Item) {
+            self.0.lock().expect("the record is not poisoned").push((
+                done,
+                total,
+                item.id.as_str().to_string(),
+            ));
+        }
+    }
+
+    /// The pass tells its watcher about every Item the Tiers are done with,
+    /// once each, counting up to the total, on one worker and on four.
+    #[test]
+    fn the_pass_tells_its_watcher_about_every_item_once() {
+        let host = FakeHost::new();
+        host.instruction_file("# demo\n\nRun the tests first.\n");
+        for name in ["alpha", "beta", "gamma"] {
+            host.skill(name, &format!("# {name}\n\nFormat the changelog.\n"));
+        }
+        let pack = RulePack::bundled().expect("the bundled pack compiles");
+        for workers in [1, 4] {
+            let mut enumeration = host.enumerate();
+            let total = enumeration.items.len();
+            let recording = Recording::default();
+            let baseline = BaselineView::none();
+            let trusted = TrustTable::default();
+            let known = KnownActions::default();
+            ScanPass::full(&pack, &baseline, &plan(), &trusted, &known, &declarations())
+                .with_workers(workers)
+                .watched(&recording)
+                .over(&mut enumeration)
+                .expect("the pass runs");
+            let told = recording.0.into_inner().expect("the record");
+            assert_eq!(told.len(), total, "{told:?}");
+            let mut counted: Vec<usize> = told.iter().map(|(done, _, _)| *done).collect();
+            counted.sort_unstable();
+            assert_eq!(counted, (1..=total).collect::<Vec<_>>());
+            assert!(told.iter().all(|(_, of, _)| *of == total));
+            let mut items: Vec<&str> = told.iter().map(|(_, _, id)| id.as_str()).collect();
+            items.sort_unstable();
+            items.dedup();
+            assert_eq!(items.len(), total, "every Item once");
+        }
     }
 
     /// Spec section 6.4: a Full Scan re-enumerates and re-hashes everything,

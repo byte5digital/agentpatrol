@@ -488,6 +488,29 @@ dialog {
   margin-top: 8px;
 }
 
+/* A Full Scan that runs (spec section 8.3): the title, the bar, the count
+   and the line naming what is being checked. */
+.checking {
+  margin: 8px 0 16px;
+}
+
+.checking-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.checking progress {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  accent-color: var(--clear);
+}
+
+.checking p {
+  margin: 6px 0 0;
+}
+
 /* The Simple Overview of layout B (spec section 8.4): the Protection line
    and the four count tiles, two by two. */
 .statusline {

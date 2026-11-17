@@ -83,6 +83,7 @@ pub mod ai_check;
 pub mod app;
 pub mod asking;
 pub mod banner;
+pub mod checking;
 pub mod cli_link;
 pub mod developer;
 pub mod false_alarm;

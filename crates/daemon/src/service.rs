@@ -22,7 +22,7 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Condvar, Mutex, RwLock};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::adapter::WatchRoots;
+use agentsweep_core::adapter::{Descriptor, WatchRoots};
 use agentsweep_core::apple_engine::AppleHelper;
 use agentsweep_core::baseline::{self, Retention};
 use agentsweep_core::chain::ChainState;
@@ -34,7 +34,7 @@ use agentsweep_core::gate_facts::GateRecord;
 use agentsweep_core::gate_registration::GateCommand;
 use agentsweep_core::health::{Health, Protection, StateFileHealth};
 use agentsweep_core::integrity::ResetUnanswered;
-use agentsweep_core::item::Scope;
+use agentsweep_core::item::{Item, Scope};
 use agentsweep_core::judged::installed_models;
 use agentsweep_core::keychain::{ClaudeKeyStore, KeySource, MemoryKeySource};
 use agentsweep_core::packs::{LoadedPack, PackOrigin, PackStore, Verdict, judge};
@@ -48,8 +48,8 @@ use agentsweep_ipc::gate::{GateRequest, GateVerdict};
 use agentsweep_ipc::notifications::changes_to_value;
 use agentsweep_ipc::peer::PeerCheck;
 use agentsweep_ipc::protocol::{
-    ActivityLine, Hello, Message, Refusal, Request, RequestError, Role, StateEvent, Status,
-    check_version, welcome,
+    ActivityLine, Hello, Message, Refusal, Request, RequestError, Role, ScanPhase, StateEvent,
+    Status, check_version, welcome,
 };
 use agentsweep_ipc::socket::{Connection, Liveness, SocketListener};
 
@@ -64,6 +64,7 @@ use crate::machine::Machine;
 use crate::notifications::Launch;
 use crate::options::{KeySourceChoice, Options};
 use crate::permission::{Access, Disk, Folders, LocationClass, proven_readable_classes};
+use crate::progress::{self, Throttle};
 use crate::rule_feed::{self, Endpoints, FeedClient, FeedTuning, Fetched, Validators};
 use crate::stores::{open_both_chains, open_the_event_log};
 use crate::watcher::{self, Batch, Decision, Timings, Watch};
@@ -388,6 +389,10 @@ pub struct Daemon {
     due: Mutex<Option<due::DueCheck>>,
     /// Everyone listening to the state events.
     subscribers: Mutex<Vec<Subscriber>>,
+    /// The last progress event of the Full Scan that runs, which a new
+    /// subscriber is sent after the Health so it can show how far the Scan
+    /// has got. None while no Full Scan runs. In memory only.
+    progress: Mutex<Option<StateEvent>>,
     /// What launches the application of this daemon's own bundle, absent
     /// when nothing is launched.
     pub(crate) launch: Option<Launch>,
@@ -638,6 +643,7 @@ impl Daemon {
             watch: Mutex::new(None),
             due: Mutex::new(None),
             subscribers: Mutex::new(Vec::new()),
+            progress: Mutex::new(None),
             launch,
             launched: Mutex::new(BTreeSet::new()),
             told: Mutex::new(None),
@@ -835,7 +841,7 @@ impl Daemon {
             .lock()
             .expect("the last Scan is not poisoned")
             .clone();
-        let watching = Watching(Arc::clone(self));
+        let watching = Watching::of(self);
         // The pack in force when the Scan starts is the one it runs to the
         // end; a pack accepted meanwhile asks for the Full Scan after it.
         let pack = self.pack_in_force();
@@ -882,6 +888,9 @@ impl Daemon {
                         .filter(|_| self.gate_hooks_enabled()),
                 }
                 .run(trigger);
+                // The Scan is over: a subscriber from now on is told its end,
+                // never how far it had got.
+                *self.progress.lock().expect("the progress is not poisoned") = None;
                 match run {
                     Ok(mut run) => {
                         let awaiting = std::mem::take(&mut run.awaiting);
@@ -1477,10 +1486,19 @@ impl Daemon {
                     result: Ok(serde_json::Value::Bool(true)),
                 });
                 // The stream opens with the Health as it stands, so a
-                // subscriber has something to show before anything changes.
+                // subscriber has something to show before anything changes,
+                // and with how far a running Full Scan has got.
                 let _ = connection.send(&Message::Event(StateEvent::HealthChanged {
                     health: Box::new(self.health()),
                 }));
+                let progress = self
+                    .progress
+                    .lock()
+                    .expect("the progress is not poisoned")
+                    .clone();
+                if let Some(progress) = progress {
+                    let _ = connection.send(&Message::Event(progress));
+                }
                 // A subscribed connection carries no more requests: the daemon
                 // writes events on it until the client goes away.
                 for event in receiver {
@@ -2299,12 +2317,64 @@ fn name_of(message: &Message) -> &'static str {
     }
 }
 
-/// The progress of a Scan, as its subscribers see it.
-struct Watching(Arc<Daemon>);
+/// The progress of a Full Scan, as its subscribers see it: a few events a
+/// second at most ([`crate::progress`]), and nothing written anywhere.
+struct Watching {
+    daemon: Arc<Daemon>,
+    /// Each adapter's Agent id with the name it gives it.
+    names: Vec<(&'static str, &'static str)>,
+    throttle: Mutex<Throttle>,
+}
+
+impl Watching {
+    fn of(daemon: &Arc<Daemon>) -> Watching {
+        Watching {
+            daemon: Arc::clone(daemon),
+            names: crate::machine::adapters()
+                .iter()
+                .map(|adapter| {
+                    let descriptor = adapter.descriptor();
+                    (descriptor.agent, descriptor.display_name)
+                })
+                .collect(),
+            throttle: Mutex::new(Throttle::default()),
+        }
+    }
+
+    /// Sends `event` when the throttle lets it through, and keeps it for a
+    /// subscriber that comes later. The throttle is held while it is sent,
+    /// so the events of several workers go out in the order it let them.
+    fn tell(&self, event: StateEvent) {
+        let mut throttle = self.throttle.lock().expect("the throttle is not poisoned");
+        if !throttle.lets_through(Instant::now(), &event) {
+            return;
+        }
+        *self
+            .daemon
+            .progress
+            .lock()
+            .expect("the progress is not poisoned") = Some(event.clone());
+        self.daemon.publish(event);
+    }
+}
 
 impl Progress for Watching {
-    fn at(&self, done: usize, total: usize) {
-        self.0.publish(StateEvent::ScanProgress { done, total });
+    fn enumerating(&self, agent: Option<&Descriptor>) {
+        self.tell(StateEvent::ScanProgress {
+            done: 0,
+            total: 0,
+            phase: ScanPhase::Enumerating,
+            in_hand: agent.map(progress::of_agent),
+        });
+    }
+
+    fn at(&self, done: usize, total: usize, item: Option<&Item>) {
+        self.tell(StateEvent::ScanProgress {
+            done,
+            total,
+            phase: ScanPhase::Checking,
+            in_hand: item.map(|item| progress::of_item(item, &self.names)),
+        });
     }
 }
 

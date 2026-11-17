@@ -14,6 +14,11 @@
         <div id="said">
           <p class="sentence" id="sentence">Protection is off.</p>
           <p class="detail" id="detail"></p>
+          <!-- "Checking…" with the bar of a Full Scan that runs. -->
+          <div class="checking" id="checking" hidden>
+            <p class="detail" id="checking-label"></p>
+            <progress id="checking-bar" aria-label="Checking"></progress>
+          </div>
         </div>
         <!-- The integrity and Protection banners replace the sentence
              (spec section 8.6). -->

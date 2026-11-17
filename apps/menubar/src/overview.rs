@@ -38,6 +38,7 @@ use agentsweep_ipc::protocol::Status;
 use serde_json::{Value, json};
 
 use crate::banner::{self, Daemon, Shown};
+use crate::checking::{self, Checking};
 use crate::findings::{ScanLine, count, progress_line};
 use crate::gate::{self, ProjectOff};
 use crate::permission::{self, CheckNow, PermissionView};
@@ -73,8 +74,12 @@ pub struct OverviewView {
     pub actions: bool,
     /// True while a Scan runs.
     pub scanning: bool,
-    /// The running Scan's progress, empty when none runs.
+    /// The running Scan's progress, empty when none runs and while the
+    /// block of a Full Scan says it.
     pub progress: String,
+    /// "Checking your setup…" with the bar and the line naming what is
+    /// being checked, while a Full Scan runs ([`crate::checking`]).
+    pub checking: Option<Checking>,
     /// The last Scan on one line: trigger, Item count, duration, Finding
     /// counts, Bands, Rule Pack and engine. The Developer Posture only.
     pub summary: Option<String>,
@@ -237,6 +242,7 @@ impl OverviewView {
             "rulesUpdated": self.rules_updated,
             "actions": self.actions,
             "scan": { "running": self.scanning, "progress": self.progress },
+            "checking": self.checking.as_ref().map(Checking::to_value),
             "summary": self.summary,
             "gate": {
                 "lines": self.gate_lines,
@@ -289,6 +295,7 @@ pub fn view(
             actions: false,
             scanning: false,
             progress: String::new(),
+            checking: None,
             summary: None,
             banner: banner::choose(health, &Daemon::Off).map(|banner| banner.shown(posture)),
             gate_lines: Vec::new(),
@@ -304,6 +311,9 @@ pub fn view(
     }
     let sentence = health.headline_in(posture);
     let simple = posture == Posture::Simple;
+    let checking = checking::of_scan(scan, posture);
+    // The block says what "Checking now." would.
+    let said_by_the_block = checking.is_some() && health.rung() == Rung::CheckingNow;
     OverviewView {
         off: false,
         // The Simple tile counts the projects that switched the check off;
@@ -321,7 +331,7 @@ pub fn view(
                 .collect(),
         },
         gate_off: gate::projects_off(overview, posture),
-        sentence_shown: !simple || said_beside_the_tiles(health.rung()),
+        sentence_shown: (!simple || said_beside_the_tiles(health.rung())) && !said_by_the_block,
         sentence,
         // Versions and Item counts are the Developer Posture's.
         agents: match simple {
@@ -346,10 +356,11 @@ pub fn view(
         watching: watching(overview).filter(|_| simple),
         actions: true,
         scanning: scan.running,
-        progress: match scan.running {
+        progress: match scan.running && checking.is_none() {
             true => progress(scan.done, scan.total, posture),
             false => String::new(),
         },
+        checking,
         summary: match posture {
             Posture::Developer => last_scan.map(summary_line),
             Posture::Simple => None,

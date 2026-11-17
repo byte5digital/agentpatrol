@@ -1493,6 +1493,7 @@ fn the_first_check_raises_one_notice_for_the_first_scan_and_shows_its_result() {
                 Some(&notifications),
                 Posture::Simple,
                 Some(&event),
+                first_check::Window::Closed,
             );
         }
     }
@@ -1519,6 +1520,7 @@ fn the_first_check_raises_one_notice_for_the_first_scan_and_shows_its_result() {
         Some(&notifications),
         Posture::Simple,
         Some(&health),
+        first_check::Window::Closed,
     ));
     assert_eq!(notifier.shown().len(), 1);
 
@@ -1538,6 +1540,46 @@ fn the_first_check_raises_one_notice_for_the_first_scan_and_shows_its_result() {
     );
     first.lock().expect("the first check").seen();
     assert_eq!(
+        first.lock().expect("the first check").to_value(),
+        Value::Null
+    );
+}
+
+/// With the window open the result shows there and no notice is raised;
+/// the changes it stands for are confirmed as told all the same, so none
+/// raises a notice of its own afterwards.
+#[test]
+fn the_first_check_raises_no_notice_while_the_window_is_open() {
+    let sandbox = Sandbox::new("first-check-open");
+    let registered = Timestamp::now();
+    let _daemon = sandbox.start();
+    let asking = sandbox.asking();
+    let notifier = RecordingNotifier::default();
+    let notifications = Notifications::new(Box::new(notifier.clone()));
+    let first = Mutex::new(FirstCheck::default());
+    first.lock().expect("the first check").start(registered);
+    assert!(!asking.unnotified().expect("the changes").is_empty());
+
+    assert!(first_check::follow(
+        &first,
+        &asking,
+        Some(&notifications),
+        Posture::Simple,
+        None,
+        first_check::Window::Open,
+    ));
+    assert!(notifier.shown().is_empty(), "{:?}", notifier.shown());
+    assert!(
+        asking.unnotified().expect("the changes").is_empty(),
+        "the result in the window stands for the planted skill"
+    );
+    assert_eq!(notifications.raise(&asking).expect("asked"), 0);
+    assert_eq!(
+        first.lock().expect("the first check").to_tell(),
+        None,
+        "tried once"
+    );
+    assert_ne!(
         first.lock().expect("the first check").to_value(),
         Value::Null
     );
@@ -1569,6 +1611,7 @@ fn the_first_check_result_waits_in_the_window_when_notifications_are_refused() {
         Some(&notifications),
         Posture::Simple,
         None,
+        first_check::Window::Closed,
     ));
     assert_eq!(
         first.lock().expect("the first check").to_tell(),

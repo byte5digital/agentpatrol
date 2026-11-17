@@ -35,7 +35,7 @@ use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
 use agentsweep_daemon::service::{self, Background, Daemon};
 use agentsweep_daemon::watcher::{Batch, Decision, Escalation, PATHS_PER_BATCH, Timings};
 use agentsweep_ipc::peer::{Nobody, Peer, PeerCheck, SameUser, this_user};
-use agentsweep_ipc::protocol::{Hello, Message, Refusal, Role, StateEvent, Status};
+use agentsweep_ipc::protocol::{Hello, Message, Refusal, Role, ScanPhase, StateEvent, Status};
 use agentsweep_ipc::{Client, RESTART_AGENTSWEEP, connect};
 
 /// Keeps one test's temporary paths apart from another's.
@@ -647,7 +647,7 @@ fn a_subscriber_is_told_when_a_scan_starts_gets_on_and_finishes() {
                 assert!(at.as_unix_ms() > 0);
                 seen.push("scan-started".to_string());
             }
-            Some(StateEvent::ScanProgress { done, total }) => {
+            Some(StateEvent::ScanProgress { done, total, .. }) => {
                 assert!(done <= total, "{done} of {total}");
                 seen.push("scan-progress".to_string());
             }
@@ -688,6 +688,137 @@ fn a_subscriber_is_told_when_a_scan_starts_gets_on_and_finishes() {
     let summary = finished.expect("a finished Scan");
     assert_eq!(summary.trigger, Trigger::ScanNow);
     assert!(summary.items >= 1);
+}
+
+/// A Full Scan's progress on the stream: first that it is looking for what
+/// to check, then each adapter it enumerates, then the Items done of the
+/// total with the Agent in hand, and last every Item done.
+#[test]
+fn a_full_scan_tells_its_phase_its_total_and_what_it_has_in_hand() {
+    let sandbox = Sandbox::with_a_planted_skill("progress");
+    let daemon = sandbox.start();
+
+    let listener = Client::connect_at(&daemon.socket(), Role::App).expect("a connected client");
+    let mut stream = listener.subscribe().expect("a subscription");
+    let mut asking = Client::connect_at(&daemon.socket(), Role::Cli).expect("a second client");
+    asking.scan_now().expect("a Full Scan");
+
+    let mut progress = Vec::new();
+    let mut ours = false;
+    loop {
+        match stream.next_event().expect("an event") {
+            Some(StateEvent::ScanStarted { trigger, .. }) => ours = trigger == Trigger::ScanNow,
+            Some(StateEvent::ScanProgress {
+                done,
+                total,
+                phase,
+                in_hand,
+            }) if ours => progress.push((done, total, phase, in_hand)),
+            Some(StateEvent::ScanFinished { summary }) if ours => {
+                assert_eq!(summary.kind, ScanKind::Full);
+                break;
+            }
+            Some(_) => {}
+            None => panic!("the stream ended before the Scan did"),
+        }
+    }
+
+    assert_eq!(
+        progress.first(),
+        Some(&(0, 0, ScanPhase::Enumerating, None)),
+        "{progress:?}"
+    );
+    let enumerated: Vec<&str> = progress
+        .iter()
+        .filter(|(_, _, phase, _)| *phase == ScanPhase::Enumerating)
+        .filter_map(|(_, _, _, in_hand)| in_hand.as_ref())
+        .map(|in_hand| in_hand.display_name.as_str())
+        .collect();
+    assert_eq!(enumerated, ["Project files", "Claude Code", "Codex"]);
+    let (done, total, phase, _) = progress.last().expect("progress").clone();
+    assert_eq!(phase, ScanPhase::Checking);
+    assert!(total >= 1);
+    assert_eq!(done, total, "the last event says every Item was done");
+    assert!(
+        progress
+            .iter()
+            .filter(|(_, _, phase, _)| *phase == ScanPhase::Checking)
+            .all(|(done, of, _, _)| *of == total && *done <= total),
+        "{progress:?}"
+    );
+    assert!(
+        progress.iter().any(
+            |(_, _, _, in_hand)| in_hand
+                .as_ref()
+                .is_some_and(|in_hand| in_hand.agent == "claude-code"
+                    && in_hand.display_name == "Claude Code"
+                    && in_hand.project.is_none())
+        ),
+        "the planted skill is the user's own: {progress:?}"
+    );
+}
+
+/// A Full Scan tells its watcher about every adapter it enumerates and the
+/// Items of a pooled project with the project in hand, nothing about the
+/// machine but what it scanned.
+#[test]
+fn a_full_scan_names_the_project_of_the_items_in_hand() {
+    /// Done, total, the Agent and the project root of each call.
+    type Told = (usize, usize, Option<String>, Option<PathBuf>);
+
+    #[derive(Default)]
+    struct Recording(Mutex<Vec<Told>>);
+
+    impl full_scan::Progress for Recording {
+        fn enumerating(&self, agent: Option<&agentsweep_core::adapter::Descriptor>) {
+            self.0.lock().expect("the record").push((
+                0,
+                0,
+                agent.map(|agent| agent.agent.to_string()),
+                None,
+            ));
+        }
+
+        fn at(&self, done: usize, total: usize, item: Option<&agentsweep_core::item::Item>) {
+            self.0.lock().expect("the record").push((
+                done,
+                total,
+                item.map(|item| item.agent.clone()),
+                item.and_then(|item| item.scope.root().map(Path::to_path_buf)),
+            ));
+        }
+    }
+
+    let fixture = fixtures::Copy::of("claude-code", "user-and-project-entries");
+    let sandbox = Sandbox::empty("progress-project");
+    let machine = Machine::named(fixture.root().join("home"));
+    let recording = Recording::default();
+    let run = full_scan::run(
+        &machine,
+        &sandbox.data(),
+        &sandbox.keys,
+        &[],
+        Trigger::DaemonStart,
+        &recording,
+    )
+    .expect("a Full Scan");
+
+    let told = recording.0.into_inner().expect("the record");
+    let total = run.summary.items;
+    assert_eq!(told.first(), Some(&(0, 0, None, None)));
+    assert!(told.contains(&(0, total, None, None)), "the total is told");
+    assert_eq!(told.last(), Some(&(total, total, None, None)));
+    let items: Vec<_> = told
+        .iter()
+        .filter(|(done, _, agent, _)| *done > 0 && agent.is_some())
+        .collect();
+    assert_eq!(items.len(), total, "every Item once");
+    assert!(
+        items
+            .iter()
+            .any(|(_, _, _, project)| project.as_deref() == Some(fixture.project())),
+        "{told:?}"
+    );
 }
 
 /// The stream opens with the Health as it stands and carries it again every

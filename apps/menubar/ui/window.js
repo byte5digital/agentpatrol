@@ -21,6 +21,7 @@
 // the next stream event's render cannot swallow a click.
 
 import { renderBanner } from "./banner.js";
+import { renderBar } from "./checking.js";
 import { isDeveloper, onPostureChange, takePosture } from "./posture.js";
 import { lookAtAiCheck, renderAiCheck } from "./ai_check.js";
 import { keep } from "./keep.js";
@@ -909,6 +910,7 @@ function renderOverview(overview) {
   $("overview-protection").textContent = overview.protection ?? "";
   $("overview-sentence").hidden = overview.sentence === null;
   $("overview-sentence").textContent = inLocalTime(overview.sentence ?? "");
+  renderChecking(overview.checking ?? null);
   $("overview-body").hidden = overview.off;
   $("overview-scan").hidden = !overview.actions;
   const tiled = renderTiles(overview);
@@ -946,6 +948,22 @@ function renderOverview(overview) {
   $("overview-cap").hidden = (overview.cap ?? null) === null;
   renderGateLines(overview.gate, tiled);
   renderPermission(overview.permission, tiled);
+}
+
+// A Full Scan that runs: "Checking your setup…", the bar, the count and
+// one line naming what is being checked (spec section 8.3). It goes when
+// the Scan ends.
+function renderChecking(checking) {
+  $("overview-checking").hidden = checking === null;
+  if (checking === null) {
+    return;
+  }
+  $("checking-title").textContent = checking.title;
+  renderBar($("checking-bar"), checking.bar.done, checking.bar.total);
+  $("checking-count").textContent = checking.count;
+  $("checking-count").hidden = checking.count === "";
+  $("checking-line").textContent = checking.line;
+  $("checking-line").hidden = checking.line === "";
 }
 
 // The four count tiles of the Simple Overview, from the frame: the count,

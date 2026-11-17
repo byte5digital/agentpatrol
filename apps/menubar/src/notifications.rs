@@ -307,6 +307,22 @@ impl Notifications {
         Ok(true)
     }
 
+    /// Confirms every change un-notified now as told, raising nothing: the
+    /// open window shows what stands for them all, as the first check's
+    /// result does (spec section 8.3). Answers how many were confirmed.
+    pub fn shown_in_the_window(&self, asking: &Asking) -> Result<usize, ClientError> {
+        let _raising = self.raising.lock().expect("the raise is not poisoned");
+        let told: Vec<String> = asking
+            .unnotified()?
+            .into_iter()
+            .map(|change| change.id)
+            .collect();
+        if !told.is_empty() {
+            asking.notified(&told)?;
+        }
+        Ok(told.len())
+    }
+
     /// Raises what is un-notified when the event may carry something new.
     pub fn follow(&self, asking: &Asking, event: &StateEvent) -> Result<usize, ClientError> {
         match may_carry(event) {
@@ -486,7 +502,7 @@ mod tests {
 
     #[test]
     fn only_a_finding_a_scan_or_health_may_carry_something_to_tell() {
-        assert!(!may_carry(&StateEvent::ScanProgress { done: 1, total: 2 }));
+        assert!(!may_carry(&crate::findings::tests::progress(1, 2)));
         assert!(!may_carry(&StateEvent::JudgementProgress {
             done: 1,
             total: 2

@@ -1,14 +1,18 @@
 //! The first check after onboarding (spec sections 6.8 and 8.3, screen 6).
 //!
-//! The wizard closes as soon as screen 5 registered the daemon; the first
-//! Full Scan runs in the background. [`FirstCheck`] waits for the first Full
+//! The wizard closes as soon as screen 5 registered the daemon, and the
+//! Findings window opens on the Overview, which shows the first Full Scan
+//! running ([`crate::checking`]). [`FirstCheck`] waits for the first Full
 //! Scan that finished after the registration and then holds its result: the
 //! Item count, that everything present was recorded as the Baseline, what
 //! was stopped, and the Health's one sentence. The Findings window shows that
 //! result until the user closes it.
 //!
-//! One notification says the result is ready. It goes through the app's
-//! ordinary notifications ([`Notifications::raise_summary`]): while the first
+//! While the window is open the result shows there, and that stands for the
+//! un-notified changes, which are confirmed as told without a notification.
+//! With the window closed, one notification says the result is ready. It
+//! goes through the app's ordinary notifications
+//! ([`Notifications::raise_summary`]): while the first
 //! check waits, the daemon's un-notified changes are held back, and once it
 //! is ready the one notice stands for all of them and confirms them to the
 //! daemon as told, so the Items the first Scan stopped or flagged do not each
@@ -225,11 +229,22 @@ impl FirstCheck {
     }
 }
 
+/// Whether the Findings window is open where the user sees it.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Window {
+    /// Open, and not in the Dock.
+    Open,
+    /// Closed or in the Dock.
+    Closed,
+}
+
 /// Follows the first check on one stream event, or, with no event, looks
 /// at once: asks the daemon for its status when the first check wants it,
 /// takes the result, and raises its one notice through `notifications`,
-/// which opens the window on the Overview when clicked. Answers true when
-/// the result just became ready, so the window can show it.
+/// which opens the window on the Overview when clicked. With the window
+/// open the result shows there at once, so no notice is raised; the
+/// changes it stands for are confirmed as told all the same. Answers true
+/// when the result just became ready, so the window can show it.
 ///
 /// A daemon that does not answer leaves the first check waiting, or its
 /// notice untried, for the next event.
@@ -239,6 +254,7 @@ pub fn follow(
     notifications: Option<&Notifications>,
     posture: Posture,
     event: Option<&StateEvent>,
+    window: Window,
 ) -> bool {
     let wants = {
         let held = first.lock().expect("the first check is not poisoned");
@@ -259,9 +275,12 @@ pub fn follow(
         .expect("the first check is not poisoned")
         .to_tell();
     if let (Some(notice), Some(notifications)) = (notice, notifications)
-        && notifications
-            .raise_summary(asking, &notice, Pane::Overview)
-            .is_ok()
+        && match window {
+            Window::Open => notifications.shown_in_the_window(asking).is_ok(),
+            Window::Closed => notifications
+                .raise_summary(asking, &notice, Pane::Overview)
+                .is_ok(),
+        }
     {
         first
             .lock()
