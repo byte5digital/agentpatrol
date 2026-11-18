@@ -477,7 +477,7 @@ impl Services for Unregistered<'_> {
 }
 
 /// Turn on protection registers the daemon and the login item once per
-/// press, and is answered once the daemon it registered answers.
+/// press, and the daemon it registered answers.
 #[test]
 fn a_turn_on_protection_delivered_twice_registers_once_and_the_daemon_answers() {
     let sandbox = Sandbox::new("turn-on");
@@ -491,21 +491,14 @@ fn a_turn_on_protection_delivered_twice_registers_once_and_the_daemon_answers() 
     };
     let presses = Presses::default();
 
-    let answers = delivered_twice(&presses, || {
-        supervision::turn_on_and_wait(
-            &services,
-            || asking.status().is_ok(),
-            Duration::from_secs(60),
-        )
-        .map(supervision::started_line)
-    });
+    let answers = delivered_twice(&presses, || supervision::turn_on(&services));
     assert_eq!(
         services.registered.load(Ordering::SeqCst),
         1,
         "registered once"
     );
     assert_eq!(services.login_items.load(Ordering::SeqCst), 1);
-    assert_eq!(answers[0], Ok("AgentSweep is running."));
+    assert_eq!(answers[0], Ok(()));
     assert!(answers.iter().all(|answer| answer == &answers[0]));
     assert!(asking.status().is_ok(), "the daemon answers");
 }

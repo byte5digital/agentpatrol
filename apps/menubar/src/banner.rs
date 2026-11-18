@@ -230,7 +230,8 @@ pub const NOT_WATCHING: &str = "Not watching right now";
 pub const STARTING: &str = "Starting AgentSweep…";
 
 /// What Protection off says in place of **Turn on protection** from a click
-/// on it until the daemon answers.
+/// on it, and the title the popover and the Overview show in the banner's
+/// place from then until the daemon answers ([`crate::checking::starting`]).
 pub const STARTING_PROTECTION: &str = "Starting protection…";
 
 /// The title of the banner of an app older than its daemon.
