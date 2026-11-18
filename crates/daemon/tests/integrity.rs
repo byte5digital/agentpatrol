@@ -366,7 +366,7 @@ fn answering_a_broken_chain_unfreezes_automatic_quarantine_and_is_itself_on_reco
     let daemon = sandbox.start(
         &keys,
         Tuning {
-            pack: Some(Arc::new(stable_0001())),
+            pack: Some(Arc::new(|| Ok(stable_0001()))),
             ..quick()
         },
     );
