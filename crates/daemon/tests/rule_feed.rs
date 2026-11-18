@@ -502,12 +502,21 @@ impl Sandbox {
 
     /// A daemon pointed at this feed whose first fetch, when it starts with
     /// no settings file, is held for at most `hold` waiting for the app's
-    /// first settings hand-over. No jitter.
+    /// first settings hand-over. No jitter. The hold counts from the start,
+    /// which the Full Scan behind the Rules' compile outlasts, so it does
+    /// not wait for that Scan.
     fn start_holding(&self, feed: &FeedServer, hold: Duration) -> Background {
-        self.start_tuned(feed.endpoints(), Duration::ZERO, hold)
+        self.begin_tuned(feed.endpoints(), Duration::ZERO, hold)
     }
 
     fn start_tuned(&self, endpoints: Endpoints, jitter: Duration, hold: Duration) -> Background {
+        let background = self.begin_tuned(endpoints, jitter, hold);
+        wait_for_a_scan(background.daemon());
+        background
+    }
+
+    /// The same, answering at once without waiting for the start's Full Scan.
+    fn begin_tuned(&self, endpoints: Endpoints, jitter: Duration, hold: Duration) -> Background {
         let clock = self.clock.clone();
         let tuning = Tuning {
             watch: Timings::of(Duration::from_millis(100), Duration::from_millis(500)),
@@ -535,7 +544,6 @@ impl Sandbox {
         let running = service::start_with(&options, daemon).expect("a listening daemon");
         let background = running.serve_in_the_background();
         self.started.follow(background.daemon());
-        wait_for_a_scan(background.daemon());
         background
     }
 

@@ -153,7 +153,7 @@ impl Sandbox {
 
     fn start_with_a_stable_rule(&self) -> Background {
         self.start_tuned(Tuning {
-            pack: Some(Arc::new(stable_0001())),
+            pack: Some(Arc::new(|| Ok(stable_0001()))),
             ..quick()
         })
     }

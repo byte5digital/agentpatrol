@@ -19,7 +19,7 @@ use std::error::Error;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::{Arc, Condvar, Mutex, RwLock};
+use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use agentsweep_core::adapter::{Descriptor, WatchRoots};
@@ -39,7 +39,7 @@ use agentsweep_core::judged::installed_models;
 use agentsweep_core::keychain::{ClaudeKeyStore, KeySource, MemoryKeySource};
 use agentsweep_core::packs::{LoadedPack, PackOrigin, PackStore, Verdict, judge};
 use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::rules::RulePack;
+use agentsweep_core::rules::{RuleError, RulePack};
 use agentsweep_core::scan_pass::{BACKGROUND_WORKERS, ScanKind, on_demand_workers};
 use agentsweep_core::settings::{Settings, SettingsError, SettingsFile, SettingsWriter};
 use agentsweep_core::state::{RecordedFinding, State, StateFile, StateWriter, Trigger};
@@ -69,6 +69,9 @@ use crate::rule_feed::{self, Endpoints, FeedClient, FeedTuning, Fetched, Validat
 use crate::stores::{open_both_chains, open_the_event_log};
 use crate::watcher::{self, Batch, Decision, Timings, Watch};
 
+/// What compiles the Rules a daemon ships, which a test may stand in for.
+pub type CompileRules = Arc<dyn Fn() -> Result<RulePack, RuleError> + Send + Sync>;
+
 /// How the daemon is timed, so a test runs a day of Protection in a second.
 ///
 /// Every field has the value the shipped daemon takes; a test names the ones
@@ -85,11 +88,12 @@ pub struct Tuning {
     /// How many worker threads a Scan nobody is waiting for runs the Tiers
     /// with.
     pub workers: usize,
-    /// The Rules the binary ships, the bundled ones unless a test names
-    /// others. The seam a test flips one Rule to stable through, since every
-    /// bundled Rule is on Probation and none may be flipped in place. A pack
-    /// from the Rule Feed still replaces it, as it replaces the bundled one.
-    pub pack: Option<Arc<RulePack>>,
+    /// What compiles the Rules the binary ships, the bundled ones unless a
+    /// test names others. The seam a test flips one Rule to stable through,
+    /// since every bundled Rule is on Probation and none may be flipped in
+    /// place, and the one it holds the compile up through. A pack from the
+    /// Rule Feed still replaces it, as it replaces the bundled one.
+    pub pack: Option<CompileRules>,
     /// Where the Rule Feed is and how the fetch is timed.
     pub feed: FeedTuning,
     /// The handle every read into a protected location class goes through:
@@ -160,7 +164,7 @@ impl std::fmt::Debug for Tuning {
             .field("watch", &self.watch)
             .field("due", &self.due)
             .field("workers", &self.workers)
-            .field("pack", &self.pack)
+            .field("pack", &self.pack.is_some())
             .field("feed", &self.feed)
             .field("detect_ollama", &self.detect_ollama)
             .field("apple_helper", &self.apple_helper)
@@ -343,11 +347,15 @@ pub struct Daemon {
     /// The Rule Pack in force, compiled once. Compiling it costs far more than
     /// a Change Scan is allowed to take, so no Scan compiles its own. A Scan
     /// takes the pack in force when it starts and keeps it to the end; an
-    /// accepted pack is in force for the Scan after.
-    pack: RwLock<Arc<LoadedPack>>,
+    /// accepted pack is in force for the Scan after. None until the Rules
+    /// the start compiles behind the socket are ready.
+    pack: Mutex<Option<Arc<LoadedPack>>>,
+    /// Woken once the Rules the start compiles are in force.
+    compiled: Condvar,
     /// The pack this binary ships, which is in force whenever no fetched pack
-    /// is, and always while the Rule Feed is off.
-    bundled: Arc<LoadedPack>,
+    /// is, and always while the Rule Feed is off. Set with the pack in force
+    /// at start.
+    bundled: OnceLock<Arc<LoadedPack>>,
     /// Where the Rule Feed is asked, absent when it is never asked: a
     /// developer run that named no feed.
     feed: Option<Endpoints>,
@@ -515,13 +523,6 @@ impl Daemon {
             state.readable_classes = proven_readable_classes(&directory, &*keys, machine.home());
         }
 
-        // The bundled pack is compiled once, here. A daemon that cannot
-        // compile its own pack has nothing to protect with and says so rather
-        // than starting.
-        let bundled = Arc::new(match &tuning.pack {
-            Some(pack) => LoadedPack::bundled_as(Arc::clone(pack)),
-            None => LoadedPack::bundled()?,
-        });
         // The installed daemon asks the project's own feed; a developer run
         // asks only a feed it was pointed at, so a hand run or a test never
         // reaches GitHub by accident.
@@ -558,24 +559,10 @@ impl Daemon {
             SettingsFile::in_data_directory(&directory).read(),
             Err(SettingsError::Missing)
         ) && !tuning.feed.first_hold.is_zero();
-        let (pack, discarded) = pack_at_start(&directory, &bundled, &mut state, settings.rule_feed);
-        // A stored pack discarded at start is recorded like an accepted one,
-        // before the first Full Scan: what it withdrew is measured against
-        // the discarded pack, which is the one the last Scans ran with.
-        let pack_change = discarded.map(|(version, before)| {
-            let mut record = RulePackRecord::new(
-                PackChange::Discarded,
-                pack.manifest.pack_version,
-                &pack.manifest.released_at,
-                pack.origin,
-            );
-            record.discarded_version = version;
-            PendingPackChange {
-                record,
-                before,
-                from: (version, PackOrigin::Fetched),
-            }
-        });
+        forget_an_ignored_pack_now_loadable(&mut state);
+        // The Rules are compiled behind the socket: until they are, the
+        // Health names the bundled pack, whose manifest the binary carries.
+        let manifest = agentsweep_core::pack::Manifest::bundled();
         let spend = CloudLedger::in_the_event_log(&directory, &*keys);
         let now = (tuning.due.now)();
 
@@ -594,9 +581,9 @@ impl Daemon {
             items: state.last_scan().map(|scan| scan.items).unwrap_or_default(),
             open_threats: 0,
             open_exposures: 0,
-            rule_pack: pack.manifest.pack_version,
-            rule_pack_origin: pack.origin,
-            rules_released_at: pack.manifest.released_at.clone(),
+            rule_pack: manifest.pack_version,
+            rule_pack_origin: PackOrigin::Bundled,
+            rules_released_at: manifest.released_at,
             rule_feed: settings.rule_feed,
             ignored_pack: state.feed.ignored.clone(),
             feed_unreachable: match settings.rule_feed {
@@ -627,13 +614,14 @@ impl Daemon {
             raised: Mutex::new(Vec::new()),
             queue: Mutex::new(Queue::default()),
             refusals: OncePer::new(REFUSALS_SAID_EVERY),
-            pack: RwLock::new(pack),
-            bundled,
+            pack: Mutex::new(None),
+            compiled: Condvar::new(),
+            bundled: OnceLock::new(),
             feed,
             detect_ollama,
             apple_helper,
             fetching: Mutex::new(()),
-            pack_change: Mutex::new(pack_change),
+            pack_change: Mutex::new(None),
             activity: Mutex::new(crate::activity::Kept::default()),
             fetch_pending: AtomicBool::new(false),
             first_fetch: FirstFetch::new(first_fetch_held),
@@ -655,6 +643,11 @@ impl Daemon {
         // The Activity starts as the Event Log stands, every line marked as
         // its record is.
         daemon.follow_the_event_log();
+        // Compiling the Rules takes seconds, and minutes for a debug build
+        // under the load of a login, so it runs behind the socket: the stores
+        // are verified and the state is read by now, which is all an answer
+        // needs. Whatever needs the pack in force waits for it.
+        daemon.compile_the_rules();
         Ok(daemon)
     }
 
@@ -674,8 +667,84 @@ impl Daemon {
     }
 
     /// The Rule Pack in force right now.
+    ///
+    /// It waits for the Rules the start compiles behind the socket.
     pub fn pack_in_force(&self) -> Arc<LoadedPack> {
-        Arc::clone(&self.pack.read().expect("the pack is not poisoned"))
+        let pack = self.pack.lock().expect("the pack is not poisoned");
+        let pack = self
+            .compiled
+            .wait_while(pack, |pack| pack.is_none())
+            .expect("the pack is not poisoned");
+        Arc::clone(pack.as_ref().expect("the Rules are compiled"))
+    }
+
+    /// The pack this binary ships, once the start has compiled it.
+    fn bundled_pack(&self) -> Arc<LoadedPack> {
+        self.pack_in_force();
+        Arc::clone(self.bundled.get().expect("the bundled pack is compiled"))
+    }
+
+    /// Compiles the Rules on a thread of their own and puts them in force.
+    fn compile_the_rules(self: &Arc<Daemon>) {
+        let daemon = Arc::clone(self);
+        std::thread::Builder::new()
+            .name("agentsweep-rules".to_string())
+            .spawn(move || daemon.put_the_rules_in_force())
+            .expect("the thread that compiles the Rules starts");
+    }
+
+    /// Compiles the bundled pack and puts the pack the start chooses in
+    /// force: the stored one from the Rule Feed when the toggle is on and it
+    /// still holds, the bundled one otherwise. A daemon that cannot compile
+    /// its own pack has nothing to protect with, says so and exits.
+    fn put_the_rules_in_force(&self) {
+        let compiled = match &self.tuning.pack {
+            Some(compile) => compile(),
+            None => RulePack::bundled(),
+        };
+        let bundled = match compiled {
+            Ok(rules) => Arc::new(LoadedPack::bundled_as(Arc::new(rules))),
+            Err(error) => {
+                say!(
+                    "the bundled Rule Pack does not compile, so there is nothing to protect with: {error}"
+                );
+                std::process::exit(1);
+            }
+        };
+        let (pack, discarded) =
+            stored_pack_at_start(&self.directory, &bundled, self.rule_feed_enabled());
+        // A stored pack discarded at start is recorded like an accepted one,
+        // before the first Full Scan: what it withdrew is measured against
+        // the discarded pack, which is the one the last Scans ran with.
+        let change = discarded.map(|(version, before)| {
+            let mut record = RulePackRecord::new(
+                PackChange::Discarded,
+                pack.manifest.pack_version,
+                &pack.manifest.released_at,
+                pack.origin,
+            );
+            record.discarded_version = version;
+            PendingPackChange {
+                record,
+                before,
+                from: (version, PackOrigin::Fetched),
+            }
+        });
+        *self
+            .pack_change
+            .lock()
+            .expect("the pack change is not poisoned") = change;
+        {
+            let mut health = self.health.lock().expect("the health is not poisoned");
+            health.rule_pack = pack.manifest.pack_version;
+            health.rule_pack_origin = pack.origin;
+            health.rules_released_at = pack.manifest.released_at.clone();
+        }
+        let _ = self.bundled.set(bundled);
+        *self.pack.lock().expect("the pack is not poisoned") = Some(pack);
+        self.compiled.notify_all();
+        say!("the Rules are compiled");
+        self.tell_health();
     }
 
     /// What the state holds for the Gate: the pooled project roots and the
@@ -833,6 +902,10 @@ impl Daemon {
 
     /// Runs one piece of work and takes what it decided.
     fn carry_out(self: &Arc<Daemon>, work: Work) {
+        // The Rules the start compiles behind the socket are waited for
+        // before the write lock is taken, so nothing that writes waits on
+        // the compile as well.
+        self.pack_in_force();
         // A Scan writes the Baseline and may write the Event Log, so no action
         // runs while it does, and it waits for one that is running.
         let _writing = self.writing.lock().expect("the write lock is not poisoned");
@@ -1781,22 +1854,10 @@ fn rules_of(pack: &RulePack) -> PackRules {
     pack.metas().map(|meta| (meta.id, meta.status)).collect()
 }
 
-/// The Rule Pack in force at start: the stored one when the feed is on and
-/// the stored pack verifies and beats the bundled one, the bundled one
-/// otherwise. A stored pack that fails verification is discarded, never
-/// trusted; one the bundled pack caught up with is thrown away as well.
-///
-/// A discarded pack is answered with its version and its Rules, both empty
-/// when it did not verify, so the change can be recorded.
-fn pack_at_start(
-    directory: &DataDirectory,
-    bundled: &Arc<LoadedPack>,
-    state: &mut State,
-    feed_on: bool,
-) -> (Arc<LoadedPack>, Option<(u64, PackRules)>) {
-    // A pack that was ignored for needing a newer AgentSweep is asked for
-    // again once this binary is new enough: the validators go, so the next
-    // fetch is not answered "unchanged".
+/// A pack that was ignored for needing a newer AgentSweep is asked for again
+/// once this binary is new enough: the validators go, so the next fetch is not
+/// answered "unchanged".
+fn forget_an_ignored_pack_now_loadable(state: &mut State) {
     if let Some(ignored) = &state.feed.ignored
         && agentsweep_core::pack::engine_satisfies(
             &ignored.minimum_engine_version,
@@ -1807,6 +1868,20 @@ fn pack_at_start(
         state.feed.etag.clear();
         state.feed.last_modified.clear();
     }
+}
+
+/// The Rule Pack in force at start: the stored one when the feed is on and
+/// the stored pack verifies and beats the bundled one, the bundled one
+/// otherwise. A stored pack that fails verification is discarded, never
+/// trusted; one the bundled pack caught up with is thrown away as well.
+///
+/// A discarded pack is answered with its version and its Rules, both empty
+/// when it did not verify, so the change can be recorded.
+fn stored_pack_at_start(
+    directory: &DataDirectory,
+    bundled: &Arc<LoadedPack>,
+    feed_on: bool,
+) -> (Arc<LoadedPack>, Option<(u64, PackRules)>) {
     if !feed_on {
         return (Arc::clone(bundled), None);
     }
@@ -1915,7 +1990,7 @@ impl Daemon {
         match enabled {
             false => {
                 if in_force.origin == PackOrigin::Fetched {
-                    self.adopt(Arc::clone(&self.bundled));
+                    self.adopt(self.bundled_pack());
                 }
             }
             true => {
@@ -2161,7 +2236,7 @@ impl Daemon {
             health.rule_pack_origin = pack.origin;
             health.rules_released_at = pack.manifest.released_at.clone();
         }
-        *self.pack.write().expect("the pack is not poisoned") = pack;
+        *self.pack.lock().expect("the pack is not poisoned") = Some(pack);
         self.forget_evaluations();
         self.tell_health();
         self.scan_with_the_new_pack();
@@ -2692,8 +2767,9 @@ pub fn leave_the_trash(
 pub fn run(options: &Options) -> Result<(), Box<dyn Error>> {
     let stop = terminate::block();
     // Said first, so the log shows the start at once: nothing else is said
-    // until the stores are open and the Rule Pack is compiled, which takes
-    // minutes for a debug build under the load of a login.
+    // until the stores are open and verified. The Rule Pack, which takes
+    // minutes to compile for a debug build under the load of a login, is
+    // compiled behind the socket.
     match std::env::current_exe() {
         Ok(executable) => say!(
             "{} starting from {}",

@@ -283,6 +283,44 @@ fn starting_the_daemon_runs_a_full_scan_a_client_can_ask_about() {
     );
 }
 
+/// The daemon listens and answers first, and compiles its Rules after: a
+/// client is answered while the Rules still compile, with the check the start
+/// runs under way, and that Full Scan finishes only once they are compiled.
+#[test]
+fn the_daemon_answers_while_its_rules_still_compile() {
+    let sandbox = Sandbox::with_a_planted_skill("answers-first");
+    let (release, held) = std::sync::mpsc::channel::<()>();
+    let held = Mutex::new(held);
+    let options = sandbox.options();
+    let daemon = Daemon::open_tuned(
+        &options,
+        Arc::new(SameUser),
+        Box::new(sandbox.keys.clone()),
+        Tuning {
+            pack: Some(Arc::new(move || {
+                let _ = held.lock().expect("the hold is not poisoned").recv();
+                agentsweep_core::rules::RulePack::bundled()
+            })),
+            ..Tuning::default()
+        },
+    )
+    .expect("an open daemon");
+    let running = service::start_with(&options, daemon).expect("a listening daemon");
+    let background = running.serve_in_the_background();
+    sandbox.started.follow(background.daemon());
+
+    let status = ask(&background.socket());
+    assert!(status.scan.is_none(), "no Scan ran yet: {:?}", status.scan);
+    assert!(status.health.scanning, "the start's check is under way");
+
+    release.send(()).expect("the compile is waiting");
+    wait_for_a_scan(background.daemon());
+    let status = ask(&background.socket());
+    let scan = status.scan.as_ref().expect("the start's Full Scan");
+    assert_eq!(scan.trigger, Trigger::DaemonStart);
+    assert!(status.open().count() >= 1, "{:?}", status.findings);
+}
+
 /// The command line interface renders the same answer, and its exit code says
 /// whether anything is open.
 #[test]
