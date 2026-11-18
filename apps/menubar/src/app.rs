@@ -15,8 +15,9 @@
 //!   daemon answers ([`supervision::start_and_wait`]).
 //! - `turn_on_protection`: **Turn on protection** on Protection off when
 //!   nothing is registered at all, which registers the daemon and the login
-//!   item as onboarding screen 5 does and is answered once the daemon
-//!   answers ([`supervision::turn_on_and_wait`]).
+//!   item as onboarding screen 5 does ([`supervision::turn_on`]); the
+//!   popover and the Overview say that protection is starting until the
+//!   daemon answers ([`Frame::protection_starts`]).
 //! - `start_fresh_record`, `look_at_records`, `show_what_changed`,
 //!   `scan_again_trusting_nothing`: the integrity banners' buttons, each the
 //!   daemon's matching request; the window then opens on Activity at the
@@ -149,7 +150,6 @@ use agentsweep_ipc::protocol::{Message, StateEvent};
 use crate::ai_check;
 use crate::asking::{ActionRequest, Asking, refusal, scan_now_line};
 use crate::banner::Button;
-use crate::checking;
 use crate::cli_link;
 use crate::developer::offers_reveal;
 use crate::false_alarm::{self, Reports, SystemBrowser};
@@ -358,25 +358,13 @@ struct Shell {
 /// The popover's view as it stands, in the window's Posture.
 #[tauri::command]
 fn popover(shell: tauri::State<'_, Shell>) -> Value {
-    let posture = shell
+    let view = shell.view.lock().expect("the view is not poisoned").clone();
+    let value = shell
         .frame
         .lock()
         .expect("the frame is not poisoned")
-        .posture();
-    let bar = checking::popover_bar(
-        shell
-            .frame
-            .lock()
-            .expect("the frame is not poisoned")
-            .findings()
-            .scan(),
-    );
-    let view = shell
-        .view
-        .lock()
-        .expect("the view is not poisoned")
-        .to_value_checking(posture, bar);
-    updater::into_popover(view, shell.updates.line())
+        .popover(&view);
+    updater::into_popover(value, shell.updates.line())
 }
 
 /// Sends the popover's view as it stands, in the window's Posture.
@@ -411,25 +399,44 @@ async fn start_daemon(app: AppHandle, press: String) -> Result<String, String> {
     .await
 }
 
-/// **Turn on protection**: registers the daemon and the login item again, as
-/// onboarding screen 5 does, and answers once the daemon answers, so the
-/// banner says it is starting until then. The link sees the daemon on its
-/// own.
+/// **Turn on protection**: from the click the popover and the Overview say
+/// that protection is starting, then the daemon and the login item are
+/// registered again, as onboarding screen 5 does. That stays until the
+/// daemon answers, however long it takes, which the link sees on its own;
+/// only a registration that fails brings the button back.
 #[tauri::command]
 async fn turn_on_protection(app: AppHandle, press: String) -> Result<String, String> {
     let shell = app.state::<Shell>();
     let services = Arc::clone(&shell.services);
-    let asking = Arc::clone(&shell.asking);
     let lines = Arc::clone(&shell.lines);
+    let handle = app.clone();
     off_main(move || {
         lines.once(&press, || {
-            let answers = || asking.status().is_ok();
-            supervision::turn_on_and_wait(&*services, answers, crate::link::REGISTERED_AGAIN)
-                .map(|answered| supervision::started_line(answered).to_string())
-                .map_err(|why| format!("Protection could not be turned on: {why}"))
+            follow_frame(&handle, Frame::protection_starts);
+            supervision::turn_on(&*services)
+                .map(|()| String::new())
+                .map_err(|why| {
+                    follow_frame(&handle, Frame::protection_failed);
+                    format!("Protection could not be turned on: {why}")
+                })
         })
     })
     .await
+}
+
+/// Moves the window's frame with `change`, and sends both views when it
+/// moved.
+fn follow_frame(app: &AppHandle, change: fn(&mut Frame) -> Follow) {
+    let follow = change(
+        &mut app
+            .state::<Shell>()
+            .frame
+            .lock()
+            .expect("the frame is not poisoned"),
+    );
+    if follow != Follow::Nothing {
+        render(app);
+    }
 }
 
 /// One integrity button: its request, then the window on Activity at the
@@ -1089,7 +1096,8 @@ async fn onboarding_next(app: AppHandle, ollama_confirmed: Option<bool>) -> Resu
 
 /// Leaves screen 5: registers the daemon and the login item once, holds the
 /// answers for the daemon, starts the first check, closes the wizard and
-/// opens the Findings window on the Overview, which shows the first check
+/// opens the Findings window on the Overview, which says that protection is
+/// starting until the daemon answers and then shows the first check
 /// running, asks for notification permission, and hands the answers over to
 /// a daemon that already answers, as after a reinstall, rather than at its
 /// next Health. The first check then looks at once, in case the first Scan
@@ -1114,30 +1122,24 @@ fn leave_onboarding(app: &AppHandle) {
         .lock()
         .expect("the first check is not poisoned")
         .start(left.since);
-    shell
-        .frame
-        .lock()
-        .expect("the frame is not poisoned")
-        .first_check_starts();
+    // Protection starts until the daemon answers, however long that takes,
+    // unless registering failed.
+    let failures = left
+        .launched
+        .as_ref()
+        .map_or(&[][..], |launched| &launched.failures[..]);
+    let turned_on = supervision::turned_on(&*shell.services, failures).is_ok();
+    {
+        let mut frame = shell.frame.lock().expect("the frame is not poisoned");
+        frame.first_check_starts();
+        if turned_on {
+            frame.protection_starts();
+        }
+    }
     close_wizard(app);
     render(app);
     show_window(app);
     let _ = app.emit(PANE_EVENT, Pane::Overview.id());
-    // A daemon that has not answered by the time a re-registered one would
-    // have is Protection off again on the Overview.
-    let handle = app.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(crate::link::REGISTERED_AGAIN);
-        let follow = handle
-            .state::<Shell>()
-            .frame
-            .lock()
-            .expect("the frame is not poisoned")
-            .first_check_unanswered();
-        if follow != Follow::Nothing {
-            render(&handle);
-        }
-    });
     for failure in left.launched.iter().flat_map(|launched| &launched.failures) {
         eprintln!("agentsweep-menubar: {failure}");
     }

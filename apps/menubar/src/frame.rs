@@ -171,24 +171,23 @@ pub struct Frame {
     queue: Queue,
     /// Where **Check now** stands in this run of the app.
     check_now: CheckNow,
+    /// True from a click on **Turn on protection**, in the wizard or on
+    /// Protection off, until the daemon answers or registering fails.
+    starting: bool,
     /// The first check after onboarding, which the Overview shows as
-    /// running from the moment the wizard closes.
+    /// running from the moment the daemon answers.
     first: FirstShown,
 }
 
 /// The first check after onboarding as the Overview shows it (spec section
-/// 8.3): the window opens on "Checking your setup…" at once, before the
-/// daemon answers, and keeps it until the first check's result is ready.
+/// 8.3): once the daemon answers, "Checking your setup…" until the first
+/// check's result is ready.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum FirstShown {
     /// No first check, or its result is ready.
     #[default]
     None,
-    /// Turn on protection registered the daemon, which has not answered
-    /// yet: the Overview shows the first check starting in place of
-    /// Protection off.
-    Starting,
-    /// The daemon answers and the first check waits for its Full Scan.
+    /// The first check waits for its Full Scan.
     Waiting,
 }
 
@@ -383,17 +382,60 @@ impl Frame {
         }
     }
 
+    /// A click on **Turn on protection**: from now until the daemon
+    /// answers, the popover and the Overview say that protection is
+    /// starting, in place of Protection off (spec section 8.6). However
+    /// long that takes, nothing else ends it but a failed registration
+    /// ([`Frame::protection_failed`]).
+    pub fn protection_starts(&mut self) -> Follow {
+        match self.starting {
+            true => Follow::Nothing,
+            false => {
+                self.starting = true;
+                Follow::Render
+            }
+        }
+    }
+
+    /// Registering failed: Protection off shows as itself again, with its
+    /// button.
+    pub fn protection_failed(&mut self) -> Follow {
+        match self.starting {
+            false => Follow::Nothing,
+            true => {
+                self.starting = false;
+                Follow::Render
+            }
+        }
+    }
+
+    /// True while protection starts and no daemon answers yet.
+    fn protection_starting(&self) -> bool {
+        self.starting && self.health.protection.is_off()
+    }
+
+    /// The popover's value for `view`, the link's last view: "Starting
+    /// protection…" while protection starts and no daemon answers, and
+    /// otherwise the view with the bar of a Full Scan that runs, in the
+    /// window's Posture.
+    pub fn popover(&self, view: &View) -> Value {
+        match self.protection_starting() && view.protection_off {
+            true => view.to_value_starting(),
+            false => {
+                view.to_value_checking(self.posture, checking::popover_bar(self.findings.scan()))
+            }
+        }
+    }
+
     /// Turn on protection in the wizard registered the daemon: the
-    /// Overview shows the first check from now on, before the daemon
-    /// answers.
+    /// Overview shows the first check once the daemon answers.
     pub fn first_check_starts(&mut self) -> Follow {
-        self.first = FirstShown::Starting;
+        self.first = FirstShown::Waiting;
         Follow::Render
     }
 
-    /// The first check's result is ready, or the daemon did not answer in
-    /// time to stand for it: the Overview shows what the daemon says, and a
-    /// Protection off that stays shows as itself.
+    /// The first check's result is ready: the Overview shows what the
+    /// daemon says.
     pub fn first_check_ends(&mut self) -> Follow {
         match self.first {
             FirstShown::None => Follow::Nothing,
@@ -402,21 +444,6 @@ impl Frame {
                 Follow::Render
             }
         }
-    }
-
-    /// The daemon has not answered since the first check started: the
-    /// first check no longer stands in for Protection off.
-    pub fn first_check_unanswered(&mut self) -> Follow {
-        match self.first {
-            FirstShown::Starting => self.first_check_ends(),
-            _ => Follow::Nothing,
-        }
-    }
-
-    /// True while the first check stands in for Protection off: the daemon
-    /// was just registered and has not answered yet.
-    fn first_check_starting(&self) -> bool {
-        self.first == FirstShown::Starting && self.health.protection.is_off()
     }
 
     /// The Health as the daemon last said it, or Protection off while none
@@ -431,6 +458,12 @@ impl Frame {
     /// moves the AI check's progress line, and every other event goes to the
     /// list.
     pub fn apply(&mut self, event: &StateEvent) -> Follow {
+        // A Health comes only from a daemon that answers: protection has
+        // started.
+        if self.starting && matches!(event, StateEvent::HealthChanged { .. }) {
+            self.starting = false;
+            return at_least_render(self.apply(event));
+        }
         match event {
             StateEvent::SettingsChanged { settings } => self.settings(settings),
             StateEvent::HealthChanged { health } if health.protection.is_off() => {
@@ -438,9 +471,6 @@ impl Frame {
             }
             StateEvent::HealthChanged { health } => {
                 self.absent = None;
-                if self.first == FirstShown::Starting {
-                    self.first = FirstShown::Waiting;
-                }
                 let follow = self.findings.apply(event);
                 match self.health == **health {
                     true => follow,
@@ -497,7 +527,7 @@ impl Frame {
             view.ai_check = verdict::progress_line(self.queue, self.posture);
             view.permission = permission::view(&self.overview, self.posture, self.check_now);
         }
-        if self.first_check_starting() {
+        if self.protection_starting() {
             view.banner = None;
             view.sentence_shown = false;
             view.checking = Some(checking::starting());
@@ -570,7 +600,7 @@ impl Frame {
             }
         }
         value["overview"] = self.overview().to_value();
-        if self.first_check_starting() {
+        if self.protection_starting() {
             value["off"] = Value::Null;
         }
         value["activity"] = self.activity.view(self.posture);
@@ -1265,15 +1295,16 @@ mod tests {
         assert_eq!(frame.overview().sentence, status().health.headline());
     }
 
-    /// After Turn on protection the Overview shows the first check from the
-    /// start: in place of Protection off while the daemon has not answered,
-    /// still looking once it answers, the Full Scan's bar once it reports,
-    /// and what the daemon says once the result is ready.
+    /// After Turn on protection in the wizard the Overview shows from the
+    /// start: starting protection while the daemon has not answered, the
+    /// first check still looking once it answers, the Full Scan's bar once
+    /// it reports, and what the daemon says once the result is ready.
     #[test]
     fn the_first_check_shows_on_the_overview_from_the_start() {
         let mut frame = Frame::new();
         frame.view(&View::off(&Off::NotRegistered));
         assert!(frame.overview().banner.is_some(), "Turn on protection");
+        assert_eq!(frame.protection_starts(), Follow::Render);
         assert_eq!(frame.first_check_starts(), Follow::Render);
         frame.view(&View::not_watching("the daemon is starting"));
 
@@ -1284,8 +1315,12 @@ mod tests {
         assert!(value["off"].is_null(), "{}", value["off"]);
         assert!(value["overview"]["sentence"].is_null());
         assert_eq!(
+            value["overview"]["checking"]["title"],
+            "Starting protection…"
+        );
+        assert_eq!(
             value["overview"]["checking"]["line"],
-            crate::checking::STARTING
+            "This can take a few minutes."
         );
 
         // The daemon answers, its first Full Scan running.
@@ -1317,29 +1352,78 @@ mod tests {
         assert_eq!(frame.first_check_ends(), Follow::Nothing);
     }
 
-    /// A daemon that never answers after Turn on protection is Protection
-    /// off again on the Overview once the first check stops standing in.
+    /// From a click on Turn on protection the popover and the Overview say
+    /// that protection is starting, however long the daemon takes and
+    /// whatever the link says meanwhile, until the daemon answers; then the
+    /// popover shows the daemon's view and its Full Scan's bar.
     #[test]
-    fn a_daemon_that_never_answers_is_protection_off_again() {
+    fn starting_protection_stays_until_the_daemon_answers() {
         let mut frame = Frame::new();
-        frame.first_check_starts();
-        frame.view(&View::not_watching("the daemon is starting"));
-        assert!(frame.overview().checking.is_some());
-        assert_eq!(frame.first_check_unanswered(), Follow::Render);
-        let off = frame.overview();
-        assert_eq!(off.checking, None);
-        assert!(off.banner.is_some());
-        assert!(!frame.to_value()["off"].is_null());
+        let off = View::off(&Off::NotRegistered);
+        frame.view(&off);
+        assert!(frame.popover(&off)["banner"].is_object());
+        assert_eq!(frame.protection_starts(), Follow::Render);
+        assert_eq!(frame.protection_starts(), Follow::Nothing);
 
-        // Once a daemon answered, the first check waits for its result.
-        let mut answered = Frame::new();
-        answered.first_check_starts();
-        answered.load(&status());
-        answered.apply(&StateEvent::HealthChanged {
-            health: Box::new(status().health),
-        });
-        assert_eq!(answered.first_check_unanswered(), Follow::Nothing);
-        assert!(answered.overview().checking.is_some());
+        for view in [off, View::not_watching("the daemon is starting")] {
+            frame.view(&view);
+            let popover = frame.popover(&view);
+            assert_eq!(popover["sentence"], "Starting protection…");
+            assert_eq!(popover["detail"], "This can take a few minutes.");
+            assert!(popover["banner"].is_null(), "{popover}");
+            let overview = frame.overview();
+            assert_eq!(overview.banner, None);
+            assert_eq!(overview.checking, Some(crate::checking::starting()));
+            assert!(frame.to_value()["off"].is_null());
+        }
+
+        // The daemon answers, its Full Scan running.
+        let mut scanning = status();
+        scanning.health.scanning = true;
+        let answering = View::of(&scanning.health);
+        frame.view(&answering);
+        assert_eq!(frame.popover(&answering)["sentence"], "Checking now.");
+        frame.load(&scanning);
+        assert_eq!(
+            frame.apply(&StateEvent::HealthChanged {
+                health: Box::new(scanning.health.clone()),
+            }),
+            Follow::Render
+        );
+        frame.apply(&crate::findings::tests::progress(40, 682));
+        let popover = frame.popover(&answering);
+        assert_eq!(popover["sentence"], "Checking…");
+        assert_eq!(popover["checking"]["total"], 682);
+        let checking = frame.overview().checking.expect("the Full Scan's bar");
+        assert_eq!(checking.title, crate::checking::TITLE);
+
+        // A daemon that goes away later is Protection off as itself.
+        let gone = View::not_watching("the daemon stopped answering");
+        frame.view(&gone);
+        assert!(frame.popover(&gone)["banner"].is_object());
+        assert_eq!(frame.overview().checking, None);
+    }
+
+    /// A registration that fails ends the starting state: Protection off
+    /// shows as itself again, with its button.
+    #[test]
+    fn a_failed_registration_shows_protection_off_again() {
+        let mut frame = Frame::new();
+        let off = View::off(&Off::NotRegistered);
+        frame.view(&off);
+        frame.protection_starts();
+        assert!(frame.overview().checking.is_some());
+        assert_eq!(frame.protection_failed(), Follow::Render);
+        assert_eq!(frame.protection_failed(), Follow::Nothing);
+        let popover = frame.popover(&off);
+        assert_eq!(
+            popover["banner"]["buttons"][0]["label"],
+            "Turn on protection"
+        );
+        let overview = frame.overview();
+        assert_eq!(overview.checking, None);
+        assert!(overview.banner.is_some());
+        assert!(!frame.to_value()["off"].is_null());
     }
 
     /// The Overview shows the banner the popover shows: "Not watching right

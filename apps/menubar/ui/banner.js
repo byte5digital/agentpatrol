@@ -22,10 +22,11 @@ const givenWay = new WeakMap();
 //
 // A button that gives way (Turn on protection) is not greyed out: from the
 // click the banner shows its line ("Starting protection…") and no button,
-// for as long as it is the banner that was pressed. The buttons come back
-// when the press fails, when the banner turns to another one (such as "Not
-// watching right now", which then shows its own buttons), or when it went
-// away and comes again.
+// for as long as it is the banner that was pressed. The app then shows
+// "Starting protection…" with a bar in the banner's place until the daemon
+// answers. The buttons come back when the press fails, when the banner
+// turns to another one (such as "Not watching right now", which then shows
+// its own buttons), or when it went away and comes again.
 export function renderBanner(root, banner) {
   root.hidden = banner === null;
   if (banner === null) {

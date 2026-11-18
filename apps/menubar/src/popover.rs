@@ -5,7 +5,10 @@
 //! window, whose buttons are only there. Nothing else: no Finding list and
 //! no Finding action in either Posture. While a Scan runs the sentence is
 //! "Checking now."; while a Full Scan runs it is "Checking…" with the bar
-//! the Overview shows ([`crate::checking`]), and no count.
+//! the Overview shows ([`crate::checking`]), and no count. From a click on
+//! **Turn on protection** until the daemon answers it says "Starting
+//! protection…" over a bar that does not know how far
+//! ([`View::to_value_starting`]).
 //!
 //! The sentence is [`Health::headline_in`] the Posture, so the app and the
 //! command line interface say the same thing about the same machine; only
@@ -302,6 +305,23 @@ impl View {
             "banner": banner.map(|banner| banner.to_value()),
         })
     }
+
+    /// The value from a click on **Turn on protection** until the daemon
+    /// answers (spec section 8.6): "Starting protection…", "This can take a
+    /// few minutes." and a bar that does not know how far, in place of the
+    /// banner, in either Posture.
+    pub fn to_value_starting(&self) -> Value {
+        json!({
+            "orb": self.orb.as_str(),
+            "sentence": banner::STARTING_PROTECTION,
+            "checking": { "label": "", "done": 0, "total": 0 },
+            "lastCheck": self.last_check,
+            "protectionOff": self.protection_off,
+            "loginItems": false,
+            "detail": checking::TAKES_TIME,
+            "banner": null,
+        })
+    }
 }
 
 #[cfg(test)]
@@ -438,6 +458,28 @@ mod tests {
             assert_eq!(buttons[0]["command"], "turn_on_protection");
             assert_eq!(buttons[0]["working"], crate::banner::STARTING_PROTECTION);
             assert_eq!(buttons[0]["givesWay"], true);
+        }
+    }
+
+    /// While protection starts the popover shows its title, the line that it
+    /// takes time and a bar that does not know how far, with no banner, no
+    /// button and no "has not answered yet".
+    #[test]
+    fn starting_protection_shows_its_title_line_and_bar() {
+        for view in [
+            View::off(&Off::NotRegistered),
+            View::not_watching("the daemon is starting"),
+        ] {
+            let value = view.to_value_starting();
+            assert_eq!(value["sentence"], "Starting protection…");
+            assert_eq!(value["detail"], "This can take a few minutes.");
+            assert_eq!(
+                value["checking"],
+                json!({ "label": "", "done": 0, "total": 0 })
+            );
+            assert!(value["banner"].is_null(), "{value}");
+            assert_eq!(value["loginItems"], false);
+            assert!(!value.to_string().contains("has not answered"));
         }
     }
 

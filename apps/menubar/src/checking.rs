@@ -11,9 +11,11 @@
 //! The Simple Posture names a project by its folder, never its path; the
 //! Developer Posture says the path and the glossary's words.
 //!
-//! The first check after onboarding opens the window at once, before the
-//! daemon answers: the Overview then shows the title and a bar that does not
-//! know its total yet, with "Starting…" ([`starting`]).
+//! From a click on **Turn on protection** until the daemon answers, which
+//! can take minutes, the Overview and the popover show "Starting
+//! protection…", "This can take a few minutes." and a bar that does not know
+//! how far ([`starting`]); the Full Scan's bar follows once the daemon
+//! answers.
 
 use std::path::Path;
 
@@ -27,8 +29,8 @@ use crate::findings::ScanLine;
 pub const TITLE: &str = "Checking your setup…";
 /// The popover's word for the same.
 pub const POPOVER_TITLE: &str = "Checking…";
-/// The line before the daemon answers, after Turn on protection.
-pub const STARTING: &str = "Starting…";
+/// The line under "Starting protection…" until the daemon answers.
+pub const TAKES_TIME: &str = "This can take a few minutes.";
 /// The line while the Scan has nothing in hand to name.
 pub const LOOKING: &str = "Looking for what to check.";
 
@@ -100,9 +102,12 @@ pub fn waiting(line: &str) -> Checking {
     }
 }
 
-/// The block after Turn on protection, before the daemon answers.
+/// The block from a click on Turn on protection until the daemon answers.
 pub fn starting() -> Checking {
-    waiting(STARTING)
+    Checking {
+        title: crate::banner::STARTING_PROTECTION,
+        ..waiting(TAKES_TIME)
+    }
 }
 
 /// The popover's bar for the Scan in hand, or none when no Full Scan runs.
@@ -300,14 +305,15 @@ mod tests {
         assert_eq!(popover_bar(&over), None);
     }
 
-    /// Before the daemon answers, the first check shows the title, a bar
-    /// that does not know its total, and "Starting…".
+    /// Until the daemon answers, starting protection shows its title, the
+    /// line that it takes time, and a bar that does not know how far.
     #[test]
-    fn the_first_check_starts_before_the_daemon_answers() {
+    fn starting_protection_says_it_takes_time() {
         let block = starting();
-        assert_eq!(block.title, TITLE);
+        assert_eq!(block.title, "Starting protection…");
+        assert_eq!(block.line, "This can take a few minutes.");
         assert_eq!(block.bar, Bar::default());
-        assert_eq!(block.line, STARTING);
+        assert_eq!(block.count, "");
     }
 
     /// The Overview draws the block from the frame's value: the title, the
@@ -334,7 +340,7 @@ mod tests {
     /// Every text is short and plain, and none carries an em-dash.
     #[test]
     fn the_texts_are_short_and_carry_no_em_dash() {
-        for text in [TITLE, POPOVER_TITLE, STARTING, LOOKING] {
+        for text in [TITLE, POPOVER_TITLE, TAKES_TIME, LOOKING] {
             assert!(text.len() <= 30, "{text}");
             assert!(!text.contains('\u{2014}'), "{text}");
         }

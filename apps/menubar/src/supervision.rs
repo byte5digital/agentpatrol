@@ -218,24 +218,25 @@ fn wait_for(answers: impl Fn() -> bool, patience: Duration) -> bool {
 
 /// **Turn on protection** on Protection off when nothing is registered at
 /// all (spec section 8.6): registers the daemon and the login item as
-/// onboarding screen 5 does ([`register`]), then waits for the daemon as
-/// **Start it** does, so the button shows that it is starting until then.
-/// True when the daemon answered. A registration that failed, or one that
-/// now waits for approval in Login Items, is not waited for.
-pub fn turn_on_and_wait(
-    services: &dyn Services,
-    answers: impl Fn() -> bool,
-    patience: Duration,
-) -> Result<bool, String> {
+/// onboarding screen 5 does ([`register`]) and says whether that worked
+/// ([`turned_on`]). It does not wait for the daemon, which can take minutes
+/// to answer: the app says it is starting until then.
+pub fn turn_on(services: &dyn Services) -> Result<(), String> {
     if !services.supervises() {
         return Err("a developer run registers nothing".to_string());
     }
     let launched = register(services);
+    turned_on(services, &launched.failures)
+}
+
+/// Whether a registration, with these `failures`, left the daemon's
+/// registration enabled, so launchd starts it: an error when it now waits
+/// for approval in Login Items, or is still not registered.
+pub fn turned_on(services: &dyn Services, failures: &[String]) -> Result<(), String> {
     match services.agent() {
-        ServiceState::Enabled => Ok(wait_for(answers, patience)),
+        ServiceState::Enabled => Ok(()),
         ServiceState::RequiresApproval => Err("allow AgentSweep in Login Items".to_string()),
-        ServiceState::NotRegistered | ServiceState::NotFound => Err(launched
-            .failures
+        ServiceState::NotRegistered | ServiceState::NotFound => Err(failures
             .first()
             .cloned()
             .unwrap_or_else(|| "the background item is not registered".to_string())),
@@ -996,18 +997,13 @@ pub(crate) mod tests {
     }
 
     /// Turn on protection registers the daemon and the login item, as
-    /// onboarding screen 5 does, and is answered once the daemon answers.
+    /// onboarding screen 5 does, and answers as soon as the registration is
+    /// enabled, without waiting for the daemon.
     #[test]
-    fn turn_on_protection_registers_both_and_waits_for_the_daemon() {
+    fn turn_on_protection_registers_both_and_does_not_wait_for_the_daemon() {
         for state in [ServiceState::NotRegistered, ServiceState::NotFound] {
             let services = Recorded::with(state, state);
-            let asked = std::sync::atomic::AtomicUsize::new(0);
-            let answers = || asked.fetch_add(1, std::sync::atomic::Ordering::SeqCst) >= 1;
-            assert_eq!(
-                turn_on_and_wait(&services, answers, Duration::from_secs(30)),
-                Ok(true),
-                "{state}"
-            );
+            assert_eq!(turn_on(&services), Ok(()), "{state}");
             assert_eq!(
                 services.calls(),
                 vec!["register agent", "register login item"],
@@ -1015,38 +1011,28 @@ pub(crate) mod tests {
             );
             assert_eq!(services.agent(), ServiceState::Enabled);
             assert_eq!(services.login_item(), ServiceState::Enabled);
+            assert_eq!(turned_on(&services, &[]), Ok(()));
         }
-
-        let silent = Recorded::with(ServiceState::NotRegistered, ServiceState::NotRegistered);
-        assert_eq!(
-            turn_on_and_wait(&silent, || false, Duration::from_millis(300)),
-            Ok(false)
-        );
     }
 
-    /// A registration that fails is reported at once and not waited for, and
-    /// a developer run registers nothing.
+    /// A registration that fails is reported at once, and a developer run
+    /// registers nothing.
     #[test]
     fn turn_on_protection_reports_a_refused_registration() {
         let mut services = Recorded::with(ServiceState::NotRegistered, ServiceState::NotRegistered);
         services.refuse = true;
-        let failed = turn_on_and_wait(&services, || panic!("not asked"), Duration::from_secs(1));
         assert_eq!(
-            failed,
+            turn_on(&services),
             Err("the daemon could not be registered: refused".to_string())
         );
-        assert!(
-            turn_on_and_wait(
-                &Unsupervised,
-                || panic!("not asked"),
-                Duration::from_secs(1)
-            )
-            .is_err()
+        assert_eq!(
+            turned_on(&services, &[]),
+            Err("the background item is not registered".to_string())
         );
+        assert!(turn_on(&Unsupervised).is_err());
     }
 
-    /// A registration that now waits for approval says where to give it,
-    /// without waiting for a daemon that cannot start yet.
+    /// A registration that now waits for approval says where to give it.
     #[test]
     fn turn_on_protection_points_to_login_items_when_approval_is_needed() {
         let services = Recorded::with(
@@ -1054,7 +1040,7 @@ pub(crate) mod tests {
             ServiceState::RequiresApproval,
         );
         assert_eq!(
-            turn_on_and_wait(&services, || panic!("not asked"), Duration::from_secs(1)),
+            turn_on(&services),
             Err("allow AgentSweep in Login Items".to_string())
         );
         assert!(services.calls().is_empty(), "approval is the user's");
