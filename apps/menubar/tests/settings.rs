@@ -1,5 +1,5 @@
 //! The Settings pane against a real daemon, and what the app may say about
-//! Full Disk Access and what AgentSweep does not protect against.
+//! Full Disk Access and what AgentPatrol does not protect against.
 //!
 //! The daemon runs in this process on a temporary home, a temporary data
 //! directory and a temporary socket, with its chain key held in memory. It
@@ -15,19 +15,19 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use agentsweep_core::health::SETTINGS_UNREADABLE;
-use agentsweep_core::keychain::MemoryKeySource;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::Posture;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_menubar::asking::Asking;
-use agentsweep_menubar::frame::Frame;
-use agentsweep_menubar::link::Socket;
-use agentsweep_menubar::settings_pane::{
+use agentpatrol_core::health::SETTINGS_UNREADABLE;
+use agentpatrol_core::keychain::MemoryKeySource;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_menubar::asking::Asking;
+use agentpatrol_menubar::frame::Frame;
+use agentpatrol_menubar::link::Socket;
+use agentpatrol_menubar::settings_pane::{
     FULL_DISK_ACCESS, NOT_PROTECTED, NOT_PROTECTED_LINK, NOT_PROTECTED_TITLE, change_of,
 };
 use serde_json::json;
@@ -45,7 +45,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-settings-{purpose}-{}-{}",
+            "agentpatrol-settings-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -310,7 +310,7 @@ fn the_not_protected_link_points_at_the_readme_section_with_the_list() {
     let section = &section[..section.find("\n## ").unwrap_or(section.len())];
 
     let (page, fragment) = NOT_PROTECTED_LINK.split_once('#').expect("an anchor");
-    assert_eq!(page, "https://github.com/byte5digital/agentsweep");
+    assert_eq!(page, "https://github.com/byte5digital/agentpatrol");
     assert_eq!(fragment, anchor(NOT_PROTECTED_TITLE));
 
     let items: Vec<&str> = section

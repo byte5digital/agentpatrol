@@ -19,9 +19,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
-use agentsweep_core::finding::Tier;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::{ScanFailure, Scanners};
+use agentpatrol_core::finding::Tier;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::{ScanFailure, Scanners};
 
 use crate::fixture::{Fixture, FixtureError};
 
@@ -124,7 +124,7 @@ fn check(
     let mut files: BTreeMap<i64, BTreeSet<String>> = BTreeMap::new();
     for unit in &fixture.units {
         let globals = fixture.globals_for(unit);
-        let unit_bytes = agentsweep_core::item::ScanUnit {
+        let unit_bytes = agentpatrol_core::item::ScanUnit {
             file: &unit.file,
             bytes: &unit.bytes,
         };

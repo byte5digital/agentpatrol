@@ -12,11 +12,11 @@
 //!
 //! Everything here is a pure function of what the daemon sent.
 
-use agentsweep_core::adapter::{Primitive, eligibility};
-use agentsweep_core::finding::{FindingState, RuleStatus, Tier};
-use agentsweep_core::overview::AmbiguousItem;
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::RecordedFinding;
+use agentpatrol_core::adapter::{Primitive, eligibility};
+use agentpatrol_core::finding::{FindingState, RuleStatus, Tier};
+use agentpatrol_core::overview::AmbiguousItem;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::RecordedFinding;
 use serde_json::{Value, json};
 
 use crate::wording::{self, heuristic_row, rows_value};
@@ -66,7 +66,7 @@ impl Heading {
 
 /// The title `<Kind> · <name>`: the kind as the glossary spells it, the name
 /// as the Simple Posture reads it off the Item id.
-fn titled(kind: agentsweep_core::item::Kind, item_id: &str) -> String {
+fn titled(kind: agentpatrol_core::item::Kind, item_id: &str) -> String {
     format!("{kind} · {}", wording::name(kind, item_id))
 }
 
@@ -166,9 +166,9 @@ pub fn ambiguous_card(item: &AmbiguousItem) -> Value {
 mod tests {
     use super::*;
 
-    use agentsweep_core::finding::{Category, Severity};
-    use agentsweep_core::finding_facts::HeuristicLine;
-    use agentsweep_core::item::{ItemId, Kind};
+    use agentpatrol_core::finding::{Category, Severity};
+    use agentpatrol_core::finding_facts::HeuristicLine;
+    use agentpatrol_core::item::{ItemId, Kind};
 
     use crate::findings::tests::recorded;
 

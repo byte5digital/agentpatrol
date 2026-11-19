@@ -2,7 +2,7 @@
 
 Public content that is known to be good, used to measure two of the five conditions of the precision bar in spec section 4.2: a T1 Rule may not hit anything here, and every weight 3 Heuristic must be at zero. The sources are listed in `manifest.toml`, pinned to a commit and to a content digest, fetched at test time over plain HTTPS and never committed. The rule authoring contract in `rules/README.md` says what the digests pin and why.
 
-The run is `cargo run -p agentsweep-xtask -- benign-corpus`. It is also part of the default test suite, where a missing network is a skip rather than a failure; CI sets `AGENTSWEEP_CORPUS_REQUIRED` so a fetch that did not happen fails there.
+The run is `cargo run -p agentpatrol-xtask -- benign-corpus`. It is also part of the default test suite, where a missing network is a skip rather than a failure; CI sets `AGENTPATROL_CORPUS_REQUIRED` so a fetch that did not happen fails there.
 
 ## Last recorded run
 

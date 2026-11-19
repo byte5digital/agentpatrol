@@ -1,5 +1,5 @@
 [package]
-name = "agentsweep-adapter-conformance"
+name = "agentpatrol-adapter-conformance"
 description = "The conformance suite every Surface Adapter has to pass, run against sanitised fixture trees on temporary copies."
 publish = false
 version.workspace = true
@@ -10,10 +10,10 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
-agentsweep-core.workspace = true
-agentsweep-adapter-claude-code.workspace = true
-agentsweep-adapter-codex.workspace = true
-agentsweep-adapter-workspace.workspace = true
+agentpatrol-core.workspace = true
+agentpatrol-adapter-claude-code.workspace = true
+agentpatrol-adapter-codex.workspace = true
+agentpatrol-adapter-workspace.workspace = true
 serde_json = "1.0.151"
 
 [features]
@@ -21,7 +21,7 @@ serde_json = "1.0.151"
 # the enforcement half of the suite exists only behind this feature. The
 # dev-dependency below turns it on for a test build of this crate and for
 # nothing else, exactly as the core does for its own write side.
-daemon = ["agentsweep-core/daemon"]
+daemon = ["agentpatrol-core/daemon"]
 
 [dev-dependencies]
-agentsweep-adapter-conformance = { path = ".", features = ["daemon"] }
+agentpatrol-adapter-conformance = { path = ".", features = ["daemon"] }

@@ -1,4 +1,4 @@
-//! `agentsweep rule-feed [on | off]`: the one Rule Feed toggle.
+//! `agentpatrol rule-feed [on | off]`: the one Rule Feed toggle.
 //!
 //! The Rule Feed is one of the three requests that ever leave the machine
 //! (spec section 1.1), on by default with a toggle of its own. The daemon is
@@ -8,8 +8,8 @@
 
 use std::path::PathBuf;
 
-use agentsweep_ipc::protocol::Role;
-use agentsweep_ipc::{Client, ClientError};
+use agentpatrol_ipc::protocol::Role;
+use agentpatrol_ipc::{Client, ClientError};
 
 use crate::actions::{DONE, NOT_DONE, UNREACHABLE};
 
@@ -54,14 +54,14 @@ pub fn run(invocation: &Invocation) -> (String, u8) {
     });
     match answered {
         Ok(true) => (
-            "The rule feed is on: AgentSweep asks GitHub once a day whether newer rules \
+            "The rule feed is on: AgentPatrol asks GitHub once a day whether newer rules \
              exist.\n"
                 .to_string(),
             DONE,
         ),
         Ok(false) => (
             "The rule feed is off: nothing is fetched, and the rules bundled with \
-             AgentSweep are in force.\n"
+             AgentPatrol are in force.\n"
                 .to_string(),
             DONE,
         ),
@@ -73,7 +73,7 @@ pub fn run(invocation: &Invocation) -> (String, u8) {
             UNREACHABLE,
         ),
         Err(error) => (
-            format!("AgentSweep could not be asked: {error}\n"),
+            format!("AgentPatrol could not be asked: {error}\n"),
             NOT_DONE,
         ),
     }
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn no_daemon_is_protection_off_and_nothing_changed() {
         let nowhere = std::env::temp_dir().join(format!(
-            "agentsweep-rule-feed-nobody-{}.sock",
+            "agentpatrol-rule-feed-nobody-{}.sock",
             std::process::id()
         ));
         let _ = std::fs::remove_file(&nowhere);

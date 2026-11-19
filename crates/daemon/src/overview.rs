@@ -11,14 +11,14 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use agentsweep_core::adapter::Detection;
-use agentsweep_core::finding::{Finding, FiredHeuristic};
-use agentsweep_core::finding_facts::HeuristicLine;
-use agentsweep_core::heuristics::Assessment;
-use agentsweep_core::item::{Item, ItemId};
-use agentsweep_core::judged::AppliedVerdict;
-use agentsweep_core::judgement::Verdict;
-use agentsweep_core::overview::{
+use agentpatrol_core::adapter::Detection;
+use agentpatrol_core::finding::{Finding, FiredHeuristic};
+use agentpatrol_core::finding_facts::HeuristicLine;
+use agentpatrol_core::heuristics::Assessment;
+use agentpatrol_core::item::{Item, ItemId};
+use agentpatrol_core::judged::AppliedVerdict;
+use agentpatrol_core::judgement::Verdict;
+use agentpatrol_core::overview::{
     AgentRecord, AmbiguousItem, CheckedItem, Overview, ProjectAgent, ProjectCheck, ProjectRecord,
 };
 

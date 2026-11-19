@@ -3,7 +3,7 @@
 //!
 //! **During a Scan.** Once the Tiers have decided and before the Baseline
 //! advances, every Item is taken in the per-Item order of spec section 6.4. An
-//! Item that is back on its Surface with exactly the content AgentSweep took
+//! Item that is back on its Surface with exactly the content AgentPatrol took
 //! out by itself is taken out again (the re-enforce of spec section 5.3), and
 //! the third reappearance within an hour is answered with the "keeps coming
 //! back" Finding instead. Any other Item with a Finding a stable Rule raised on
@@ -32,22 +32,22 @@ use std::sync::Arc;
 
 use serde_json::Value;
 
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter, eligibility};
-use agentsweep_core::derived::{QuarantineEntry, QuarantineManifest};
-use agentsweep_core::drift::{AcknowledgeError, Acknowledgement};
-use agentsweep_core::enforcement::{Cause, Enforcement, FIXABLE_EXPOSURES, may_quarantine};
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::{Actor, EventLog, Outcome, Primitive, ReceiptStep};
-use agentsweep_core::finding::{
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter, eligibility};
+use agentpatrol_core::derived::{QuarantineEntry, QuarantineManifest};
+use agentpatrol_core::drift::{AcknowledgeError, Acknowledgement};
+use agentpatrol_core::enforcement::{Cause, Enforcement, FIXABLE_EXPOSURES, may_quarantine};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::{Actor, EventLog, Outcome, Primitive, ReceiptStep};
+use agentpatrol_core::finding::{
     Category, Finding, FindingId, FindingState, RuleStatus, Severity, Source,
 };
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Activation, InactiveReason, Item, ItemId, Kind, Scope, Shape};
-use agentsweep_core::keychain::KeySource;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::quarantine::{Conflict, EnforcementError, Receipt, ReceiptId};
-use agentsweep_core::state::{RecordedFinding, StateFile, StateWriter};
-use agentsweep_ipc::protocol::{
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Activation, InactiveReason, Item, ItemId, Kind, Scope, Shape};
+use agentpatrol_core::keychain::KeySource;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::quarantine::{Conflict, EnforcementError, Receipt, ReceiptId};
+use agentpatrol_core::state::{RecordedFinding, StateFile, StateWriter};
+use agentpatrol_ipc::protocol::{
     ActionReport, Request, RequestError, RevealedReceipt, Sessions, StateEvent, receipts_to_value,
 };
 
@@ -396,7 +396,7 @@ fn refused(code: &str, message: impl Into<String>) -> RequestError {
 fn unknown(target: &str) -> RequestError {
     refused(
         "unknown-target",
-        format!("AgentSweep knows no Finding, Item or Receipt `{target}`"),
+        format!("AgentPatrol knows no Finding, Item or Receipt `{target}`"),
     )
 }
 
@@ -688,11 +688,11 @@ impl Daemon {
         let mut message = match switched {
             true => format!(
                 "Switched the {} off with the Agent's own switch; it stays where it is and is \
-                 not loaded. `agentsweep restore {receipt_id}` switches it back on.",
+                 not loaded. `agentpatrol restore {receipt_id}` switches it back on.",
                 named(Some(item.kind), item.id.as_str())
             ),
             false => format!(
-                "Quarantined the {}. `agentsweep restore {receipt_id}` puts it back.",
+                "Quarantined the {}. `agentpatrol restore {receipt_id}` puts it back.",
                 named(Some(item.kind), item.id.as_str())
             ),
         };
@@ -747,7 +747,7 @@ impl Daemon {
             sessions_running: sessions.running,
         };
         // Taking one member out of a list moves every member after it up one
-        // index, and those are AgentSweep's own write too: the next Scan
+        // index, and those are AgentPatrol's own write too: the next Scan
         // reads them `unchanged` through the hashes named here.
         let before = acting.entries_now();
         let (mut enforcement, _) =
@@ -771,7 +771,7 @@ impl Daemon {
             false,
             sessions,
             format!(
-                "Took the setting '{}' out of its file. `agentsweep restore {receipt_id}` puts \
+                "Took the setting '{}' out of its file. `agentpatrol restore {receipt_id}` puts \
                  it back.",
                 name_of(item.id.as_str())
             ),
@@ -779,7 +779,7 @@ impl Daemon {
     }
 
     /// Restore: the Receipt replayed in reverse, with Trust for what
-    /// AgentSweep took out by itself (spec section 5.4).
+    /// AgentPatrol took out by itself (spec section 5.4).
     fn restore(
         self: &Arc<Daemon>,
         target: &str,
@@ -894,7 +894,7 @@ impl Daemon {
         if entry.kind != Some(Kind::Plugin) || !entry.natively_disabled {
             return Err(refused(
                 "not-allowed",
-                "only a plugin AgentSweep switched off is re-enabled",
+                "only a plugin AgentPatrol switched off is re-enabled",
             ));
         }
         let finding = self.recorded_for_receipt(&entry).ok_or_else(|| {
@@ -1111,7 +1111,7 @@ impl Daemon {
 
         // The records granted on the Item, and the content of a Finding on it
         // that carries Trust wherever the Trust was granted.
-        let granted_on_it = |record: &&agentsweep_core::derived::TrustRecord| {
+        let granted_on_it = |record: &&agentpatrol_core::derived::TrustRecord| {
             record.granted_on.as_ref().map(ItemId::as_str) == Some(target)
         };
         let mut found: Vec<(Kind, String)> = trusted
@@ -1469,7 +1469,7 @@ mod tests {
     #[test]
     fn purge_and_untrust_wait_for_a_running_scan() {
         use crate::options::{KeySourceChoice, LogChoice, Options};
-        use agentsweep_core::keychain::MemoryKeySource;
+        use agentpatrol_core::keychain::MemoryKeySource;
         use std::sync::mpsc::channel;
         use std::time::Duration;
 
@@ -1485,7 +1485,7 @@ mod tests {
         };
         let daemon = Daemon::open_tuned(
             &options,
-            Arc::new(agentsweep_ipc::peer::SameUser),
+            Arc::new(agentpatrol_ipc::peer::SameUser),
             Box::new(MemoryKeySource::empty()),
             crate::Tuning::default(),
         )
@@ -1527,14 +1527,14 @@ mod tests {
 
     fn sample() -> RecordedFinding {
         RecordedFinding {
-            id: agentsweep_core::finding::FindingId::from_recorded("x|rule/0001|a"),
+            id: agentpatrol_core::finding::FindingId::from_recorded("x|rule/0001|a"),
             item_id: ItemId::from_recorded("claude-code/user/skill/x"),
             kind: Kind::Skill,
             source: String::new(),
             rule_id: 1,
             category: Category::Threat,
             severity: Severity::Critical,
-            tier: agentsweep_core::finding::Tier::Rules,
+            tier: agentpatrol_core::finding::Tier::Rules,
             status: RuleStatus::Probation,
             state: FindingState::Open,
             content_hash: "a".to_string(),

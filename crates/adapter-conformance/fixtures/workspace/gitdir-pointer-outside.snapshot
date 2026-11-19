@@ -1,6 +1,6 @@
 item workspace/project:<root>/repository-metadata/.git
-  shape=file scope=project provenance=unknown activation=active registered=true symlink=false size=42
-  sha256=fe0e29d2ab26a2661c0ef50a96795a57731bd1adb0f088907f3eac984e3d0026
+  shape=file scope=project provenance=unknown activation=active registered=true symlink=false size=43
+  sha256=74b9b53dfd5565ee17809aabbaa572baa10f533971380762699c18164a73101e
   view repo {commondir_outside_repo=false exec_keys=[{key="" value="" value_outside_repo=false}] exec_keys_n=0 gitdir_outside_repo=true hook_executables=[""] hook_executables_n=0}
-problem .git /tmp/agentsweep.invalid/elsewhere Unsupported
+problem .git /tmp/agentpatrol.invalid/elsewhere Unsupported
 watch <root>

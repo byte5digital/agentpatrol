@@ -21,48 +21,48 @@ use std::sync::mpsc::{Receiver, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::finding::{Category, FindingState};
-use agentsweep_core::gate_registration::GateCommand;
-use agentsweep_core::item::Kind;
-use agentsweep_core::keychain::MemoryKeySource;
-use agentsweep_core::overview::ProjectCheck;
-use agentsweep_core::pack::Manifest;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::quarantine::Conflict;
-use agentsweep_core::settings::Posture;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, SettingsChange, StateEvent, Status};
-use agentsweep_menubar::actions::{after_quarantine, offered};
-use agentsweep_menubar::asking::{ActionRequest, Asking, MOVED_TO_QUARANTINE};
-use agentsweep_menubar::banner::{Banner, Button};
-use agentsweep_menubar::findings::{Findings, Follow, WORKING};
-use agentsweep_menubar::first_check::{self, FIRST_CHECK_TITLE, FirstCheck};
-use agentsweep_menubar::folder::{DropRefusal, resolve_drop, scan};
-use agentsweep_menubar::frame::{Frame, Pane};
-use agentsweep_menubar::gate;
-use agentsweep_menubar::integrity;
-use agentsweep_menubar::link::{Link, Socket, Update};
-use agentsweep_menubar::notifications::{
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::finding::{Category, FindingState};
+use agentpatrol_core::gate_registration::GateCommand;
+use agentpatrol_core::item::Kind;
+use agentpatrol_core::keychain::MemoryKeySource;
+use agentpatrol_core::overview::ProjectCheck;
+use agentpatrol_core::pack::Manifest;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::quarantine::Conflict;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, SettingsChange, StateEvent, Status};
+use agentpatrol_menubar::actions::{after_quarantine, offered};
+use agentpatrol_menubar::asking::{ActionRequest, Asking, MOVED_TO_QUARANTINE};
+use agentpatrol_menubar::banner::{Banner, Button};
+use agentpatrol_menubar::findings::{Findings, Follow, WORKING};
+use agentpatrol_menubar::first_check::{self, FIRST_CHECK_TITLE, FirstCheck};
+use agentpatrol_menubar::folder::{DropRefusal, resolve_drop, scan};
+use agentpatrol_menubar::frame::{Frame, Pane};
+use agentpatrol_menubar::gate;
+use agentpatrol_menubar::integrity;
+use agentpatrol_menubar::link::{Link, Socket, Update};
+use agentpatrol_menubar::notifications::{
     Activation, NEEDS_YOU_BODY, Notice, Notifications, Notifier,
 };
-use agentsweep_menubar::permission;
-use agentsweep_menubar::popover::View;
-use agentsweep_menubar::reveal::{Finder, reveal_in_finder};
-use agentsweep_menubar::supervision::Unsupervised;
-use agentsweep_menubar::wording::PROJECT_LINE;
+use agentpatrol_menubar::permission;
+use agentpatrol_menubar::popover::View;
+use agentpatrol_menubar::reveal::{Finder, reveal_in_finder};
+use agentpatrol_menubar::supervision::Unsupervised;
+use agentpatrol_menubar::wording::PROJECT_LINE;
 use serde_json::Value;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
 /// Where the bundle puts the command line interface the Gate's entries name.
 /// Nothing runs it, and it sits outside every temporary directory.
-const GATE_CLI: &str = "/Applications/AgentSweep.app/Contents/MacOS/agentsweep";
+const GATE_CLI: &str = "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol";
 
 /// A Finder that records what it was asked to show and opens nothing.
 #[derive(Default)]
@@ -98,7 +98,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-window-{purpose}-{}-{}",
+            "agentpatrol-window-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -247,7 +247,7 @@ impl Following {
         &self,
         list: &mut Findings,
         asking: &Asking,
-        triggers: &[agentsweep_core::state::Trigger],
+        triggers: &[agentpatrol_core::state::Trigger],
     ) {
         let deadline = Instant::now() + Duration::from_secs(180);
         loop {
@@ -260,7 +260,7 @@ impl Following {
                 list.load(&asking.status().expect("a status"));
             }
             if let StateEvent::ScanFinished { summary } = &event
-                && summary.kind == agentsweep_core::scan_pass::ScanKind::Full
+                && summary.kind == agentpatrol_core::scan_pass::ScanKind::Full
                 && triggers.contains(&summary.trigger)
             {
                 break;
@@ -495,9 +495,9 @@ fn the_window_lists_the_status_and_follows_every_action_from_the_stream() {
     // way, and Scan now rightly joins it (spec section 6.4); then its own
     // trigger names the finished Scan.
     let started = asking.scan_now().expect("a Full Scan");
-    let triggers: &[agentsweep_core::state::Trigger] = match started {
-        true => &[agentsweep_core::state::Trigger::ScanNow],
-        false => &agentsweep_core::state::Trigger::ALL,
+    let triggers: &[agentpatrol_core::state::Trigger] = match started {
+        true => &[agentpatrol_core::state::Trigger::ScanNow],
+        false => &agentpatrol_core::state::Trigger::ALL,
     };
     following.until_a_full_scan_finished(&mut list, &asking, triggers);
     // Once Health no longer says "checking now", a press no longer waits,
@@ -546,7 +546,7 @@ fn a_folder_scan_from_the_window_answers_and_records_nothing() {
     assert_eq!(view["state"], "done");
     assert_eq!(view["verdict"], "Do not open yet.");
     assert_eq!(view["recorded"], "Nothing was recorded.");
-    assert_eq!(view["command"], format!("agentsweep scan '{root}'"));
+    assert_eq!(view["command"], format!("agentpatrol scan '{root}'"));
     assert_eq!(view["findings"][0]["source"], "rule 0001");
     assert_eq!(view["findings"][0]["name"], "CLAUDE.md");
     assert_eq!(
@@ -778,7 +778,7 @@ fn the_simple_posture_words_the_findings_a_real_daemon_sends() {
         .iter()
         .find(|finding| bypass["id"] == finding.id.as_str())
         .expect("the same Exposure");
-    let developer_bypass = agentsweep_menubar::actions::card_in(recorded, Posture::Developer);
+    let developer_bypass = agentpatrol_menubar::actions::card_in(recorded, Posture::Developer);
     let path = developer_bypass["howTo"]["file"].as_str().expect("a path");
     assert!(
         path.starts_with('/') && path.ends_with("/.claude/settings.json"),
@@ -1086,7 +1086,7 @@ fn the_window_switches_a_line_answers_a_drift_question_and_offers_the_conflict_c
     });
     let written = std::fs::read_to_string(&env_file).expect("the env file");
     assert!(
-        written.starts_with("# agentsweep: quarantined "),
+        written.starts_with("# agentpatrol: quarantined "),
         "{written}"
     );
     let stopped = list.get(env.id.as_str()).expect("listed").clone();
@@ -1535,7 +1535,7 @@ fn the_first_check_raises_one_notice_for_the_first_scan_and_shows_its_result() {
     assert!(
         view["items"]
             .as_str()
-            .is_some_and(|line| line.starts_with("AgentSweep checked ")),
+            .is_some_and(|line| line.starts_with("AgentPatrol checked ")),
         "{view}"
     );
     first.lock().expect("the first check").seen();
@@ -1669,7 +1669,7 @@ fn the_key_missing_banner_answers_through_the_daemon_and_opens_activity_at_the_r
     assert!(popover["sentence"].is_null(), "{popover}");
     assert_eq!(
         popover["banner"]["title"],
-        "Something needs a look. Open AgentSweep."
+        "Something needs a look. Open AgentPatrol."
     );
     assert_eq!(popover["banner"]["buttons"], serde_json::json!([]));
 

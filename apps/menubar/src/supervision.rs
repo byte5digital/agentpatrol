@@ -12,7 +12,7 @@
 use std::fmt;
 use std::time::{Duration, Instant};
 
-use agentsweep_core::paths::DataDirectory;
+use agentpatrol_core::paths::DataDirectory;
 
 use crate::popover::Off;
 
@@ -235,7 +235,7 @@ pub fn turn_on(services: &dyn Services) -> Result<(), String> {
 pub fn turned_on(services: &dyn Services, failures: &[String]) -> Result<(), String> {
     match services.agent() {
         ServiceState::Enabled => Ok(()),
-        ServiceState::RequiresApproval => Err("allow AgentSweep in Login Items".to_string()),
+        ServiceState::RequiresApproval => Err("allow AgentPatrol in Login Items".to_string()),
         ServiceState::NotRegistered | ServiceState::NotFound => Err(failures
             .first()
             .cloned()
@@ -247,8 +247,8 @@ pub fn turned_on(services: &dyn Services, failures: &[String]) -> Result<(), Str
 /// answers yet.
 pub fn started_line(answered: bool) -> &'static str {
     match answered {
-        true => "AgentSweep is running.",
-        false => "AgentSweep was started but has not answered yet.",
+        true => "AgentPatrol is running.",
+        false => "AgentPatrol was started but has not answered yet.",
     }
 }
 
@@ -513,7 +513,7 @@ mod system {
     use objc2_foundation::NSString;
     use objc2_service_management::{SMAppService, SMAppServiceStatus};
 
-    use agentsweep_core::DAEMON_LABEL;
+    use agentpatrol_core::DAEMON_LABEL;
 
     use super::{Job, ServiceState, Services, SystemServices, job_from_launchctl};
     use crate::launch_agent::PLIST_NAME;
@@ -954,7 +954,7 @@ pub(crate) mod tests {
         assert!(began.elapsed() < Duration::from_secs(5));
         assert_eq!(
             started_line(false),
-            "AgentSweep was started but has not answered yet."
+            "AgentPatrol was started but has not answered yet."
         );
 
         assert!(
@@ -1041,7 +1041,7 @@ pub(crate) mod tests {
         );
         assert_eq!(
             turn_on(&services),
-            Err("allow AgentSweep in Login Items".to_string())
+            Err("allow AgentPatrol in Login Items".to_string())
         );
         assert!(services.calls().is_empty(), "approval is the user's");
     }
@@ -1125,14 +1125,14 @@ pub(crate) mod tests {
     /// out, and what is missing or unreadable stays absent.
     #[test]
     fn the_job_is_read_from_launchds_record() {
-        let record = "gui/501/de.byte5.agentsweep.daemon = {
+        let record = "gui/501/de.byte5.agentpatrol.daemon = {
 \tactive count = 0
-\tpath = /Users/someone/AgentSweep.app/Contents/Library/LaunchAgents/de.byte5.agentsweep.daemon.plist
+\tpath = /Users/someone/AgentPatrol.app/Contents/Library/LaunchAgents/de.byte5.agentpatrol.daemon.plist
 \ttype = LaunchAgent
 \tstate = not running
 
-\tprogram identifier = Contents/MacOS/agentsweepd (mode: 2)
-\tparent bundle identifier = de.byte5.agentsweep
+\tprogram identifier = Contents/MacOS/agentpatrold (mode: 2)
+\tparent bundle identifier = de.byte5.agentpatrol
 \tparent bundle version = 0.1.0
 \truns = 8
 \tlast exit code = 78: EX_CONFIG

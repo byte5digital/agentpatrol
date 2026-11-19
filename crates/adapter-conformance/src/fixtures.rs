@@ -36,7 +36,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_core::host::Host;
+use agentpatrol_core::host::Host;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -79,7 +79,7 @@ impl Copy {
     pub fn of(agent: &str, case: &str) -> Copy {
         let source = directory().join(agent).join(case);
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-conformance-{agent}-{case}-{}-{}",
+            "agentpatrol-conformance-{agent}-{case}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -198,7 +198,7 @@ impl Scratch {
     /// A directory nothing else is using.
     pub fn new(purpose: &str) -> Scratch {
         let path = std::env::temp_dir().join(format!(
-            "agentsweep-conformance-{purpose}-{}-{}",
+            "agentpatrol-conformance-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

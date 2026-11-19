@@ -18,8 +18,8 @@
 
 use std::sync::Arc;
 
-use agentsweep_core::settings::{SettingsFile, SettingsWriter};
-use agentsweep_ipc::protocol::RequestError;
+use agentpatrol_core::settings::{SettingsFile, SettingsWriter};
+use agentpatrol_ipc::protocol::RequestError;
 
 use crate::gate::{self, Removal};
 use crate::service::Daemon;

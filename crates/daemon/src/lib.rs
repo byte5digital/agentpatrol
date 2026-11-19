@@ -1,4 +1,4 @@
-//! The AgentSweep daemon.
+//! The AgentPatrol daemon.
 //!
 //! It runs as a user-level launch agent, watches the Surfaces, runs the three
 //! Scan kinds and is the only process that writes the Event Log, the Baseline,
@@ -39,7 +39,7 @@
 
 /// Writes one line to the daemon's log.
 ///
-/// The log is `tracing`: the rotated file under `~/Library/Logs/AgentSweep`
+/// The log is `tracing`: the rotated file under `~/Library/Logs/AgentPatrol`
 /// for the installed daemon, the standard error stream for a developer run
 /// (see [`log`]). A line names paths and ids and never content or a sensitive
 /// field (spec section 6.9).

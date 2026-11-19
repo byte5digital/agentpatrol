@@ -12,16 +12,16 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
-use agentsweep_core::judged::OLLAMA_BUDGET;
-use agentsweep_core::judgement::{EngineError, JudgementEngine, PROMPT_VERSION, Prompt};
-use agentsweep_core::judgement_request::Normalisation;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
-use agentsweep_xtask::bad;
-use agentsweep_xtask::benign::fetch::{Fetch, Problem};
-use agentsweep_xtask::eval::{self, BenignSet, Engine, EvalItem, Sets, Wrapper};
-use agentsweep_xtask::repo_root;
+use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
+use agentpatrol_core::judged::OLLAMA_BUDGET;
+use agentpatrol_core::judgement::{EngineError, JudgementEngine, PROMPT_VERSION, Prompt};
+use agentpatrol_core::judgement_request::Normalisation;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
+use agentpatrol_xtask::bad;
+use agentpatrol_xtask::benign::fetch::{Fetch, Problem};
+use agentpatrol_xtask::eval::{self, BenignSet, Engine, EvalItem, Sets, Wrapper};
+use agentpatrol_xtask::repo_root;
 use serde_json::{Value, json};
 
 /// A Judgement Engine that answers from the content of the request it is
@@ -385,13 +385,13 @@ fn offline_the_benign_set_is_a_skip_and_only_the_report_is_written() {
     println!("{written}");
     assert!(written.contains("skipped"), "{written}");
     assert!(
-        written.contains(agentsweep_xtask::benign::REQUIRED),
+        written.contains(agentpatrol_xtask::benign::REQUIRED),
         "{written}"
     );
     assert!(written.contains("insufficient"), "{written}");
 }
 
-/// `AGENTSWEEP_CORPUS_REQUIRED` turns the offline skip into a failure, and
+/// `AGENTPATROL_CORPUS_REQUIRED` turns the offline skip into a failure, and
 /// then no report is written at all.
 #[test]
 fn offline_with_the_corpus_required_is_a_failure() {
@@ -409,7 +409,7 @@ fn offline_with_the_corpus_required_is_a_failure() {
     )
     .expect_err("the corpus is required");
     assert!(
-        problem.contains(agentsweep_xtask::benign::REQUIRED),
+        problem.contains(agentpatrol_xtask::benign::REQUIRED),
         "{problem}"
     );
     assert!(!report_path.exists());

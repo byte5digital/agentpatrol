@@ -38,7 +38,7 @@ jobs:
       id-token: write
       attestations: write
     env:
-      XTASK: target/debug/agentsweep-xtask
+      XTASK: target/debug/agentpatrol-xtask
     steps:
       - name: Check out the tagged commit
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -58,7 +58,7 @@ jobs:
       # no build script ever runs beside a secret key. Its signer is the
       # minisign crate from crates.io, locked like every other dependency.
       - name: Build the build tool
-        run: cargo build -p agentsweep-xtask --locked
+        run: cargo build -p agentpatrol-xtask --locked
 
       # N is strictly greater than the bundled pack's version and than the
       # pack version the feed index holds. Without a `feed` branch there is no
@@ -133,7 +133,7 @@ jobs:
           id="$(gh api --method POST "repos/${GITHUB_REPOSITORY}/releases" \
             -f tag_name="${GITHUB_REF_NAME}" \
             -f name="Rule Pack ${PACK_VERSION}" \
-            -f body="Rule Pack ${PACK_VERSION}, signed for the AgentSweep Rule Feed." \
+            -f body="Rule Pack ${PACK_VERSION}, signed for the AgentPatrol Rule Feed." \
             -F draft=true \
             -F prerelease=false \
             -f make_latest=false \

@@ -1,6 +1,6 @@
 [package]
-name = "agentsweep-core"
-description = "The AgentSweep core: the Item model, the Surface Adapter contract, Scans, Findings and the stores."
+name = "agentpatrol-core"
+description = "The AgentPatrol core: the Item model, the Surface Adapter contract, Scans, Findings and the stores."
 # Published to crates.io before the adapters and the command line interface,
 # which build on it (spec section 9.3, item 17).
 version.workspace = true
@@ -85,5 +85,5 @@ development-keys = ["dep:minisign"]
 # The core's own tests cover the write side, so a test build turns the daemon
 # feature on for the core itself, and signs its test packs with the development
 # keys. Nothing here reaches a shipped binary.
-agentsweep-core = { path = ".", features = ["apple", "daemon", "development-keys"] }
+agentpatrol-core = { path = ".", features = ["apple", "daemon", "development-keys"] }
 tempfile = "3.27.0"

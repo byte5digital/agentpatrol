@@ -1,6 +1,6 @@
-//! Embeds the daemon's Info.plist in the `agentsweepd` binary.
+//! Embeds the daemon's Info.plist in the `agentpatrold` binary.
 //!
-//! The daemon's signing identifier is frozen as `de.byte5.agentsweep.daemon`,
+//! The daemon's signing identifier is frozen as `de.byte5.agentpatrol.daemon`,
 //! because the Keychain key behind the Event Log is bound to it (spec section
 //! 9.1). Tauri signs each sidecar without naming an identifier, and codesign
 //! then takes the bundle identifier of an Info.plist embedded in the binary's
@@ -19,7 +19,7 @@ fn main() {
 
     if env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
         println!(
-            "cargo::rustc-link-arg-bin=agentsweepd=-Wl,-sectcreate,__TEXT,__info_plist,{}",
+            "cargo::rustc-link-arg-bin=agentpatrold=-Wl,-sectcreate,__TEXT,__info_plist,{}",
             plist.display()
         );
     }

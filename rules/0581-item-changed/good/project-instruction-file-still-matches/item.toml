@@ -1,4 +1,4 @@
-# Near miss: the same file, still the content AgentSweep accepted.
+# Near miss: the same file, still the content AgentPatrol accepted.
 [item]
 agent = "claude-code"
 kind = "InstructionFile"

@@ -1,7 +1,7 @@
 name: Cask bump
 
 # Publishing a release bumps the Homebrew cask in `byte5digital/homebrew-tap`
-# (spec section 9.2), so `brew install byte5digital/tap/agentsweep` installs
+# (spec section 9.2), so `brew install byte5digital/tap/agentpatrol` installs
 # the notarized DMG the release carries. Only a plain `v<semver>` release
 # bumps it: a prerelease is installed by hand, and a `rules-v<N>` release,
 # which is published directly, is no app release at all. The filter runs in a
@@ -63,7 +63,7 @@ jobs:
       - name: Name the working paths
         run: |
           echo "CASK_DIR=${RUNNER_TEMP}/cask-bump" >> "${GITHUB_ENV}"
-          echo "DMG=AgentSweep_${VERSION}_universal.dmg" >> "${GITHUB_ENV}"
+          echo "DMG=AgentPatrol_${VERSION}_universal.dmg" >> "${GITHUB_ENV}"
 
       - name: Download the DMG from the release
         env:
@@ -85,7 +85,7 @@ jobs:
             --source-ref "refs/tags/${TAG}"
 
       - name: Render the cask
-        run: .github/scripts/render-cask.sh "${VERSION}" "${CASK_DIR}/${DMG}" > "${CASK_DIR}/agentsweep.rb"
+        run: .github/scripts/render-cask.sh "${VERSION}" "${CASK_DIR}/${DMG}" > "${CASK_DIR}/agentpatrol.rb"
 
       # The tap token is a fine-grained token scoped to the tap alone, with
       # contents read and write.
@@ -102,13 +102,13 @@ jobs:
       - name: Commit the cask to the tap
         run: |
           mkdir -p homebrew-tap/Casks
-          cp "${CASK_DIR}/agentsweep.rb" homebrew-tap/Casks/agentsweep.rb
+          cp "${CASK_DIR}/agentpatrol.rb" homebrew-tap/Casks/agentpatrol.rb
           git -C homebrew-tap config user.name "github-actions[bot]"
           git -C homebrew-tap config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git -C homebrew-tap add Casks/agentsweep.rb
+          git -C homebrew-tap add Casks/agentpatrol.rb
           if git -C homebrew-tap diff --cached --quiet; then
             echo "The tap already carries the cask for ${VERSION}."
             exit 0
           fi
-          git -C homebrew-tap commit -m "Update agentsweep to ${VERSION}"
+          git -C homebrew-tap commit -m "Update agentpatrol to ${VERSION}"
           git -C homebrew-tap push origin HEAD:main

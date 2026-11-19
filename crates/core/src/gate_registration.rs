@@ -54,7 +54,7 @@ impl GateCommand {
     /// The command line interface beside the executable at `daemon`, which is
     /// where the bundle puts it.
     pub fn beside(daemon: &Path) -> Option<GateCommand> {
-        Some(GateCommand::at(daemon.parent()?.join("agentsweep")))
+        Some(GateCommand::at(daemon.parent()?.join("agentpatrol")))
     }
 
     /// The arguments the Gate runs the command with for one Agent:
@@ -88,9 +88,9 @@ pub struct GateEntry {
 /// under a new key because a group ahead of them went.
 ///
 /// A registration writes the entries an event is missing and takes away the
-/// entries that carry AgentSweep's own arguments and timeout under another
+/// entries that carry AgentPatrol's own arguments and timeout under another
 /// command line interface path, so that after the bundle moved there is
-/// exactly one AgentSweep entry per event (the owner's decision of
+/// exactly one AgentPatrol entry per event (the owner's decision of
 /// 2026-10-14). A removal only takes away. Codex files a pin under the
 /// position of its group, so a group that goes shifts every group after it in
 /// the same event; their pins are filed again under the new position with the
@@ -102,7 +102,7 @@ pub struct GateWrite {
     pub written: Vec<GateEntry>,
     /// The entries taken away.
     pub removed: Vec<GateEntry>,
-    /// How many pins of groups that are not AgentSweep's were filed again
+    /// How many pins of groups that are not AgentPatrol's were filed again
     /// under their new position.
     pub pins_rekeyed: usize,
 }
@@ -119,11 +119,11 @@ impl GateWrite {
 pub enum GateCheck {
     /// This Agent has no Gate.
     NoGate,
-    /// Every event carries AgentSweep's entry, unchanged, and no entry
-    /// carries AgentSweep's arguments and timeout under another path.
+    /// Every event carries AgentPatrol's entry, unchanged, and no entry
+    /// carries AgentPatrol's arguments and timeout under another path.
     Registered,
-    /// These events carry no unchanged AgentSweep entry, or carry one of
-    /// AgentSweep's under another command line interface path, by the
+    /// These events carry no unchanged AgentPatrol entry, or carry one of
+    /// AgentPatrol's under another command line interface path, by the
     /// Agent's own event names.
     Missing(Vec<String>),
     /// The file the entries live in could not be read or parsed, so nothing
@@ -136,7 +136,7 @@ pub enum GateCheck {
     ManagedPolicy,
     /// The user switched the Agent's hooks off in their own settings: a
     /// User-scope `disableAllHooks` in Claude Code, `[features] hooks = false`
-    /// in the Codex user layer. That is the user's own choice and AgentSweep
+    /// in the Codex user layer. That is the user's own choice and AgentPatrol
     /// never writes it (the owner's decision of 2026-10-14); the entries
     /// themselves are still kept in place.
     SwitchedOffByUser,
@@ -400,12 +400,12 @@ mod tests {
     #[test]
     fn the_command_sits_beside_the_daemon_and_names_the_agent() {
         let command = GateCommand::beside(Path::new(
-            "/Applications/AgentSweep.app/Contents/MacOS/agentsweepd",
+            "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrold",
         ))
         .expect("a command");
         assert_eq!(
             command.program,
-            PathBuf::from("/Applications/AgentSweep.app/Contents/MacOS/agentsweep")
+            PathBuf::from("/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol")
         );
         assert_eq!(
             GateCommand::arguments("claude-code"),

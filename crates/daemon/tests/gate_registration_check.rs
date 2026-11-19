@@ -20,32 +20,32 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_core::adapter::SurfaceAdapter;
-use agentsweep_core::drift::Change;
-use agentsweep_core::entry_edit::{EntryPath, Format, drop_toml, insert_toml, read_entry};
-use agentsweep_core::evaluation::NoCache;
-use agentsweep_core::eventlog::{Action, EventLog};
-use agentsweep_core::finding::Source;
-use agentsweep_core::gate_registration::{GateCheck, GateCommand};
-use agentsweep_core::health::{GateLine, GateTrouble};
-use agentsweep_core::keychain::MemoryKeySource;
-use agentsweep_core::packs::LoadedPack;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::scan_pass::BACKGROUND_WORKERS;
-use agentsweep_core::state::Trigger;
-use agentsweep_daemon::full_scan::{FullScan, ScanRun, Unwatched};
-use agentsweep_daemon::machine::Machine;
+use agentpatrol_core::adapter::SurfaceAdapter;
+use agentpatrol_core::drift::Change;
+use agentpatrol_core::entry_edit::{EntryPath, Format, drop_toml, insert_toml, read_entry};
+use agentpatrol_core::evaluation::NoCache;
+use agentpatrol_core::eventlog::{Action, EventLog};
+use agentpatrol_core::finding::Source;
+use agentpatrol_core::gate_registration::{GateCheck, GateCommand};
+use agentpatrol_core::health::{GateLine, GateTrouble};
+use agentpatrol_core::keychain::MemoryKeySource;
+use agentpatrol_core::packs::LoadedPack;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::scan_pass::BACKGROUND_WORKERS;
+use agentpatrol_core::state::Trigger;
+use agentpatrol_daemon::full_scan::{FullScan, ScanRun, Unwatched};
+use agentpatrol_daemon::machine::Machine;
 use serde_json::{Value, json};
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
 
 /// Keeps one test's temporary paths apart from another's.
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
 /// Where the bundle puts the command line interface. Nothing runs it, and it
 /// sits outside every temporary directory.
-const CLI: &str = "/Applications/AgentSweep.app/Contents/MacOS/agentsweep";
+const CLI: &str = "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol";
 
 /// One temporary machine with both Agents installed and one temporary data
 /// directory.
@@ -59,7 +59,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-gate-check-{purpose}-{}-{}",
+            "agentpatrol-gate-check-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -117,9 +117,9 @@ impl Sandbox {
         let readable = std::collections::BTreeSet::new();
         FullScan {
             machine: &self.machine(),
-            access: agentsweep_daemon::permission::Access {
+            access: agentpatrol_daemon::permission::Access {
                 readable: &readable,
-                folders: &agentsweep_daemon::permission::Disk,
+                folders: &agentpatrol_daemon::permission::Disk,
             },
             directory: &self.data(),
             keys: &self.keys,
@@ -168,7 +168,7 @@ impl Sandbox {
     /// Its bytes are a Mach-O header and nothing else, so nothing could run
     /// it.
     fn built_cli(&self, checkout: &str) -> GateCommand {
-        let path = self.root.join(checkout).join("target/debug/agentsweep");
+        let path = self.root.join(checkout).join("target/debug/agentpatrol");
         std::fs::create_dir_all(path.parent().expect("a parent")).expect("a directory");
         let mut bytes = vec![0xcf, 0xfa, 0xed, 0xfe];
         bytes.resize(64, 0);
@@ -287,7 +287,7 @@ fn the_first_full_scan_registers_both_agents_and_the_next_writes_nothing() {
     assert!(second.standing.is_empty(), "{:?}", second.standing);
 }
 
-/// AgentSweep's own Gate entries are never a Finding, wherever the command
+/// AgentPatrol's own Gate entries are never a Finding, wherever the command
 /// line interface they name lives: in the app bundle, in `target/debug` of a
 /// checkout, and in `target/debug` of a checkout below a `.claude` directory,
 /// which is where Claude Code keeps its worktrees and where Rule 0014 reads an
@@ -331,7 +331,7 @@ fn a_full_scan_right_after_registration_raises_no_finding_on_the_gates_entries()
     }
 }
 
-/// What clears the Gate's entries is AgentSweep's own registration of exactly
+/// What clears the Gate's entries is AgentPatrol's own registration of exactly
 /// that content, not their look: the same entries copied onto a machine whose
 /// Event Log never registered them are judged like any other hook, and a
 /// native executable below a `.claude` directory is Rule 0014's.
@@ -413,7 +413,7 @@ fn failures() -> Vec<Failure> {
             mutate: |sandbox| {
                 edit_claude_group(sandbox, "PreToolUse", |group| {
                     group["hooks"][0]["command"] =
-                        json!("/Volumes/Old/AgentSweep.app/Contents/MacOS/agentsweep");
+                        json!("/Volumes/Old/AgentPatrol.app/Contents/MacOS/agentpatrol");
                 });
             },
             leaves_an_edited_entry: false,
@@ -543,7 +543,7 @@ fn each_failure_is_mended_by_the_next_full_scan_silently() {
 /// Spec section 7.6: an entry an attacker edited is not repaired in place.
 /// It stays in the file beside the fresh one, a Hook Item whose locator
 /// changed, which the Scan shows as Drift: the edited Hook Item is new
-/// where AgentSweep's entry stood, which is "replaced".
+/// where AgentPatrol's entry stood, which is "replaced".
 #[test]
 fn an_edited_entry_stays_beside_the_fresh_one_and_shows_as_drift() {
     let sandbox = Sandbox::new("edited");
@@ -597,7 +597,7 @@ fn an_edited_entry_stays_beside_the_fresh_one_and_shows_as_drift() {
         edited.drift.as_ref().map(|drift| drift.change),
         Some(Change::Added)
     );
-    // The fresh entry is AgentSweep's own write under the original locator,
+    // The fresh entry is AgentPatrol's own write under the original locator,
     // known to the Scan, so it raises nothing.
     assert!(run.looked_at.iter().any(|id| id.as_str() == original[0]));
     assert!(
@@ -804,10 +804,10 @@ fn the_users_own_switch_is_never_written_and_raises_its_line() {
 /// rung, and drops a line on the first Full Scan whose check passes.
 #[test]
 fn the_daemon_carries_the_line_in_health_until_a_check_passes() {
-    use agentsweep_core::health::Rung;
-    use agentsweep_core::settings::Posture;
-    use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-    use agentsweep_daemon::{Daemon, Tuning};
+    use agentpatrol_core::health::Rung;
+    use agentpatrol_core::settings::Posture;
+    use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+    use agentpatrol_daemon::{Daemon, Tuning};
 
     let sandbox = Sandbox::new("daemon");
     std::fs::write(sandbox.settings(), "{}\n").expect("a settings file");
@@ -821,7 +821,7 @@ fn the_daemon_carries_the_line_in_health_until_a_check_passes() {
     };
     let daemon = Daemon::open_tuned(
         &options,
-        std::sync::Arc::new(agentsweep_ipc::peer::SameUser),
+        std::sync::Arc::new(agentpatrol_ipc::peer::SameUser),
         Box::new(MemoryKeySource::empty()),
         Tuning {
             gate: Some(GateCommand::at(CLI)),

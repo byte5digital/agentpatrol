@@ -17,23 +17,23 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::Actor;
-use agentsweep_core::finding::{Category, FindingState, Tier};
-use agentsweep_core::finding_facts::WhyNothingHappened;
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::quarantine::Conflict;
-use agentsweep_core::rules::{BUNDLED_RULES, RulePack, RuleSource};
-use agentsweep_core::state::RecordedFinding;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::client::Subscription;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, StateEvent, Status};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::Actor;
+use agentpatrol_core::finding::{Category, FindingState, Tier};
+use agentpatrol_core::finding_facts::WhyNothingHappened;
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::quarantine::Conflict;
+use agentpatrol_core::rules::{BUNDLED_RULES, RulePack, RuleSource};
+use agentpatrol_core::state::RecordedFinding;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::client::Subscription;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, StateEvent, Status};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -99,7 +99,7 @@ struct Sandbox {
 impl Sandbox {
     fn empty(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-facts-{purpose}-{}-{}",
+            "agentpatrol-facts-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -294,7 +294,7 @@ fn stopped_on_the_stream(stream: &mut Subscription, ends_with: &str) -> Recorded
     }
 }
 
-/// What the user took out and what AgentSweep took out by itself arrive with
+/// What the user took out and what AgentPatrol took out by itself arrive with
 /// different actors, in the status and on the stream; a Restore of the first
 /// grants no Trust and a Restore of the second does (spec section 5.4).
 #[test]
@@ -451,7 +451,7 @@ fn a_suspicious_finding_lists_its_heuristics_and_redacts_the_sensitive_one() {
     assert_eq!(suspicious.facts.band, "Suspicious");
     assert_eq!(
         suspicious.facts.bands,
-        Some(agentsweep_core::pack::Bands::V1),
+        Some(agentpatrol_core::pack::Bands::V1),
         "the thresholds of the Rule Pack in force"
     );
     assert!(

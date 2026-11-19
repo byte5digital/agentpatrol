@@ -11,7 +11,7 @@
 //! Nothing here infers who wrote anything (ADR 0007). The decision is a pure
 //! function of the [`BaselineRecord`] the last Scan left and the Item this one
 //! enumerated: the known actions have already been applied, so an Item
-//! AgentSweep wrote itself, one whose content carries Trust and one the user
+//! AgentPatrol wrote itself, one whose content carries Trust and one the user
 //! acknowledged arrive reading `unchanged` and are never Drift.
 //!
 //! A Drift Finding is a Threat at T2 with Severity high that is never
@@ -39,8 +39,8 @@ pub const DRIFT_TITLE: &str =
     "The user's own executable configuration moved without a known action";
 
 /// The one sentence the Simple Posture shows above the detail. It asks the one
-/// question AgentSweep can answer neither way.
-pub const DRIFT_PLAIN: &str = "Something that runs when the agent starts changed, and AgentSweep has no record of \
+/// question AgentPatrol can answer neither way.
+pub const DRIFT_PLAIN: &str = "Something that runs when the agent starts changed, and AgentPatrol has no record of \
      doing it. Was that you?";
 
 /// What the Activity keeps when content comes back to the hash that was
@@ -80,7 +80,7 @@ pub struct Drift {
     /// When the accepted form was accepted, which the line reads back. Absent
     /// where nothing was ever accepted.
     pub since: Option<Timestamp>,
-    /// The hash AgentSweep last accepted, empty for an Item that is `added`.
+    /// The hash AgentPatrol last accepted, empty for an Item that is `added`.
     pub accepted_hash: String,
     /// The hash on screen, which an Acknowledge compares against.
     pub last_seen_hash: String,

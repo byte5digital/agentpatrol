@@ -1,5 +1,5 @@
 [package]
-name = "agentsweep-adapter-workspace"
+name = "agentpatrol-adapter-workspace"
 description = "The built-in workspace Surface Adapter: Repository Metadata, env files and Repository Provenance, for every pooled project root."
 version.workspace = true
 edition.workspace = true
@@ -15,7 +15,7 @@ authors.workspace = true
 testing = []
 
 [dependencies]
-agentsweep-core.workspace = true
+agentpatrol-core.workspace = true
 gix-config = { version = "0.60.0", features = ["sha1"] }
 gix-hash = { version = "0.26.2", features = ["sha1"] }
 gix-index = { version = "0.55.0", features = ["sha1"] }

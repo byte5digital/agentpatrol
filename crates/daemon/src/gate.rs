@@ -22,17 +22,17 @@
 
 use std::path::Path;
 
-use agentsweep_core::adapter::SurfaceAdapter;
-use agentsweep_core::chain::ChainError;
-use agentsweep_core::eventlog::{Action, Actor, Event};
-use agentsweep_core::gate_registration::{
+use agentpatrol_core::adapter::SurfaceAdapter;
+use agentpatrol_core::chain::ChainError;
+use agentpatrol_core::eventlog::{Action, Actor, Event};
+use agentpatrol_core::gate_registration::{
     AtomicWriter, GateCheck, GateCommand, GateEntry, GateError, GateWrite,
 };
-use agentsweep_core::health::{GateLine, GateTrouble};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::Kind;
-use agentsweep_core::keychain::KeySource;
-use agentsweep_core::paths::DataDirectory;
+use agentpatrol_core::health::{GateLine, GateTrouble};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::Kind;
+use agentpatrol_core::keychain::KeySource;
+use agentpatrol_core::paths::DataDirectory;
 
 use crate::log::counted;
 use crate::machine::{Machine, agents};
@@ -284,7 +284,7 @@ pub struct Removal {
 /// or not, and records every entry taken away: what switching the Gate off
 /// does, and what Uninstall does on every path (spec sections 7.6 and 9.6).
 ///
-/// Only the entries whose command, arguments and timeout are AgentSweep's
+/// Only the entries whose command, arguments and timeout are AgentPatrol's
 /// go; the user's own hooks and pins stay, and a pin of a user's group that
 /// moved up is filed again under its new position.
 pub fn remove_everywhere(

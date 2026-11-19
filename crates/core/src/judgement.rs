@@ -46,7 +46,7 @@ const NONCE_BYTES: usize = 16;
 /// The fixed system prompt, shipped in the binary. It never contains Item
 /// text: everything about the Item goes in the user turn, inside the block.
 pub const SYSTEM_PROMPT: &str = "\
-You are a security analyst for AgentSweep. You judge one configuration item \
+You are a security analyst for AgentPatrol. You judge one configuration item \
 of a coding agent (a skill, plugin, MCP server entry, hook, instruction file, \
 settings entry or similar) and decide whether it was written to harm the \
 person who runs the agent.
@@ -558,7 +558,7 @@ pub fn check_flagged(
 
 /// True when there is at least one quote and every quote is a non-blank,
 /// verbatim substring of the content the request carried. The facts and the
-/// Heuristics' own sentences are AgentSweep's text, not the Item's, and do
+/// Heuristics' own sentences are AgentPatrol's text, not the Item's, and do
 /// not count.
 fn quotes_verify(evidence: &[String], request: &JudgementRequest) -> bool {
     !evidence.is_empty()
@@ -698,7 +698,7 @@ pub enum EngineSuggestion {
 
 /// The onboarding suggestion: Ollama when it runs and holds a model of four
 /// billion parameters or more (the first such model it lists), else nothing,
-/// so the engine stays off. A smaller model counts as absent, AgentSweep
+/// so the engine stays off. A smaller model counts as absent, AgentPatrol
 /// never pulls one, and the Claude API is never suggested. Apple on-device
 /// is suggested only once the eval bar clears this Mac's major macOS
 /// version: in a hand check its model called every real Item it judged

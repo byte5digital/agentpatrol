@@ -1,6 +1,6 @@
 [package]
-name = "agentsweep-daemon"
-description = "The AgentSweep daemon, binary agentsweepd: the only writer of the Event Log, the Baseline, the verdict cache and the state file."
+name = "agentpatrol-daemon"
+description = "The AgentPatrol daemon, binary agentpatrold: the only writer of the Event Log, the Baseline, the verdict cache and the state file."
 publish = false
 version.workspace = true
 edition.workspace = true
@@ -10,22 +10,22 @@ repository.workspace = true
 authors.workspace = true
 
 [lib]
-name = "agentsweep_daemon"
+name = "agentpatrol_daemon"
 path = "src/lib.rs"
 
 [[bin]]
-name = "agentsweepd"
+name = "agentpatrold"
 path = "src/main.rs"
 
 [dependencies]
-agentsweep-adapter-claude-code.workspace = true
-agentsweep-adapter-codex.workspace = true
-agentsweep-adapter-workspace.workspace = true
+agentpatrol-adapter-claude-code.workspace = true
+agentpatrol-adapter-codex.workspace = true
+agentpatrol-adapter-workspace.workspace = true
 # The daemon is the one crate that turns the core's `daemon` feature on, which
 # is what makes it the only writer of the chains and the only process that
 # touches the Keychain (spec section 6.2).
-agentsweep-core = { workspace = true, features = ["apple", "daemon"] }
-agentsweep-ipc.workspace = true
+agentpatrol-core = { workspace = true, features = ["apple", "daemon"] }
+agentpatrol-ipc.workspace = true
 # The jitter of the Rule Feed fetch: up to an hour, drawn from the operating
 # system's generator, so a fleet of clients does not ask in the same minute.
 getrandom = "0.4.3"
@@ -35,13 +35,13 @@ getrandom = "0.4.3"
 libc = "0.2.180"
 # The watcher. FSEvents and never kqueue, which is a file descriptor per file
 # and runs out at a few hundred of them (spec section 6.1). The debounce and
-# the batching are AgentSweep's own, because what the specification asks for,
+# the batching are AgentPatrol's own, because what the specification asks for,
 # two seconds quiet with a fifteen second maximum hold over one batch of paths,
 # is not what an event debouncer does per path.
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 serde_json = "1.0.151"
-# The log (spec section 6.9): `tracing` to a file under ~/Library/Logs/AgentSweep
-# that AgentSweep rotates itself at five files of five megabytes, or to the
+# The log (spec section 6.9): `tracing` to a file under ~/Library/Logs/AgentPatrol
+# that AgentPatrol rotates itself at five files of five megabytes, or to the
 # terminal for a developer run. No colours and no `log` bridge: the formatter
 # and nothing else.
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
@@ -68,13 +68,13 @@ security-framework-sys = "2.17.0"
 [dev-dependencies]
 # The fixture homes the daemon's own tests scan. A test never goes near the
 # real home.
-agentsweep-adapter-conformance = { version = "0.1.0", path = "../adapter-conformance" }
-agentsweep-adapter-workspace = { workspace = true, features = ["testing"] }
+agentpatrol-adapter-conformance = { version = "0.1.0", path = "../adapter-conformance" }
+agentpatrol-adapter-workspace = { workspace = true, features = ["testing"] }
 # Signs the test Rule Packs a fixture Rule Feed serves, with the development
 # keys a test build pins in place of the release keys. A shipped daemon is
 # built without this feature and pins the release keys alone.
-agentsweep-core = { workspace = true, features = ["apple", "daemon", "development-keys"] }
+agentpatrol-core = { workspace = true, features = ["apple", "daemon", "development-keys"] }
 # The Rule Pack release workflow's own release writer and signing step, so a
 # test proves the client accepts what the workflow publishes.
-agentsweep-xtask = { path = "../xtask" }
+agentpatrol-xtask = { path = "../xtask" }
 tempfile = "3.27.0"

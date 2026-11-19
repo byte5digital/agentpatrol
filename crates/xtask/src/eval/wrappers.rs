@@ -10,10 +10,10 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
-use agentsweep_core::judgement_request::Normalisation;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
+use agentpatrol_core::judgement_request::Normalisation;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 
 use crate::bad::lint::defanging_problems;
 use crate::eval::item::EvalItem;

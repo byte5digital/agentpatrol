@@ -18,20 +18,20 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use agentsweep_core::finding::{Category, FindingState};
-use agentsweep_core::gate_facts::{GateFacts, GateRecord};
-use agentsweep_core::item::{Invocation, Kind};
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::scan_pass::ScanKind;
-use agentsweep_core::state::{State, StateFile, StateWriter};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::Role;
+use agentpatrol_core::finding::{Category, FindingState};
+use agentpatrol_core::gate_facts::{GateFacts, GateRecord};
+use agentpatrol_core::item::{Invocation, Kind};
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::scan_pass::ScanKind;
+use agentpatrol_core::state::{State, StateFile, StateWriter};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::Role;
 
 /// Keeps one test's temporary paths apart from another's.
 static NEXT: AtomicU32 = AtomicU32::new(0);
@@ -71,7 +71,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-gate-facts-{purpose}-{}-{}",
+            "agentpatrol-gate-facts-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

@@ -25,7 +25,7 @@ use crate::keychain::{KeyError, KeySource};
 /// Why a chain does not verify.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BreakReason {
-    /// The line is not a record, or not in the form AgentSweep writes.
+    /// The line is not a record, or not in the form AgentPatrol writes.
     Malformed(String),
     /// The last write did not finish: the file ends mid-record.
     Truncated,
@@ -312,7 +312,7 @@ impl Chain {
                     continue;
                 }
                 Err(EnvelopeError::NotCanonical) => {
-                    let detail = "not the form AgentSweep writes".to_string();
+                    let detail = "not the form AgentPatrol writes".to_string();
                     structural = Some((sequence, BreakReason::Malformed(detail)));
                     continue;
                 }
@@ -1135,7 +1135,7 @@ mod tests {
         assert!(
             daemon
                 .lines()
-                .any(|line| line.starts_with("agentsweep-core = ")
+                .any(|line| line.starts_with("agentpatrol-core = ")
                     && line.contains("features = [")
                     && line.contains("\"daemon\"")),
             "the daemon crate must turn the feature on"

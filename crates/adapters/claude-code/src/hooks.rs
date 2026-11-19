@@ -9,8 +9,8 @@
 //! group's position is not part of a hook's identity (spec section 4.6.1), so
 //! reordering has to leave every id where it was.
 
-use agentsweep_core::item::canonical_entry;
-use agentsweep_core::views::HookView;
+use agentpatrol_core::item::canonical_entry;
+use agentpatrol_core::views::HookView;
 use serde_json::Value;
 
 use crate::document::Document;

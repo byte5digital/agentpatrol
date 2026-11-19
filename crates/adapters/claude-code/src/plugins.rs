@@ -19,10 +19,10 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::Enumeration;
-use agentsweep_core::drift;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Activation, InactiveReason, Kind, Provenance, Scope};
+use agentpatrol_core::adapter::Enumeration;
+use agentpatrol_core::drift;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Activation, InactiveReason, Kind, Provenance, Scope};
 use serde_json::Value;
 
 use crate::document::{self, Document};
@@ -432,7 +432,7 @@ fn is_official(name: &str, known: &BTreeMap<String, Value>) -> bool {
         return true;
     }
     let url = string(source, "url");
-    agentsweep_core::views::url_host(&url) == OFFICIAL_SOURCE_HOST
+    agentpatrol_core::views::url_host(&url) == OFFICIAL_SOURCE_HOST
         && url.contains(&format!("/{OFFICIAL_SOURCE_OWNER}"))
 }
 
@@ -442,7 +442,7 @@ fn source_hash(entry: Option<&Value>) -> String {
     let Some(source) = entry.and_then(|entry| entry.get("source")) else {
         return String::new();
     };
-    agentsweep_core::item::sha256_hex(&agentsweep_core::item::canonical_entry(source))
+    agentpatrol_core::item::sha256_hex(&agentpatrol_core::item::canonical_entry(source))
 }
 
 fn string(value: &Value, field: &str) -> String {

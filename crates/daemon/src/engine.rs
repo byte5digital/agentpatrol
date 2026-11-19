@@ -19,17 +19,17 @@
 
 use std::sync::Arc;
 
-use agentsweep_core::apple::AppleAvailability;
-use agentsweep_core::apple_engine::AppleHelper;
-use agentsweep_core::eval_bar;
-use agentsweep_core::eventlog::{Action, Actor, Event};
-use agentsweep_core::keychain::{ClaudeKey, ClaudeKeyStore, MemoryClaudeKeyStore};
-use agentsweep_core::ollama::OllamaClient;
-use agentsweep_core::settings::{
+use agentpatrol_core::apple::AppleAvailability;
+use agentpatrol_core::apple_engine::AppleHelper;
+use agentpatrol_core::eval_bar;
+use agentpatrol_core::eventlog::{Action, Actor, Event};
+use agentpatrol_core::keychain::{ClaudeKey, ClaudeKeyStore, MemoryClaudeKeyStore};
+use agentpatrol_core::ollama::OllamaClient;
+use agentpatrol_core::settings::{
     CLAUDE_MODEL, ChoiceRefused, JudgementEngine, JudgementSettings, OLLAMA_MODEL, OllamaAddress,
     Posture, SettingsFile, SettingsWriter, model_id,
 };
-use agentsweep_ipc::protocol::{EngineChange, EngineState, RequestError};
+use agentpatrol_ipc::protocol::{EngineChange, EngineState, RequestError};
 
 use crate::options::KeySourceChoice;
 use crate::service::Daemon;
@@ -51,7 +51,7 @@ pub fn claude_key_store(choice: KeySourceChoice) -> Arc<dyn ClaudeKeyStore + Sen
 
 #[cfg(target_os = "macos")]
 fn login_keychain() -> Arc<dyn ClaudeKeyStore + Send + Sync> {
-    Arc::new(agentsweep_core::keychain::LoginKeychainClaudeKey::for_the_daemon())
+    Arc::new(agentpatrol_core::keychain::LoginKeychainClaudeKey::for_the_daemon())
 }
 
 /// There is no Keychain off macOS (spec section 6.1); a key that lives only as
@@ -195,7 +195,7 @@ impl Daemon {
     ///
     /// The answer says whether Ollama runs at the address the settings now
     /// name and which models it has pulled, asked on that loopback address
-    /// with a short timeout and after any write is done. AgentSweep never
+    /// with a short timeout and after any write is done. AgentPatrol never
     /// pulls a model and never starts Ollama.
     ///
     /// It also says whether Apple's on-device model is available, and the

@@ -750,7 +750,7 @@ impl HookView {
     ///
     /// It is the shape Codex hashes for its own hook trust, chosen so that a
     /// hook written as JSON and the same hook written as TOML come out
-    /// identical (`docs/research/codex-surfaces.md`). AgentSweep serialises it
+    /// identical (`docs/research/codex-surfaces.md`). AgentPatrol serialises it
     /// with [`canonical_entry`], which is what an entry Item of kind Hook
     /// carries as its content, whichever Agent the hook belongs to.
     pub fn normal_form(event: &str, matcher: &str, handler: &Value) -> Value {

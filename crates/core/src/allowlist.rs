@@ -5,17 +5,17 @@
 //! ways in: the user granted [`crate::derived::TrustTable`] Trust to this
 //! content of this kind, wherever it appears; the Item came from an official
 //! marketplace; or the Item is one of the Gate's own entries, exactly as
-//! AgentSweep registered it (spec section 7.6).
+//! AgentPatrol registered it (spec section 7.6).
 //!
 //! The Gate's entries name the command line interface wherever the daemon
 //! found it beside itself. In a release that is inside the app bundle; in a
 //! developer build it is `target/debug` of a checkout, and a checkout can sit
 //! below a directory Rule 0014 reads as an Agent configuration directory, such
-//! as the `.claude/worktrees` Claude Code keeps its worktrees in. AgentSweep's
+//! as the `.claude/worktrees` Claude Code keeps its worktrees in. AgentPatrol's
 //! own registration is a known action, so the entries it wrote are never a
 //! Finding, neither Drift nor a Rule or Heuristic hit on their command. They
 //! are known by the content hash the `gate-registered` event names, so an
-//! entry someone else wrote, or one of AgentSweep's that was edited, is judged
+//! entry someone else wrote, or one of AgentPatrol's that was edited, is judged
 //! like every other hook.
 //!
 //! Trust is what makes Restore work. Restoring an automatically quarantined
@@ -34,7 +34,7 @@ pub enum Clearance {
     Trusted,
     /// The Item came from an official marketplace.
     OfficialMarketplace,
-    /// The Item is a Gate entry AgentSweep registered itself and has not
+    /// The Item is a Gate entry AgentPatrol registered itself and has not
     /// taken away since.
     GateEntry,
 }
@@ -45,7 +45,7 @@ impl Clearance {
         match self {
             Clearance::Trusted => "trusted",
             Clearance::OfficialMarketplace => "official-marketplace",
-            Clearance::GateEntry => "agentsweep-gate",
+            Clearance::GateEntry => "agentpatrol-gate",
         }
     }
 }
@@ -67,7 +67,7 @@ impl<'a> Allowlist<'a> {
     }
 
     /// The same Allowlist, clearing the Gate entries these known actions say
-    /// AgentSweep registered and has not taken away.
+    /// AgentPatrol registered and has not taken away.
     pub fn with_gate_entries(mut self, known: &'a KnownActions) -> Allowlist<'a> {
         self.known = Some(known);
         self
@@ -276,9 +276,9 @@ mod tests {
     }
 
     #[test]
-    fn a_gate_entry_agentsweep_registered_is_cleared_until_it_is_taken_away() {
+    fn a_gate_entry_agentpatrol_registered_is_cleared_until_it_is_taken_away() {
         let table = TrustTable::default();
-        let entry = gate_entry("/somewhere/.claude/worktrees/w/target/debug/agentsweep");
+        let entry = gate_entry("/somewhere/.claude/worktrees/w/target/debug/agentpatrol");
 
         let registered = known_after(&[gate(Action::GateRegistered, &entry)]);
         let allowlist = Allowlist::over(&table).with_gate_entries(&registered);
@@ -289,7 +289,7 @@ mod tests {
 
         // The entry edited is other content, and the same content as another
         // kind is not a Gate entry.
-        let edited = gate_entry("/somewhere/else/agentsweep");
+        let edited = gate_entry("/somewhere/else/agentpatrol");
         let mut edited_at_the_same_id = edited.clone();
         edited_at_the_same_id.id = entry.id.clone();
         assert_eq!(allowlist.clears(&edited_at_the_same_id), None);

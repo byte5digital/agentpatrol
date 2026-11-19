@@ -22,19 +22,19 @@ use std::fmt;
 
 use serde_json::{Map, Value};
 
-use agentsweep_core::chain::{BreakReason, ChainState};
-use agentsweep_core::envelope::{ChainId, Timestamp};
-use agentsweep_core::eventlog::{Actor, Outcome, Primitive, ReceiptStep, SessionsRunning};
-use agentsweep_core::finding::{Category, FindingId, FindingState};
-use agentsweep_core::health::{GateLine, GateTrouble, Health, Protection, StateFileHealth};
-use agentsweep_core::item::{ItemId, Kind};
-use agentsweep_core::keychain::ClaudeKey;
-use agentsweep_core::overview::Overview;
-use agentsweep_core::packs::PackOrigin;
-use agentsweep_core::quarantine::Conflict;
-use agentsweep_core::settings::{JUDGEMENT_ENGINE, JudgementEngine};
-use agentsweep_core::spend::{CapNotice, JudgementCap};
-use agentsweep_core::state::{IgnoredPack, RecordedFinding, ScanSummary, Trigger};
+use agentpatrol_core::chain::{BreakReason, ChainState};
+use agentpatrol_core::envelope::{ChainId, Timestamp};
+use agentpatrol_core::eventlog::{Actor, Outcome, Primitive, ReceiptStep, SessionsRunning};
+use agentpatrol_core::finding::{Category, FindingId, FindingState};
+use agentpatrol_core::health::{GateLine, GateTrouble, Health, Protection, StateFileHealth};
+use agentpatrol_core::item::{ItemId, Kind};
+use agentpatrol_core::keychain::ClaudeKey;
+use agentpatrol_core::overview::Overview;
+use agentpatrol_core::packs::PackOrigin;
+use agentpatrol_core::quarantine::Conflict;
+use agentpatrol_core::settings::{JUDGEMENT_ENGINE, JudgementEngine};
+use agentpatrol_core::spend::{CapNotice, JudgementCap};
+use agentpatrol_core::state::{IgnoredPack, RecordedFinding, ScanSummary, Trigger};
 
 pub use crate::engine::{EngineChange, EngineState};
 pub use crate::gate::{GateEvent, GateReason, GateRequest, GateTool, GateVerdict, McpServerRef};
@@ -93,27 +93,27 @@ impl Hello {
     /// The handshake this build sends.
     pub fn of(role: Role) -> Hello {
         Hello {
-            version: agentsweep_core::VERSION.to_string(),
+            version: agentpatrol_core::VERSION.to_string(),
             role,
         }
     }
 }
 
 /// The fixed sentence a version mismatch is refused with (spec section 6.3).
-pub const RESTART_AGENTSWEEP: &str = "restart AgentSweep";
+pub const RESTART_AGENTPATROL: &str = "restart AgentPatrol";
 
 /// Why the daemon will not talk to this peer.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Refusal {
-    /// The peer is a different version of AgentSweep. The application then
-    /// re-registers the daemon; a person is told to restart AgentSweep.
+    /// The peer is a different version of AgentPatrol. The application then
+    /// re-registers the daemon; a person is told to restart AgentPatrol.
     VersionMismatch {
         /// The version the daemon is.
         daemon_version: String,
         /// The version the peer said it was.
         peer_version: String,
     },
-    /// The peer does not carry AgentSweep's code signature, or does not run as
+    /// The peer does not carry AgentPatrol's code signature, or does not run as
     /// the same user (ADR 0008).
     UnsignedPeer {
         /// What the check found, for the daemon's own log.
@@ -151,12 +151,12 @@ impl Refusal {
     /// The sentence the peer is given.
     pub fn message(&self) -> String {
         match self {
-            Refusal::VersionMismatch { .. } => RESTART_AGENTSWEEP.to_string(),
+            Refusal::VersionMismatch { .. } => RESTART_AGENTPATROL.to_string(),
             Refusal::UnsignedPeer { detail } => {
-                format!("AgentSweep answers only its own signed programs: {detail}")
+                format!("AgentPatrol answers only its own signed programs: {detail}")
             }
             Refusal::NotAHandshake { detail } => {
-                format!("AgentSweep expects a handshake first: {detail}")
+                format!("AgentPatrol expects a handshake first: {detail}")
             }
         }
     }
@@ -200,7 +200,7 @@ pub enum Request {
         target: String,
     },
     /// Put a quarantined Item back by replaying its Receipt in reverse. What
-    /// AgentSweep took out by itself comes back with Trust for that exact
+    /// AgentPatrol took out by itself comes back with Trust for that exact
     /// content (spec section 5.4).
     Restore {
         /// A Receipt id, or a Finding or Item id that one Receipt stopped.
@@ -369,7 +369,7 @@ pub enum Request {
         ids: Vec<String>,
     },
     /// Put one redacted Judgement Request to the Claude engine, for the
-    /// in-bundle `agentsweep scan <dir>`, which never holds the key: looked
+    /// in-bundle `agentpatrol scan <dir>`, which never holds the key: looked
     /// up in the Verdict cache first, under the cloud caps, checked and
     /// cached (spec section 4.4). Answers with a
     /// [`crate::judge::JudgeAnswer`].
@@ -749,7 +749,7 @@ pub enum StateEvent {
     FindingChanged {
         /// Which Finding.
         id: FindingId,
-        /// Where it stands now, as [`agentsweep_core::finding::FindingState`]
+        /// Where it stands now, as [`agentpatrol_core::finding::FindingState`]
         /// spells it, or `gone` when it is no longer raised.
         state: String,
         /// The Finding as the status carries it now, with its facts, absent
@@ -1296,7 +1296,7 @@ pub struct AgentSessions {
 /// states (spec section 5.3).
 ///
 /// Detected read-only, from the session files an Agent keeps and a liveness
-/// check on the process id they name. AgentSweep never signals or stops a
+/// check on the process id they name. AgentPatrol never signals or stops a
 /// session; it tells the user to restart one.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Sessions {
@@ -1354,11 +1354,11 @@ impl Sessions {
             SessionsRunning::Unknown => {
                 let unknown = named(SessionsRunning::Unknown);
                 match unknown.is_empty() {
-                    true => "AgentSweep could not tell whether Agent sessions are running; \
+                    true => "AgentPatrol could not tell whether Agent sessions are running; \
                              restart any that are open."
                         .to_string(),
                     false => format!(
-                        "AgentSweep could not tell whether sessions of {} are running; restart \
+                        "AgentPatrol could not tell whether sessions of {} are running; restart \
                          any that are open.",
                         unknown.join(", ")
                     ),
@@ -1428,7 +1428,7 @@ pub struct ActionReport {
     /// What it physically did, step by step, with each step's outcome.
     pub steps: Vec<ReceiptStep>,
     /// True when it wrote a Trust record: a Trust, or the Restore of what
-    /// AgentSweep took out by itself.
+    /// AgentPatrol took out by itself.
     pub trusted: bool,
     /// Whether Agent sessions appear to be running.
     pub sessions: Sessions,
@@ -1527,7 +1527,7 @@ pub struct RevealedReceipt {
     /// Where its payload sits in the store, empty when nothing moved (an entry
     /// taken out of its file keeps no payload).
     pub payload_path: String,
-    /// Whether AgentSweep or the user took it out.
+    /// Whether AgentPatrol or the user took it out.
     pub actor: Actor,
     /// When.
     pub quarantined_at: Timestamp,
@@ -1646,7 +1646,7 @@ pub struct FolderScanResult {
     /// Every Finding, a Problem included, in the order the Items were found.
     pub findings: Vec<FolderFinding>,
     /// The version of the Rule Pack in force that judged the folder. The
-    /// in-process `agentsweep scan <dir>` uses the bundled pack instead, so
+    /// in-process `agentpatrol scan <dir>` uses the bundled pack instead, so
     /// the two may answer differently, and each names the pack it used.
     pub rule_pack: u64,
 }
@@ -1787,7 +1787,7 @@ impl Offer {
 const DRIFT_SOURCE: &str = "drift";
 
 /// The Rule ids whose Exposure offers the one-click fix.
-const FIXABLE_EXPOSURES: [i64; 2] = agentsweep_core::enforcement::FIXABLE_EXPOSURES;
+const FIXABLE_EXPOSURES: [i64; 2] = agentpatrol_core::enforcement::FIXABLE_EXPOSURES;
 
 /// What the daemon allows on one Finding as it stands.
 ///
@@ -1994,7 +1994,7 @@ impl Message {
                 Some(Message::Refused(match text("reason")? {
                     "version-mismatch" => Refusal::VersionMismatch {
                         daemon_version: text("version").unwrap_or_default().to_string(),
-                        peer_version: agentsweep_core::VERSION.to_string(),
+                        peer_version: agentpatrol_core::VERSION.to_string(),
                     },
                     "unsigned-peer" => Refusal::UnsignedPeer { detail },
                     _ => Refusal::NotAHandshake { detail },
@@ -2079,8 +2079,8 @@ impl Message {
 /// What the daemon answers a handshake with when it accepts it.
 pub fn welcome() -> Message {
     Message::Welcome {
-        version: agentsweep_core::VERSION.to_string(),
-        daemon: agentsweep_core::DAEMON_LABEL.to_string(),
+        version: agentpatrol_core::VERSION.to_string(),
+        daemon: agentpatrol_core::DAEMON_LABEL.to_string(),
     }
 }
 
@@ -2088,13 +2088,13 @@ pub fn welcome() -> Message {
 ///
 /// Application, daemon and command line interface always share one version
 /// (spec section 6.3), so anything else is a half-finished update and the
-/// answer is to restart AgentSweep rather than to guess at compatibility.
+/// answer is to restart AgentPatrol rather than to guess at compatibility.
 pub fn check_version(hello: &Hello) -> Result<(), Refusal> {
-    if hello.version == agentsweep_core::VERSION {
+    if hello.version == agentpatrol_core::VERSION {
         return Ok(());
     }
     Err(Refusal::VersionMismatch {
-        daemon_version: agentsweep_core::VERSION.to_string(),
+        daemon_version: agentpatrol_core::VERSION.to_string(),
         peer_version: hello.version.clone(),
     })
 }
@@ -2116,7 +2116,7 @@ pub fn by_item(status: &Status) -> BTreeMap<String, Vec<&RecordedFinding>> {
 mod tests {
     use super::*;
 
-    use agentsweep_core::scan_pass::ScanKind;
+    use agentpatrol_core::scan_pass::ScanKind;
 
     fn moment(text: &str) -> Timestamp {
         Timestamp::parse(text).expect("a readable moment")
@@ -2290,18 +2290,18 @@ mod tests {
             settings: Box::new(SettingsState {
                 rule_feed: true,
                 update_check: false,
-                posture: agentsweep_core::settings::Posture::Developer,
+                posture: agentpatrol_core::settings::Posture::Developer,
                 config_dirs: BTreeMap::from([(
                     "codex".to_string(),
                     "/Volumes/Work/.codex".to_string(),
                 )]),
                 engine: EngineState {
-                    engine: agentsweep_core::settings::JudgementEngine::Off,
+                    engine: agentpatrol_core::settings::JudgementEngine::Off,
                     ollama_address: "127.0.0.1:11434".to_string(),
                     ollama_model: String::new(),
                     claude_model: String::new(),
                     claude_model_in_use: "claude-sonnet-5".to_string(),
-                    caps: agentsweep_core::settings::CloudCaps::default(),
+                    caps: agentpatrol_core::settings::CloudCaps::default(),
                     claude_key_ending: None,
                     recorded: 0,
                     ollama: None,
@@ -2317,8 +2317,8 @@ mod tests {
 
     /// One of everything the Overview names.
     fn an_overview() -> Overview {
-        use agentsweep_core::finding_facts::HeuristicLine;
-        use agentsweep_core::overview::{
+        use agentpatrol_core::finding_facts::HeuristicLine;
+        use agentpatrol_core::overview::{
             AgentRecord, AmbiguousItem, ProjectAgent, ProjectCheck, ProjectRecord,
         };
         Overview {
@@ -2389,12 +2389,12 @@ mod tests {
     fn a_version_mismatch_carries_the_fixed_sentence() {
         let refusal = Refusal::VersionMismatch {
             daemon_version: "9.9.9".to_string(),
-            peer_version: agentsweep_core::VERSION.to_string(),
+            peer_version: agentpatrol_core::VERSION.to_string(),
         };
         assert_eq!(refusal.reason(), "version-mismatch");
-        assert_eq!(refusal.message(), RESTART_AGENTSWEEP);
+        assert_eq!(refusal.message(), RESTART_AGENTPATROL);
         let value = Message::Refused(refusal).to_value();
-        assert_eq!(value["message"], Value::from(RESTART_AGENTSWEEP));
+        assert_eq!(value["message"], Value::from(RESTART_AGENTPATROL));
         assert_eq!(value["version"], Value::from("9.9.9"));
     }
 
@@ -2406,7 +2406,7 @@ mod tests {
             role: Role::App,
         };
         let refusal = check_version(&older).expect_err("another version is refused");
-        assert_eq!(refusal.message(), RESTART_AGENTSWEEP);
+        assert_eq!(refusal.message(), RESTART_AGENTPATROL);
     }
 
     #[test]
@@ -2416,7 +2416,7 @@ mod tests {
         health.open_threats = 1;
         health.open_exposures = 2;
         health.rule_pack = 3;
-        health.rule_pack_origin = agentsweep_core::packs::PackOrigin::Fetched;
+        health.rule_pack_origin = agentpatrol_core::packs::PackOrigin::Fetched;
         health.rules_released_at = "2026-10-01T09:30:00Z".to_string();
         health.rule_feed = false;
         health.settings_unreadable = true;
@@ -2545,7 +2545,7 @@ mod tests {
             },
             Request::Engine {
                 change: EngineChange {
-                    engine: Some(agentsweep_core::settings::JudgementEngine::Ollama),
+                    engine: Some(agentpatrol_core::settings::JudgementEngine::Ollama),
                     ollama_address: Some("127.0.0.1:11434".to_string()),
                     ollama_model: Some("qwen3:8b".to_string()),
                     claude_model: Some(String::new()),
@@ -2565,7 +2565,7 @@ mod tests {
                 change: SettingsChange {
                     rule_feed: Some(false),
                     update_check: Some(false),
-                    posture: Some(agentsweep_core::settings::Posture::Developer),
+                    posture: Some(agentpatrol_core::settings::Posture::Developer),
                     config_dirs: BTreeMap::from([
                         (
                             "claude-code".to_string(),
@@ -2645,8 +2645,8 @@ mod tests {
     /// canonical serialisation, as the in-bundle command line interface
     /// builds it.
     fn a_judge_request() -> JudgeRequest {
-        use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
-        use agentsweep_core::judgement_request::{ByteEstimate, Normalisation, RequestBuilder};
+        use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
+        use agentpatrol_core::judgement_request::{ByteEstimate, Normalisation, RequestBuilder};
 
         let item = Item::file(
             "claude-code",
@@ -2903,7 +2903,7 @@ mod tests {
         source: &str,
         rule_id: i64,
     ) -> RecordedFinding {
-        use agentsweep_core::finding::{RuleStatus, Severity, Tier};
+        use agentpatrol_core::finding::{RuleStatus, Severity, Tier};
         RecordedFinding {
             id: FindingId::from_recorded("claude-code/user/settings-entry/x|rule/0018|abc"),
             item_id: ItemId::from_recorded("claude-code/user/settings-entry/x"),
@@ -2960,8 +2960,8 @@ mod tests {
     /// a daemon from before reads as no facts known.
     #[test]
     fn an_older_client_reads_a_status_whose_findings_carry_facts() {
-        use agentsweep_core::eventlog::Actor;
-        use agentsweep_core::finding_facts::{FindingFacts, HeuristicLine, WhyNothingHappened};
+        use agentpatrol_core::eventlog::Actor;
+        use agentpatrol_core::finding_facts::{FindingFacts, HeuristicLine, WhyNothingHappened};
 
         let mut finding = recorded(FindingState::Stopped, Category::Threat, "rule 0001", 1);
         finding.switched = true;
@@ -2991,7 +2991,7 @@ mod tests {
             drift_change: "changed".to_string(),
             path: "/src/demo/.claude/skills/setup".to_string(),
             excerpt: "curl -k".to_string(),
-            bands: Some(agentsweep_core::pack::Bands::V1),
+            bands: Some(agentpatrol_core::pack::Bands::V1),
             ..FindingFacts::default()
         };
         let status = Status {

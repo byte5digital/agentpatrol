@@ -662,7 +662,7 @@ mod tests {
         );
         assert!(
             after.contains(&format!(
-                "# agentsweep: quarantined {} CODEX_HOME",
+                "# agentpatrol: quarantined {} CODEX_HOME",
                 receipt.id
             )),
             "{after}"

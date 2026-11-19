@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>de.byte5.agentsweep.daemon</string>
+	<string>de.byte5.agentpatrol.daemon</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>agentsweepd</string>
+	<string>agentpatrold</string>
 </dict>
 </plist>

@@ -1,5 +1,5 @@
 //! The popover as the shell and the banner script set it (spec sections 8.1
-//! and 8.6): every show makes AgentSweep the active app and focuses the
+//! and 8.6): every show makes AgentPatrol the active app and focuses the
 //! popover, so a click outside takes the focus away and hides it; and
 //! **Turn on protection** gives way to "Starting protection…" from the click
 //! until it fails.

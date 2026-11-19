@@ -10,10 +10,10 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::RecordedFinding;
-use agentsweep_ipc::ClientError;
-use agentsweep_ipc::protocol::RevealedReceipt;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::RecordedFinding;
+use agentpatrol_ipc::ClientError;
+use agentpatrol_ipc::protocol::RevealedReceipt;
 
 use crate::asking::refusal;
 use crate::developer::offers_reveal;
@@ -53,7 +53,7 @@ pub fn payload_of(receipts: &[RevealedReceipt], receipt_id: &str) -> Result<Path
     let receipt = receipts
         .iter()
         .find(|receipt| receipt.receipt_id == receipt_id)
-        .ok_or_else(|| "AgentSweep holds no Receipt for this Item any more.".to_string())?;
+        .ok_or_else(|| "AgentPatrol holds no Receipt for this Item any more.".to_string())?;
     match receipt.payload_path.is_empty() {
         true => Err(
             "Nothing was moved into quarantine for this Item, so there is nothing to \
@@ -98,10 +98,10 @@ pub(crate) mod tests {
 
     use std::cell::RefCell;
 
-    use agentsweep_core::envelope::Timestamp;
-    use agentsweep_core::eventlog::Actor;
-    use agentsweep_core::finding::{Category, FindingState};
-    use agentsweep_core::item::{ItemId, Kind};
+    use agentpatrol_core::envelope::Timestamp;
+    use agentpatrol_core::eventlog::Actor;
+    use agentpatrol_core::finding::{Category, FindingState};
+    use agentpatrol_core::item::{ItemId, Kind};
 
     use crate::findings::tests::recorded;
 

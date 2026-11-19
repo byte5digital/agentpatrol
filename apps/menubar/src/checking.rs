@@ -19,8 +19,8 @@
 
 use std::path::Path;
 
-use agentsweep_core::settings::Posture;
-use agentsweep_ipc::protocol::{InHand, ScanPhase};
+use agentpatrol_core::settings::Posture;
+use agentpatrol_ipc::protocol::{InHand, ScanPhase};
 use serde_json::{Value, json};
 
 use crate::findings::ScanLine;

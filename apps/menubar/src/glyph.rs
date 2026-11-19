@@ -19,7 +19,7 @@ pub enum Mark {
     Tick,
     /// Something asks for the user.
     Exclamation,
-    /// Protection is off, or AgentSweep is updating.
+    /// Protection is off, or AgentPatrol is updating.
     Dash,
 }
 

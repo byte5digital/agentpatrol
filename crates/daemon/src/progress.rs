@@ -11,9 +11,9 @@
 
 use std::time::{Duration, Instant};
 
-use agentsweep_core::adapter::Descriptor;
-use agentsweep_core::item::{Item, Scope};
-use agentsweep_ipc::protocol::{InHand, ScanPhase, StateEvent};
+use agentpatrol_core::adapter::Descriptor;
+use agentpatrol_core::item::{Item, Scope};
+use agentpatrol_ipc::protocol::{InHand, ScanPhase, StateEvent};
 
 /// The least time between two progress events that carry nothing new but
 /// the count: four a second at most.
@@ -94,7 +94,7 @@ mod tests {
 
     use std::path::PathBuf;
 
-    use agentsweep_core::item::{Activation, Kind, Provenance};
+    use agentpatrol_core::item::{Activation, Kind, Provenance};
 
     fn checking(done: usize, total: usize, project: Option<&str>) -> StateEvent {
         StateEvent::ScanProgress {

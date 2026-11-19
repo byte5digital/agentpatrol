@@ -44,7 +44,7 @@ pub struct AgentRecord {
     pub projects: usize,
     /// How many Items the last Full Scan enumerated on this Agent's Surfaces.
     pub items: usize,
-    /// The config layers this Agent merges that AgentSweep does not read, in
+    /// The config layers this Agent merges that AgentPatrol does not read, in
     /// plain words, so nothing reads as checked when it was not (spec
     /// section 3.3).
     pub layers_not_read: Vec<String>,
@@ -117,7 +117,7 @@ pub enum ProjectCheck {
     /// The last Full Scan read it.
     #[default]
     Checked,
-    /// The operating system will not let AgentSweep read it until the user
+    /// The operating system will not let AgentPatrol read it until the user
     /// allows it. Never counts towards an all-clear.
     NeedsPermission,
 }
@@ -306,7 +306,7 @@ impl CheckedItem {
 /// Everything the Overview names beside the Findings.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Overview {
-    /// One record per Agent AgentSweep has an adapter for, installed or not.
+    /// One record per Agent AgentPatrol has an adapter for, installed or not.
     pub agents: Vec<AgentRecord>,
     /// One record per pooled project root, in a stable order.
     pub projects: Vec<ProjectRecord>,

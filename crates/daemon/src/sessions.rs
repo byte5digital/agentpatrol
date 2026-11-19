@@ -2,8 +2,8 @@
 //!
 //! A running Claude Code session holds `~/.claude.json` in memory and writes it
 //! back whole, and both Agents re-fetch plugins after a session starts, so what
-//! AgentSweep took out may be in use or come back until the session restarts
-//! (spec section 5.3). The user is told, and asked to restart; AgentSweep never
+//! AgentPatrol took out may be in use or come back until the session restarts
+//! (spec section 5.3). The user is told, and asked to restart; AgentPatrol never
 //! signals or stops a session itself.
 //!
 //! Detection is read-only and executes nothing. Claude Code keeps one file per
@@ -20,8 +20,8 @@
 
 use std::path::Path;
 
-use agentsweep_core::eventlog::SessionsRunning;
-use agentsweep_ipc::protocol::{AgentSessions, Sessions};
+use agentpatrol_core::eventlog::SessionsRunning;
+use agentpatrol_ipc::protocol::{AgentSessions, Sessions};
 
 /// The directory Claude Code keeps its configuration in, below the home.
 const CLAUDE_CODE_DIRECTORY: &str = ".claude";

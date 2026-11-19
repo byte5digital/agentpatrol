@@ -19,22 +19,22 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::{Action, Actor, Event, EventLog, EventLogWriter, SessionsRunning};
-use agentsweep_core::item::Kind;
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::rules::{BUNDLED_RULES, RulePack, RuleSource};
-use agentsweep_core::state::{StateFile, Trigger};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::notifications::{Launch, Launcher};
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::notifications::{NotificationClass, Unnotified, WINDOWLESS};
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, Status};
-use agentsweep_ipc::{Client, Subscription};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::{Action, Actor, Event, EventLog, EventLogWriter, SessionsRunning};
+use agentpatrol_core::item::Kind;
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::rules::{BUNDLED_RULES, RulePack, RuleSource};
+use agentpatrol_core::state::{StateFile, Trigger};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::notifications::{Launch, Launcher};
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::notifications::{NotificationClass, Unnotified, WINDOWLESS};
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, Status};
+use agentpatrol_ipc::{Client, Subscription};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -138,7 +138,7 @@ struct Sandbox {
 impl Sandbox {
     fn empty(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-notify-{purpose}-{}-{}",
+            "agentpatrol-notify-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -193,7 +193,7 @@ impl Sandbox {
 
     /// The app the fake launcher is told is the daemon's own.
     fn app(&self) -> PathBuf {
-        self.root.join("AgentSweep.app")
+        self.root.join("AgentPatrol.app")
     }
 
     fn options(&self) -> Options {
@@ -473,7 +473,7 @@ fn a_probation_rule_a_suspicious_score_and_a_drift_question_each_need_you() {
     assert_eq!(drift[0].name, "tracker");
 }
 
-/// The first two returns of an entry AgentSweep took out by itself are taken
+/// The first two returns of an entry AgentPatrol took out by itself are taken
 /// out again silently; the third within the hour keeps coming back.
 #[test]
 fn the_third_return_within_the_hour_keeps_coming_back() {

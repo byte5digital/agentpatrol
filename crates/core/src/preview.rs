@@ -286,6 +286,6 @@ mod tests {
         assert_eq!(budget, CLAUDE_BUDGET);
         assert!(tokens <= budget);
         assert!(request.is_windowed());
-        assert!(prompt.user().contains("bytes elided by AgentSweep"));
+        assert!(prompt.user().contains("bytes elided by AgentPatrol"));
     }
 }

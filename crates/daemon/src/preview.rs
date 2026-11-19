@@ -17,14 +17,14 @@
 //! opened, the Verdict cache is not read, and neither the Event Log nor the
 //! state file is touched. The request is answered beside any running Scan.
 
-use agentsweep_core::finding::FiredHeuristic;
-use agentsweep_core::item::{Item, ItemId};
-use agentsweep_core::judgement_request::Normalisation;
-use agentsweep_core::preview::{self, Preview, judge_for, sample_item};
-use agentsweep_core::scan::Scanners;
-use agentsweep_core::settings::JudgementEngine;
-use agentsweep_ipc::preview::{PreviewOutcome, RequestPreview};
-use agentsweep_ipc::protocol::RequestError;
+use agentpatrol_core::finding::FiredHeuristic;
+use agentpatrol_core::item::{Item, ItemId};
+use agentpatrol_core::judgement_request::Normalisation;
+use agentpatrol_core::preview::{self, Preview, judge_for, sample_item};
+use agentpatrol_core::scan::Scanners;
+use agentpatrol_core::settings::JudgementEngine;
+use agentpatrol_ipc::preview::{PreviewOutcome, RequestPreview};
+use agentpatrol_ipc::protocol::RequestError;
 
 use crate::actions::Acting;
 use crate::service::Daemon;
@@ -111,7 +111,7 @@ impl Daemon {
             .ok_or_else(|| {
                 RequestError::new(
                     "unknown-target",
-                    format!("`{}` names no Item AgentSweep knows", id.as_str()),
+                    format!("`{}` names no Item AgentPatrol knows", id.as_str()),
                 )
             })?;
         let fired = self.fired_now(&item)?;

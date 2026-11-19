@@ -1,6 +1,6 @@
 [package]
-name = "agentsweep-xtask"
-description = "Build work for the AgentSweep Rule corpus and Rule Pack: the corpus runner, the Indicator List rendering and the pack build."
+name = "agentpatrol-xtask"
+description = "Build work for the AgentPatrol Rule corpus and Rule Pack: the corpus runner, the Indicator List rendering and the pack build."
 # Nothing ships this: it is the build side of the corpus and of a pack release.
 publish = false
 version.workspace = true
@@ -11,18 +11,18 @@ repository.workspace = true
 authors.workspace = true
 
 [[bin]]
-name = "agentsweep-xtask"
+name = "agentpatrol-xtask"
 path = "src/main.rs"
 
 [dependencies]
-agentsweep-adapter-claude-code.workspace = true
-agentsweep-adapter-codex.workspace = true
-agentsweep-adapter-workspace.workspace = true
+agentpatrol-adapter-claude-code.workspace = true
+agentpatrol-adapter-codex.workspace = true
+agentpatrol-adapter-workspace.workspace = true
 # The eval harness asks the three Judgement Engines by hand (spec section 4.4,
 # "Eval gate"): the Claude API client lives behind `daemon` and the Apple
 # helper behind `apple`. The eval takes its Claude key from a file or standard
 # input and never reads the Keychain, appends to a chain or writes a store.
-agentsweep-core = { workspace = true, features = ["apple", "daemon"] }
+agentpatrol-core = { workspace = true, features = ["apple", "daemon"] }
 flate2 = "1.1.10"
 # Only the checksum of the index a bad corpus sample's repository is laid out
 # with; no git binary is ever run.
@@ -43,5 +43,5 @@ ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 # The pack release tests sign with the development keys, so a test build pins
 # those in place of the release keys. The build tool the release workflow runs
 # is built without this feature and verifies against the release keys.
-agentsweep-core = { workspace = true, features = ["apple", "daemon", "development-keys"] }
+agentpatrol-core = { workspace = true, features = ["apple", "daemon", "development-keys"] }
 tempfile = "3.27.0"

@@ -18,16 +18,16 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::mpsc;
 use std::time::Duration;
 
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::overview::{Overview, ProjectAgent, ProjectCheck};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, StateEvent, Status};
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::overview::{Overview, ProjectAgent, ProjectCheck};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, StateEvent, Status};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -79,7 +79,7 @@ impl Sandbox {
     /// A home where Claude Code is installed and Codex is not.
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-overview-{purpose}-{}-{}",
+            "agentpatrol-overview-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -470,7 +470,7 @@ fn a_project_that_switches_hooks_off_is_listed_and_counted_until_it_clears_the_s
     assert_eq!(status.health.projects_gate_off, 1);
     assert_eq!(
         status.health.rung(),
-        agentsweep_core::health::Rung::GateLine
+        agentpatrol_core::health::Rung::GateLine
     );
     assert_eq!(
         status.health.headline(),
@@ -494,6 +494,6 @@ fn a_project_that_switches_hooks_off_is_listed_and_counted_until_it_clears_the_s
     assert_eq!(status.health.projects_gate_off, 0);
     assert_ne!(
         status.health.rung(),
-        agentsweep_core::health::Rung::GateLine
+        agentpatrol_core::health::Rung::GateLine
     );
 }

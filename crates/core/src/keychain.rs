@@ -109,7 +109,7 @@ pub struct MemoryKeySource {
 }
 
 impl MemoryKeySource {
-    /// An empty store, as a Mac that has never run AgentSweep would have.
+    /// An empty store, as a Mac that has never run AgentPatrol would have.
     pub fn empty() -> MemoryKeySource {
         MemoryKeySource::default()
     }
@@ -318,7 +318,7 @@ mod login_keychain {
 
     /// The key in the user's login Keychain, reached through `SecItem`.
     ///
-    /// This is the only type in AgentSweep that touches the Keychain, and it
+    /// This is the only type in AgentPatrol that touches the Keychain, and it
     /// exists only in a build with the `daemon` feature, so the application
     /// and the CLI cannot compile a call to it. A file-based item is used on
     /// purpose: the data protection Keychain needs an entitlement a Developer
@@ -461,14 +461,14 @@ mod login_keychain {
         use super::*;
 
         /// Touches the real login Keychain, so it never runs by itself. Run it
-        /// by hand with `cargo test -p agentsweep-core --features daemon --
+        /// by hand with `cargo test -p agentpatrol-core --features daemon --
         /// --ignored the_login_keychain`, which leaves no item behind: the
         /// test removes what it wrote.
         #[test]
         #[ignore = "writes to the developer's own login Keychain"]
         fn the_login_keychain_holds_and_returns_the_key() {
             let keychain =
-                LoginKeychain::named("de.byte5.agentsweep.daemon.test", "chain-key-test");
+                LoginKeychain::named("de.byte5.agentpatrol.daemon.test", "chain-key-test");
             keychain.forget().expect("a clean start");
             assert!(keychain.load().expect("a readable Keychain").is_none());
 
@@ -622,7 +622,7 @@ mod tests {
 
     #[test]
     fn the_keychain_item_is_named_after_the_daemon() {
-        assert_eq!(KEYCHAIN_SERVICE, "de.byte5.agentsweep.daemon");
+        assert_eq!(KEYCHAIN_SERVICE, "de.byte5.agentpatrol.daemon");
         assert!(KEYCHAIN_SERVICE.starts_with(crate::BUNDLE_ID));
         assert_eq!(KEYCHAIN_ACCOUNT, "chain-key");
     }

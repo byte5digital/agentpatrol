@@ -17,13 +17,13 @@
 
 use std::collections::BTreeSet;
 
-use agentsweep_core::finding::{Category, FindingState};
-use agentsweep_core::health::{Health, Rung};
-use agentsweep_core::overview::Overview;
-use agentsweep_core::settings::{JudgementEngine, Posture};
-use agentsweep_core::state::ScanSummary;
-use agentsweep_ipc::engine::EngineState;
-use agentsweep_ipc::protocol::{SettingsState, StateEvent, Status};
+use agentpatrol_core::finding::{Category, FindingState};
+use agentpatrol_core::health::{Health, Rung};
+use agentpatrol_core::overview::Overview;
+use agentpatrol_core::settings::{JudgementEngine, Posture};
+use agentpatrol_core::state::ScanSummary;
+use agentpatrol_ipc::engine::EngineState;
+use agentpatrol_ipc::protocol::{SettingsState, StateEvent, Status};
 use serde_json::{Value, json};
 
 use crate::actions::card_in;
@@ -645,15 +645,15 @@ mod tests {
 
     use std::collections::BTreeMap;
 
-    use agentsweep_core::envelope::Timestamp;
-    use agentsweep_core::finding_facts::HeuristicLine;
-    use agentsweep_core::item::ItemId;
-    use agentsweep_core::item::Kind;
-    use agentsweep_core::overview::{AgentRecord, AmbiguousItem};
-    use agentsweep_core::scan_pass::ScanKind;
-    use agentsweep_core::settings::CloudCaps;
-    use agentsweep_core::state::Trigger;
-    use agentsweep_ipc::engine::EngineState;
+    use agentpatrol_core::envelope::Timestamp;
+    use agentpatrol_core::finding_facts::HeuristicLine;
+    use agentpatrol_core::item::ItemId;
+    use agentpatrol_core::item::Kind;
+    use agentpatrol_core::overview::{AgentRecord, AmbiguousItem};
+    use agentpatrol_core::scan_pass::ScanKind;
+    use agentpatrol_core::settings::CloudCaps;
+    use agentpatrol_core::state::Trigger;
+    use agentpatrol_ipc::engine::EngineState;
 
     use crate::findings::tests::{recorded, status_of};
     use crate::overview::summary_line;
@@ -680,7 +680,7 @@ mod tests {
                 recorded: 0,
                 ollama: None,
                 apple: None,
-                cloud_use: agentsweep_ipc::engine::CloudUse::default(),
+                cloud_use: agentpatrol_ipc::engine::CloudUse::default(),
             },
         }
     }
@@ -1081,7 +1081,7 @@ mod tests {
     /// pages as the record they show needs.
     #[test]
     fn two_thousand_activity_lines_reach_the_window_500_at_a_time() {
-        use agentsweep_ipc::protocol::ActivityLine;
+        use agentpatrol_ipc::protocol::ActivityLine;
         let mut status = status();
         status.activity = (1..=2000)
             .map(|n| ActivityLine {
@@ -1187,7 +1187,7 @@ mod tests {
     /// Needs Permission.
     #[test]
     fn check_now_waits_for_the_answer_and_then_offers_the_privacy_link() {
-        use agentsweep_core::overview::{ProjectCheck, ProjectRecord};
+        use agentpatrol_core::overview::{ProjectCheck, ProjectRecord};
         let mut status = Status {
             health: Health::running(),
             scan: None,
@@ -1448,12 +1448,12 @@ mod tests {
         let line = frame.overview().banner.expect("a banner").developer;
         assert!(
             line.as_deref()
-                .is_some_and(|line| line.contains(agentsweep_core::DAEMON_LABEL)),
+                .is_some_and(|line| line.contains(agentpatrol_core::DAEMON_LABEL)),
             "{line:?}"
         );
 
         let reset = Health {
-            events: agentsweep_core::chain::ChainState::KeyMissing,
+            events: agentpatrol_core::chain::ChainState::KeyMissing,
             // An open Threat would outrank the reset.
             open_threats: 0,
             ..status().health
@@ -1474,7 +1474,7 @@ mod tests {
         assert_eq!(frame.overview().banner, None);
     }
 
-    /// An app older than its daemon shows "AgentSweep was updated. Reopen
+    /// An app older than its daemon shows "AgentPatrol was updated. Reopen
     /// it." with **Reopen** on the Overview too, as in the popover.
     #[test]
     fn the_overview_shows_the_reopen_line_of_an_older_app() {
@@ -1483,7 +1483,7 @@ mod tests {
         assert_eq!(frame.view(&View::reopen("0.1.0", "0.2.0")), Follow::Render);
         let shown = frame.overview();
         let banner = shown.banner.clone().expect("a banner");
-        assert_eq!(banner.title, "AgentSweep was updated. Reopen it.");
+        assert_eq!(banner.title, "AgentPatrol was updated. Reopen it.");
         assert_eq!(banner.buttons, vec![crate::banner::Button::Reopen]);
         assert!(shown.to_value()["sentence"].is_null());
     }
@@ -1537,13 +1537,13 @@ mod tests {
     fn the_settings_pane_follows_the_answer_and_the_health() {
         let mut frame = Frame::new();
         frame.load(&status());
-        frame.set_rules_folder("/home/Library/Application Support/de.byte5.agentsweep/rules.d");
+        frame.set_rules_folder("/home/Library/Application Support/de.byte5.agentpatrol/rules.d");
         assert_eq!(frame.settings(&settings(Posture::Simple)), Follow::Render);
         let pane = frame.to_value()["settings"].clone();
         assert_eq!(pane["background"]["toggles"][0]["on"], true);
         assert_eq!(
             pane["advanced"]["rules"]["path"],
-            "/home/Library/Application Support/de.byte5.agentsweep/rules.d"
+            "/home/Library/Application Support/de.byte5.agentpatrol/rules.d"
         );
 
         let mut moved = settings(Posture::Simple);
@@ -1571,7 +1571,7 @@ mod tests {
         };
         assert_eq!(frame.apply(&unreadable), Follow::Render);
         let pane = frame.to_value()["settings"].clone();
-        assert_eq!(pane["note"], agentsweep_core::health::SETTINGS_UNREADABLE);
+        assert_eq!(pane["note"], agentpatrol_core::health::SETTINGS_UNREADABLE);
         assert_eq!(pane["available"], true);
     }
 

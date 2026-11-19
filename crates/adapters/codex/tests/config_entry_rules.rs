@@ -14,17 +14,17 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_adapter_codex::{Codex, mcp};
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_adapter_workspace::testing::TemporaryRepository;
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter};
-use agentsweep_core::finding::{Category, Severity, Source, Tier};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Item, Provenance};
-use agentsweep_core::pack::Manifest;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
-use agentsweep_core::views::{McpView, ParsedView};
+use agentpatrol_adapter_codex::{Codex, mcp};
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_adapter_workspace::testing::TemporaryRepository;
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter};
+use agentpatrol_core::finding::{Category, Severity, Source, Tier};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Item, Provenance};
+use agentpatrol_core::pack::Manifest;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
+use agentpatrol_core::views::{McpView, ParsedView};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -47,7 +47,7 @@ struct Machine {
 impl Machine {
     fn new(name: &str) -> Machine {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-codex-rules-{name}-{}-{}",
+            "agentpatrol-codex-rules-{name}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -384,7 +384,7 @@ fn a_trusted_codex_project_nobody_has_worked_in_is_heuristic_0589() {
     // this machine lives in cargo's scratch directory for integration tests,
     // where only the session fact decides.
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
-        "agentsweep-codex-rules-sessions-{}",
+        "agentpatrol-codex-rules-sessions-{}",
         std::process::id()
     ));
     let _ = fs::remove_dir_all(&root);

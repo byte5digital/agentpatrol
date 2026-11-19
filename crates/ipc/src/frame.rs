@@ -17,7 +17,7 @@ use serde_json::Value;
 ///
 /// A status answer carries every open Finding with its plain sentence, so it
 /// is not small; it is nowhere near this, and a frame that is says the peer is
-/// not AgentSweep.
+/// not AgentPatrol.
 pub const MAX_FRAME: usize = 8 * 1024 * 1024;
 
 /// Writes one message and flushes it.

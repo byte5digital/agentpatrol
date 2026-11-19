@@ -9,12 +9,12 @@
 //! commits in `corpus/benign/manifest.toml`, fetched over plain HTTPS into
 //! `target/` and laid out there as a machine the Surface Adapters recognise.
 //! With no network the test says so and passes, because a developer on a train
-//! is not a failing Rule; CI sets `AGENTSWEEP_CORPUS_REQUIRED` so that there a
+//! is not a failing Rule; CI sets `AGENTPATROL_CORPUS_REQUIRED` so that there a
 //! fetch that did not happen is a failure rather than a green tick over an
 //! unproven Rule Pack.
 
-use agentsweep_xtask::benign::{self, Run};
-use agentsweep_xtask::repo_root;
+use agentpatrol_xtask::benign::{self, Run};
+use agentpatrol_xtask::repo_root;
 
 /// Part of the default suite. The CI job runs the same check through the
 /// xtask command with the offline skip turned off.

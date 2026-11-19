@@ -15,18 +15,18 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
-use agentsweep_core::adapter::SurfaceAdapter;
-use agentsweep_core::host::{Confinement, Host, Touched};
-use agentsweep_core::location::{LocationClass, classify};
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
+use agentpatrol_core::adapter::SurfaceAdapter;
+use agentpatrol_core::host::{Confinement, Host, Touched};
+use agentpatrol_core::location::{LocationClass, classify};
 
 /// The line under the Agents (spec section 8.3, screen 2).
 pub const OWN_LISTS: &str =
-    "Projects come from the agents' own lists, AgentSweep never crawls your disk.";
+    "Projects come from the agents' own lists, AgentPatrol never crawls your disk.";
 
 /// What the screen says when no Agent was found.
-pub const NONE_FOUND: &str = "AgentSweep found neither Claude Code nor Codex on this Mac.";
+pub const NONE_FOUND: &str = "AgentPatrol found neither Claude Code nor Codex on this Mac.";
 
 /// One Agent the Inventory found installed.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -50,9 +50,9 @@ impl Found {
     pub fn not_read_line(&self) -> Option<String> {
         match self.not_read {
             [] => None,
-            [one] => Some(format!("AgentSweep does not read {one}.")),
+            [one] => Some(format!("AgentPatrol does not read {one}.")),
             [rest @ .., last] => Some(format!(
-                "AgentSweep does not read {} or {last}.",
+                "AgentPatrol does not read {} or {last}.",
                 rest.join(", ")
             )),
         }
@@ -391,7 +391,7 @@ mod tests {
         assert_eq!(
             codex.not_read_line().as_deref(),
             Some(
-                "AgentSweep does not read the cloud enterprise bundle or the MDM managed \
+                "AgentPatrol does not read the cloud enterprise bundle or the MDM managed \
                  preference."
             )
         );

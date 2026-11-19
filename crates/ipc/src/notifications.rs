@@ -15,8 +15,8 @@
 
 use serde_json::{Map, Value};
 
-use agentsweep_core::eventlog::SessionsRunning;
-use agentsweep_core::item::{ItemId, Kind};
+use agentpatrol_core::eventlog::SessionsRunning;
+use agentpatrol_core::item::{ItemId, Kind};
 
 /// The launch argument the application reads as "start into the menu bar
 /// with no window" (spec section 6.7).
@@ -26,16 +26,16 @@ pub const WINDOWLESS: &str = "--windowless";
 /// permission class.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub enum NotificationClass {
-    /// AgentSweep quarantined an Item by itself: the notification names the
+    /// AgentPatrol quarantined an Item by itself: the notification names the
     /// Item, says whether Agent sessions were open and asks for a restart.
     StoppedAutomatically,
-    /// Nothing was changed; the user is asked to open AgentSweep and decide.
+    /// Nothing was changed; the user is asked to open AgentPatrol and decide.
     NeedsYou,
-    /// An Item AgentSweep took out came back a third time within the hour.
+    /// An Item AgentPatrol took out came back a third time within the hour.
     KeepsComingBack,
-    /// One of AgentSweep's own chains was changed by something else.
+    /// One of AgentPatrol's own chains was changed by something else.
     RecordsChanged,
-    /// "AgentSweep can't check N projects yet."
+    /// "AgentPatrol can't check N projects yet."
     Permission,
 }
 
@@ -84,7 +84,7 @@ pub struct Unnotified {
     /// The name a person knows the Item by ([`item_name`]), empty beside an
     /// absent Item.
     pub name: String,
-    /// Whether Agent sessions appeared to be running when AgentSweep stopped
+    /// Whether Agent sessions appeared to be running when AgentPatrol stopped
     /// the Item, as its Event Log record says. Unknown for every class but
     /// stopped automatically.
     pub sessions: SessionsRunning,

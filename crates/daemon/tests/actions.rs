@@ -15,23 +15,23 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use agentsweep_adapter_conformance::fixtures;
-use agentsweep_core::baseline::{AcceptedBy, Baseline};
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::{Action, Actor, EventLog, EventLogView, SessionsRunning};
-use agentsweep_core::finding::{Category, FindingState};
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::quarantine::Conflict;
-use agentsweep_core::rules::{BUNDLED_RULES, RulePack, RuleSource};
-use agentsweep_core::state::RecordedFinding;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, Status};
+use agentpatrol_adapter_conformance::fixtures;
+use agentpatrol_core::baseline::{AcceptedBy, Baseline};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::{Action, Actor, EventLog, EventLogView, SessionsRunning};
+use agentpatrol_core::finding::{Category, FindingState};
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::quarantine::Conflict;
+use agentpatrol_core::rules::{BUNDLED_RULES, RulePack, RuleSource};
+use agentpatrol_core::state::RecordedFinding;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, Status};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -98,7 +98,7 @@ struct Sandbox {
 impl Sandbox {
     fn empty(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-actions-{purpose}-{}-{}",
+            "agentpatrol-actions-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -270,7 +270,7 @@ fn stable_0001() -> RulePack {
         .expect("Rule 0001 is in the pack");
     assert_eq!(
         meta.status,
-        agentsweep_core::finding::RuleStatus::Stable,
+        agentpatrol_core::finding::RuleStatus::Stable,
         "the test pack flipped Rule 0001"
     );
     pack
@@ -336,7 +336,7 @@ fn finding_on<'s>(status: &'s Status, ends_with: &str) -> &'s RecordedFinding {
         .unwrap_or_else(|| panic!("a Finding on {ends_with}: {:?}", status.findings))
 }
 
-fn last_event(sandbox: &Sandbox) -> agentsweep_core::eventlog::Event {
+fn last_event(sandbox: &Sandbox) -> agentpatrol_core::eventlog::Event {
     sandbox
         .events()
         .events
@@ -438,9 +438,9 @@ fn quarantine_restore_and_trust_change_the_finding_record_it_and_show_in_status(
 }
 
 /// The code and the sentence of a refusal.
-fn refusal_of(error: agentsweep_ipc::ClientError) -> (String, String) {
+fn refusal_of(error: agentpatrol_ipc::ClientError) -> (String, String) {
     match error {
-        agentsweep_ipc::ClientError::Request(refusal) => (refusal.code, refusal.message),
+        agentpatrol_ipc::ClientError::Request(refusal) => (refusal.code, refusal.message),
         other => panic!("a refusal, not {other}"),
     }
 }
@@ -606,7 +606,7 @@ fn the_fix_of_0019_takes_the_setting_out_and_restore_puts_it_back() {
     assert!(back.contains("bypassPermissions"), "{back}");
 }
 
-/// The fix of Exposures 0018 and 0019 is AgentSweep's own write, known by
+/// The fix of Exposures 0018 and 0019 is AgentPatrol's own write, known by
 /// what it left: taking one member out of `permissions.allow` moves the next
 /// member up to its place, and the next Scan reads that Item `unchanged`
 /// through the hash the fix left there, asking nothing. The Item a standing
@@ -655,7 +655,7 @@ fn the_fix_of_0018_leaves_the_items_it_moved_unchanged_on_the_next_scan() {
     let moved = baseline
         .record(&exposure.item_id)
         .expect("the member that moved up is recorded");
-    assert_eq!(moved.accepted_by, AcceptedBy::AgentsweepWrite, "{moved:?}");
+    assert_eq!(moved.accepted_by, AcceptedBy::AgentpatrolWrite, "{moved:?}");
     assert_eq!(moved.accepted_hash, moved.last_seen_hash, "{moved:?}");
     // The Exposure that still stands did not hold its Item.
     let kept = baseline
@@ -712,7 +712,7 @@ fn a_rule_flipped_to_stable_quarantines_its_open_findings_on_the_next_full_scan(
     assert_eq!(recorded.rule_id, 1);
     assert_eq!(recorded.sessions_running, SessionsRunning::No);
 
-    // Restoring what AgentSweep took out by itself trusts that exact version,
+    // Restoring what AgentPatrol took out by itself trusts that exact version,
     // or the next Scan would take it out again.
     let restored = sandbox
         .client()
@@ -723,7 +723,7 @@ fn a_rule_flipped_to_stable_quarantines_its_open_findings_on_the_next_full_scan(
     assert!(sandbox.skill().join("SKILL.md").is_file());
 }
 
-/// The third reappearance within an hour of an entry AgentSweep took out by
+/// The third reappearance within an hour of an entry AgentPatrol took out by
 /// itself is not taken out again: it is the "keeps coming back" Finding. The
 /// two before it were re-enforced by the watcher-driven Change Scan and
 /// counted on the Receipt.
@@ -851,7 +851,7 @@ fn a_codex_server_is_switched_off_in_place_reads_unchanged_and_flips_back_byte_f
     assert_eq!(quarantined.steps.len(), 1, "{:?}", quarantined.steps);
     assert_eq!(
         quarantined.steps[0].primitive,
-        agentsweep_core::eventlog::Primitive::NativeDisable
+        agentpatrol_core::eventlog::Primitive::NativeDisable
     );
     let item_id = quarantined.item_id.clone().expect("the Item");
     assert!(item_id.as_str().ends_with("#dropper"), "{item_id}");
@@ -894,7 +894,7 @@ fn a_codex_server_is_switched_off_in_place_reads_unchanged_and_flips_back_byte_f
         0,
         "a switch that stays off is left alone"
     );
-    let baseline = agentsweep_core::baseline::Baseline::in_data_directory(&sandbox.data())
+    let baseline = agentpatrol_core::baseline::Baseline::in_data_directory(&sandbox.data())
         .read(&sandbox.keys)
         .expect("a readable Baseline");
     let record = baseline.record(&item_id).expect("a Baseline record");
@@ -902,7 +902,7 @@ fn a_codex_server_is_switched_off_in_place_reads_unchanged_and_flips_back_byte_f
     assert_eq!(record.accepted_hash, left, "unchanged");
     assert_eq!(
         record.accepted_by,
-        agentsweep_core::baseline::AcceptedBy::AgentsweepWrite
+        agentpatrol_core::baseline::AcceptedBy::AgentpatrolWrite
     );
 
     let report = sandbox
@@ -979,7 +979,7 @@ fn a_switch_an_agent_turns_back_on_is_re_enforced_and_the_third_time_flagged() {
         assert_eq!(recorded.event.receipt_id, first.receipt_id);
         assert_eq!(
             recorded.event.steps[0].primitive,
-            agentsweep_core::eventlog::Primitive::NativeDisable
+            agentpatrol_core::eventlog::Primitive::NativeDisable
         );
     }
     let entry = view
@@ -1077,7 +1077,7 @@ fn a_path_or_an_unknown_id_is_refused_and_nothing_is_done() {
 }
 
 /// The plugin composite flips the Agent's own switch in the user settings
-/// file. That write is AgentSweep's own, so the settings entry it moved is a
+/// file. That write is AgentPatrol's own, so the settings entry it moved is a
 /// known action and never Drift, after the Quarantine and after the Restore.
 #[test]
 fn the_switch_a_plugin_quarantine_flips_is_a_known_action_and_never_drift() {
@@ -1195,7 +1195,8 @@ fn a_clean_newer_plugin_version_offers_re_enable_and_re_enable_switches_it_back_
     assert_eq!(held.state, FindingState::Stopped);
     assert!(!held.fixed_version.is_empty(), "{:?}", status.findings);
     assert!(
-        agentsweep_ipc::protocol::offers(held).contains(&agentsweep_ipc::protocol::Offer::ReEnable)
+        agentpatrol_ipc::protocol::offers(held)
+            .contains(&agentpatrol_ipc::protocol::Offer::ReEnable)
     );
     assert!(
         std::fs::read_to_string(&settings)
@@ -1392,17 +1393,17 @@ fn a_path_on_a_request_that_takes_none_is_never_answered() {
         stream
             .set_read_timeout(Some(Duration::from_secs(30)))
             .expect("a timeout");
-        agentsweep_ipc::write_frame(
+        agentpatrol_ipc::write_frame(
             &mut stream,
-            &agentsweep_ipc::Message::Hello(agentsweep_ipc::Hello::of(Role::Cli)).to_value(),
+            &agentpatrol_ipc::Message::Hello(agentpatrol_ipc::Hello::of(Role::Cli)).to_value(),
         )
         .expect("a handshake");
-        let welcome = agentsweep_ipc::read_frame(&mut stream).expect("an answer");
+        let welcome = agentpatrol_ipc::read_frame(&mut stream).expect("an answer");
         assert_eq!(
             welcome.as_ref().and_then(|value| value["type"].as_str()),
             Some("welcome")
         );
-        agentsweep_ipc::write_frame(
+        agentpatrol_ipc::write_frame(
             &mut stream,
             &serde_json::json!({
                 "type": "request",
@@ -1414,7 +1415,7 @@ fn a_path_on_a_request_that_takes_none_is_never_answered() {
         )
         .expect("a request");
         stream.flush().expect("sent");
-        let answer = agentsweep_ipc::read_frame(&mut stream);
+        let answer = agentpatrol_ipc::read_frame(&mut stream);
         assert!(
             !matches!(answer, Ok(Some(ref value)) if value["type"] == "response"),
             "{request} with a path was answered: {answer:?}"
@@ -1425,7 +1426,7 @@ fn a_path_on_a_request_that_takes_none_is_never_answered() {
 }
 
 /// The `purge` records of the Event Log, in the order written.
-fn purges(sandbox: &Sandbox) -> Vec<agentsweep_core::eventlog::RecordedEvent> {
+fn purges(sandbox: &Sandbox) -> Vec<agentpatrol_core::eventlog::RecordedEvent> {
     sandbox
         .events()
         .events
@@ -1441,7 +1442,7 @@ fn purges(sandbox: &Sandbox) -> Vec<agentsweep_core::eventlog::RecordedEvent> {
 /// a restart reads back from the Event Log.
 #[test]
 fn purge_deletes_a_quarantined_skill_for_good_and_its_finding_goes_with_an_activity_line() {
-    use agentsweep_ipc::protocol::StateEvent;
+    use agentpatrol_ipc::protocol::StateEvent;
 
     let sandbox = Sandbox::with_a_planted_skill("purge");
     let daemon = sandbox.start();
@@ -1651,10 +1652,10 @@ fn untrust_of_a_trusted_skill_is_recorded_and_the_next_full_scan_quarantines_it_
 /// with the sequence of the record it wrote.
 #[test]
 fn every_record_is_one_activity_line_and_a_live_action_tells_the_same_line() {
-    use agentsweep_core::eventlog::{Event, EventLogWriter};
-    use agentsweep_core::finding::Tier;
-    use agentsweep_core::item::{ItemId, Kind, Scope};
-    use agentsweep_ipc::protocol::StateEvent;
+    use agentpatrol_core::eventlog::{Event, EventLogWriter};
+    use agentpatrol_core::finding::Tier;
+    use agentpatrol_core::item::{ItemId, Kind, Scope};
+    use agentpatrol_ipc::protocol::StateEvent;
 
     let sandbox = Sandbox::with_a_planted_skill("activity");
     let tracker = ItemId::new(

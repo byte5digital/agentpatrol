@@ -20,7 +20,7 @@ use base64::Engine;
 use serde_json::{Value, json};
 use tauri::test::{MockRuntime, mock_builder, mock_context, noop_assets};
 
-use agentsweep_menubar::updater::{ENDPOINT, Look, PluginSource, READY, Ready, Source, Updates};
+use agentpatrol_menubar::updater::{ENDPOINT, Look, PluginSource, READY, Ready, Source, Updates};
 
 /// The configuration the app ships.
 const SHIPPED: &str = include_str!("../tauri.conf.json");
@@ -61,7 +61,7 @@ fn key_id(pub_file: &str) -> String {
 }
 
 /// The archive the fixture serves: a stand-in, never unpacked.
-const ARCHIVE: &[u8] = b"a stand-in for AgentSweep.app.tar.gz, never installed\n";
+const ARCHIVE: &[u8] = b"a stand-in for AgentPatrol.app.tar.gz, never installed\n";
 
 /// The version the mock runtime runs as.
 const CURRENT: &str = "0.1.0";
@@ -85,7 +85,7 @@ fn signed(bytes: &[u8]) -> String {
     let secret = minisign::SecretKeyBox::from_string(&unbase64(DEVELOPMENT_SECRET))
         .and_then(|secret| secret.into_secret_key(Some(String::new())))
         .expect("the development secret key reads");
-    let signature = minisign::sign(None, &secret, bytes, Some("AgentSweep.app.tar.gz"), None)
+    let signature = minisign::sign(None, &secret, bytes, Some("AgentPatrol.app.tar.gz"), None)
         .expect("the development key signs");
     base64(signature.to_string().as_bytes())
 }
@@ -118,7 +118,7 @@ impl Fixture {
     fn serving(version: &str, signature: &str) -> Fixture {
         let listener = TcpListener::bind("127.0.0.1:0").expect("a loopback port");
         let address = format!("http://{}", listener.local_addr().expect("an address"));
-        let archive_url = format!("{address}/download/AgentSweep.app.tar.gz");
+        let archive_url = format!("{address}/download/AgentPatrol.app.tar.gz");
         let platform = json!({"signature": signature, "url": archive_url});
         // Both darwin keys point at the same universal archive (spec 9.1).
         let latest = json!({
@@ -184,7 +184,7 @@ fn answer(stream: TcpStream, latest: &str, seen: &Mutex<Vec<Seen>>) {
         "/releases/latest/download/latest.json" => {
             ("200 OK", "application/json", latest.as_bytes())
         }
-        "/download/AgentSweep.app.tar.gz" => ("200 OK", "application/octet-stream", ARCHIVE),
+        "/download/AgentPatrol.app.tar.gz" => ("200 OK", "application/octet-stream", ARCHIVE),
         _ => ("404 Not Found", "text/plain", b"not here"),
     };
     let mut stream = stream;
@@ -225,7 +225,7 @@ fn app_trusting(endpoint: &str, pubkey: Option<&str>) -> tauri::App<MockRuntime>
 }
 
 const LATEST: &str = "/releases/latest/download/latest.json";
-const ARCHIVE_PATH: &str = "/download/AgentSweep.app.tar.gz";
+const ARCHIVE_PATH: &str = "/download/AgentPatrol.app.tar.gz";
 
 fn launch() -> SystemTime {
     SystemTime::UNIX_EPOCH + Duration::from_secs(1_800_000_000)
@@ -454,8 +454,8 @@ fn the_request_carries_no_identifier() {
     assert_eq!(request.headers["accept"], "application/json");
     let everything = format!("{} {:?}", request.path, request.headers);
     for identifier in [
-        "de.byte5.agentsweep",
-        "agentsweep",
+        "de.byte5.agentpatrol",
+        "agentpatrol",
         CURRENT,
         "darwin",
         "aarch64",

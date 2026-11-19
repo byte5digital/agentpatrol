@@ -25,15 +25,15 @@ pub mod testing;
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::{
+use agentpatrol_core::adapter::{
     Descriptor, Detection, Enumeration, Primitive, Problem, ProblemReason, ProjectRegistration,
     Surface, SurfaceAdapter, WatchRoots,
 };
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope, Shape};
-use agentsweep_core::provenance::Provenances;
-use agentsweep_core::quarantine::{Conflict, EnforcementError, Receipt, RestoreReport, Store};
-use agentsweep_core::views::{EnvView, ParsedView, RepoView};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope, Shape};
+use agentpatrol_core::provenance::Provenances;
+use agentpatrol_core::quarantine::{Conflict, EnforcementError, Receipt, RestoreReport, Store};
+use agentpatrol_core::views::{EnvView, ParsedView, RepoView};
 
 use crate::git::Layout;
 
@@ -449,7 +449,7 @@ impl SurfaceAdapter for Workspace {
     }
 
     fn detect(&self, _host: &Host) -> Detection {
-        // The workspace adapter is part of AgentSweep, so it is always here.
+        // The workspace adapter is part of AgentPatrol, so it is always here.
         // It has no Agent to find and no version to read off disk.
         Detection {
             installed: true,
@@ -541,7 +541,7 @@ impl SurfaceAdapter for Workspace {
         receipt: &Receipt,
         conflict: Conflict,
     ) -> RestoreReport {
-        agentsweep_core::quarantine::replay_in_reverse(host, store, receipt, conflict)
+        agentpatrol_core::quarantine::replay_in_reverse(host, store, receipt, conflict)
     }
 }
 
@@ -567,7 +567,7 @@ fn mode_of(_metadata: &std::fs::Metadata) -> u32 {
 mod tests {
     use super::*;
     use crate::testing::TemporaryRepository;
-    use agentsweep_core::adapter::eligibility;
+    use agentpatrol_core::adapter::eligibility;
 
     fn host_for(repository: &TemporaryRepository) -> Host {
         Host::for_folder_scan(repository.root().to_path_buf())
@@ -794,7 +794,7 @@ mod tests {
     #[test]
     fn a_gitdir_pointer_out_of_the_layout_is_flagged_and_never_followed() {
         let repository = TemporaryRepository::new("pointer-out");
-        repository.point_git_at(Path::new("/tmp/agentsweep-elsewhere"));
+        repository.point_git_at(Path::new("/tmp/agentpatrol-elsewhere"));
         let host = host_for(&repository);
 
         let enumeration = Workspace::new().enumerate(&host, host.project_roots());

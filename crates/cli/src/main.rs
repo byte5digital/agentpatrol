@@ -1,8 +1,8 @@
-//! The AgentSweep command line interface, binary `agentsweep`.
+//! The AgentPatrol command line interface, binary `agentpatrol`.
 //!
 //! One name, two tools (ADR 0008), chosen when the binary is built.
 //!
-//! The in-bundle build, feature `bundle`, is the one the AgentSweep app ships;
+//! The in-bundle build, feature `bundle`, is the one the AgentPatrol app ships;
 //! the app's build turns the feature on.
 //! It is a client of the daemon: `status`, which reaches the daemon and does
 //! nothing else; the action commands, each of which is one request to the
@@ -57,64 +57,64 @@ const USAGE_ERROR: u8 = 2;
 /// The help text of the in-bundle build.
 #[cfg(feature = "bundle")]
 const USAGE: &str = "\
-AgentSweep scans the local configuration surfaces of coding agents.
+AgentPatrol scans the local configuration surfaces of coding agents.
 
 Usage:
-  agentsweep status       Show what AgentSweep is protecting and what it found.
-  agentsweep scan         Ask the running AgentSweep for a full scan now and
+  agentpatrol status       Show what AgentPatrol is protecting and what it found.
+  agentpatrol scan         Ask the running AgentPatrol for a full scan now and
                           follow it to the end.
-  agentsweep scan <dir> [--no-ai]
+  agentpatrol scan <dir> [--no-ai]
                           Check one folder before you open it with an agent.
                           This runs here, on its own, and records nothing.
                           What is neither clear nor suspicious is put to the
-                          AI engine chosen in AgentSweep's settings: Ollama or
+                          AI engine chosen in AgentPatrol's settings: Ollama or
                           Apple on-device here, the Claude API through the
-                          running AgentSweep, which holds the key. --no-ai
+                          running AgentPatrol, which holds the key. --no-ai
                           asks no engine.
-  agentsweep gate --agent <claude-code | codex>
+  agentpatrol gate --agent <claude-code | codex>
                           The Gate, which the agents run as a hook: it reads
-                          the event on stdin, asks the running AgentSweep and
+                          the event on stdin, asks the running AgentPatrol and
                           answers the agent. It always exits 0.
-  agentsweep gate-hooks [on | off]
+  agentpatrol gate-hooks [on | off]
                           Say whether the Gate's hooks are in Claude Code and
                           Codex, or switch them on or off. Off takes them out
                           and adds nothing back until you switch it on.
-  agentsweep uninstall [--keep | --restore-all | --delete-everything]
-                          Take AgentSweep's hooks out of Claude Code and Codex
+  agentpatrol uninstall [--keep | --restore-all | --delete-everything]
+                          Take AgentPatrol's hooks out of Claude Code and Codex
                           and decide what happens to what is in quarantine:
-                          keep it (the default, so installing AgentSweep again
+                          keep it (the default, so installing AgentPatrol again
                           picks it up), put it all back, or delete everything
-                          AgentSweep made. AgentSweep then quits and stops;
+                          AgentPatrol made. AgentPatrol then quits and stops;
                           you drag it to the Trash.
-  agentsweep --version    Print the version.
-  agentsweep --help       Print this message.
+  agentpatrol --version    Print the version.
+  agentpatrol --help       Print this message.
 
-Acting on a Finding, through the running AgentSweep. <id> is a Finding id, an
+Acting on a Finding, through the running AgentPatrol. <id> is a Finding id, an
 Item id or a Receipt id, as `status` prints them:
-  agentsweep quarantine <id>
+  agentpatrol quarantine <id>
                           Take the item of a threat out, so the agent cannot
                           load it. It can be restored.
-  agentsweep restore <id> [--replace | --beside]
-                          Put a quarantined item back. What AgentSweep stopped
+  agentpatrol restore <id> [--replace | --beside]
+                          Put a quarantined item back. What AgentPatrol stopped
                           by itself comes back trusted. When something else is
                           at the original place, --replace replaces it and
                           --beside restores beside it.
-  agentsweep trust <id>   Say this exact version is safe. A change to it is
+  agentpatrol trust <id>   Say this exact version is safe. A change to it is
                           checked afresh.
-  agentsweep acknowledge <id>
+  agentpatrol acknowledge <id>
                           Say a change was yours. Every check still runs.
-  agentsweep fix <id>     Take an unrestricted shell or a switched-off approval
+  agentpatrol fix <id>     Take an unrestricted shell or a switched-off approval
                           out of your settings (rules 0018 and 0019).
-  agentsweep re-enable <id>
+  agentpatrol re-enable <id>
                           Switch a stopped plugin back on for its newer,
                           clean version.
-  agentsweep reveal-receipt [<path>]
+  agentpatrol reveal-receipt [<path>]
                           List what is in quarantine, each receipt id beside
                           the path it was taken from.
 
-The rule feed, one of the only three requests AgentSweep ever sends:
-  agentsweep rule-feed [on | off]
-                          Say whether AgentSweep asks GitHub once a day for
+The rule feed, one of the only three requests AgentPatrol ever sends:
+  agentpatrol rule-feed [on | off]
+                          Say whether AgentPatrol asks GitHub once a day for
                           newer rules, or switch it on or off. Off means
                           nothing is fetched and the bundled rules are in
                           force.
@@ -128,13 +128,13 @@ exits 2. Every command that reaches the daemon takes `--socket <path>` to reach
 one somewhere other than the documented socket.
 
 Developer only, off unless asked for by name:
-  agentsweep --developer-list-items [<home>]
+  agentpatrol --developer-list-items [<home>]
                           List the Items the surface adapters would enumerate
                           for a home directory, so a real installation can be
                           compared with the surface inventory. It reads the
                           real machine, records nothing and prints no values.
                           Its output is never committed.
-  agentsweep --developer-scan-items [<home>]
+  agentpatrol --developer-scan-items [<home>]
                           Scan the user-level surfaces of both agents with the
                           bundled rule pack and print the tier 1 hits and the
                           hit count per heuristic, the same report the benign
@@ -150,8 +150,8 @@ macro_rules! on_its_own {
     () => {
         "\
 This build runs on its own and cannot show status or act on a Finding, because
-the AgentSweep daemon answers only the signed tools of its own app; the command
-line tool that comes with the AgentSweep app can."
+the AgentPatrol daemon answers only the signed tools of its own app; the command
+line tool that comes with the AgentPatrol app can."
     };
 }
 
@@ -159,17 +159,17 @@ line tool that comes with the AgentSweep app can."
 #[cfg(not(feature = "bundle"))]
 const USAGE: &str = concat!(
     "\
-AgentSweep scans the local configuration surfaces of coding agents.
+AgentPatrol scans the local configuration surfaces of coding agents.
 
 Usage:
-  agentsweep scan <dir> [--no-ai]
+  agentpatrol scan <dir> [--no-ai]
                           Check one folder before you open it with an agent.
                           It runs here and records nothing. What is neither
                           clear nor suspicious is put to Ollama, the only AI
-                          engine this build has, when AgentSweep's settings
+                          engine this build has, when AgentPatrol's settings
                           name its address and model. --no-ai asks nothing.
-  agentsweep --version    Print the version.
-  agentsweep --help       Print this message.
+  agentpatrol --version    Print the version.
+  agentpatrol --help       Print this message.
 
 `scan <dir>` exits 0 when the folder is safe to open and 1 when it found
 something. A command line that was not understood exits 2.
@@ -183,7 +183,7 @@ fn main() -> ExitCode {
     match arguments.first().map(String::as_str) {
         Some("scan") => scan(&arguments[1..]),
         Some("--version" | "-V") => {
-            println!("{} {}", agentsweep_core::NAME, agentsweep_core::VERSION);
+            println!("{} {}", agentpatrol_core::NAME, agentpatrol_core::VERSION);
             ExitCode::SUCCESS
         }
         Some("--help" | "-h") => {
@@ -222,7 +222,7 @@ fn bundled(command: &str, _arguments: &[String]) -> ExitCode {
 }
 
 fn not_a_command(command: &str) -> ExitCode {
-    eprintln!("agentsweep: `{command}` is not a command.\n\n{USAGE}");
+    eprintln!("agentpatrol: `{command}` is not a command.\n\n{USAGE}");
     ExitCode::from(USAGE_ERROR)
 }
 
@@ -235,7 +235,7 @@ fn scan(arguments: &[String]) -> ExitCode {
     match folder_scan::parse(arguments) {
         Ok(invocation) => folder_scan(&invocation),
         Err(reason) => {
-            eprintln!("agentsweep: {reason}\n\n{USAGE}");
+            eprintln!("agentpatrol: {reason}\n\n{USAGE}");
             ExitCode::from(USAGE_ERROR)
         }
     }
@@ -249,7 +249,7 @@ fn scan_through_the_daemon(arguments: &[String]) -> ExitCode {
     let invocation = match scan_now::parse(arguments) {
         Ok(invocation) => invocation,
         Err(reason) => {
-            eprintln!("agentsweep: {reason}\n\n{USAGE}");
+            eprintln!("agentpatrol: {reason}\n\n{USAGE}");
             return ExitCode::from(USAGE_ERROR);
         }
     };
@@ -263,7 +263,7 @@ fn scan_through_the_daemon(arguments: &[String]) -> ExitCode {
 /// a command line it does not understand, and it says why.
 #[cfg(not(feature = "bundle"))]
 fn scan_through_the_daemon(_arguments: &[String]) -> ExitCode {
-    eprintln!("agentsweep: `scan` takes one folder in this build.\n\n{USAGE}");
+    eprintln!("agentpatrol: `scan` takes one folder in this build.\n\n{USAGE}");
     ExitCode::from(USAGE_ERROR)
 }
 
@@ -276,7 +276,7 @@ fn folder_scan(invocation: &folder_scan::Invocation) -> ExitCode {
         Ok(scanned) => scanned,
         Err(error) => {
             eprintln!(
-                "agentsweep: {} could not be scanned: {error}",
+                "agentpatrol: {} could not be scanned: {error}",
                 directory.display()
             );
             return ExitCode::from(USAGE_ERROR);
@@ -293,12 +293,12 @@ fn folder_scan(invocation: &folder_scan::Invocation) -> ExitCode {
 /// Asks the engine the settings file chooses about the Items awaiting
 /// judgement, or says that the AI check did not run.
 fn ai_check(
-    enumeration: &agentsweep_core::adapter::Enumeration,
-    report: &mut agentsweep_core::scan::ScanReport,
+    enumeration: &agentpatrol_core::adapter::Enumeration,
+    report: &mut agentpatrol_core::scan::ScanReport,
     invocation: &folder_scan::Invocation,
 ) -> judgement::Judgement {
     let normalisation = std::env::var_os("HOME")
-        .map(|home| agentsweep_core::judgement_request::Normalisation::of_home(home.as_ref()))
+        .map(|home| agentpatrol_core::judgement_request::Normalisation::of_home(home.as_ref()))
         .unwrap_or_default();
     let chosen = judgement::read_the_settings()
         .filter(judgement::admitted)
@@ -327,7 +327,7 @@ fn status(arguments: &[String]) -> ExitCode {
     let socket = match status::socket_argument(arguments) {
         Ok(socket) => socket,
         Err(reason) => {
-            eprintln!("agentsweep: {reason}\n\n{USAGE}");
+            eprintln!("agentpatrol: {reason}\n\n{USAGE}");
             return ExitCode::from(2);
         }
     };
@@ -342,7 +342,7 @@ fn rule_feed(arguments: &[String]) -> ExitCode {
     let invocation = match rule_feed::parse(arguments) {
         Ok(invocation) => invocation,
         Err(reason) => {
-            eprintln!("agentsweep: {reason}\n\n{USAGE}");
+            eprintln!("agentpatrol: {reason}\n\n{USAGE}");
             return ExitCode::from(2);
         }
     };
@@ -357,7 +357,7 @@ fn gate_hooks(arguments: &[String]) -> ExitCode {
     let invocation = match gate_hooks::parse(arguments) {
         Ok(invocation) => invocation,
         Err(reason) => {
-            eprintln!("agentsweep: {reason}\n\n{USAGE}");
+            eprintln!("agentpatrol: {reason}\n\n{USAGE}");
             return ExitCode::from(2);
         }
     };
@@ -372,7 +372,7 @@ fn uninstall(arguments: &[String]) -> ExitCode {
     let invocation = match uninstall::parse(arguments) {
         Ok(invocation) => invocation,
         Err(reason) => {
-            eprintln!("agentsweep: {reason}\n\n{USAGE}");
+            eprintln!("agentpatrol: {reason}\n\n{USAGE}");
             return ExitCode::from(2);
         }
     };
@@ -383,7 +383,7 @@ fn uninstall(arguments: &[String]) -> ExitCode {
 
 /// The Gate: one event on stdin, one verdict from the daemon, the decision the
 /// Agent honours on stdout. It always exits 0, so neither Agent reads a
-/// failure of AgentSweep as a decision (spec section 7.4).
+/// failure of AgentPatrol as a decision (spec section 7.4).
 #[cfg(feature = "bundle")]
 fn gate(arguments: &[String]) -> ExitCode {
     use std::io::Write as _;
@@ -401,7 +401,7 @@ fn act(command: &str, arguments: &[String]) -> ExitCode {
     let invocation = match actions::parse(command, arguments) {
         Ok(invocation) => invocation,
         Err(reason) => {
-            eprintln!("agentsweep: {reason}\n\n{USAGE}");
+            eprintln!("agentpatrol: {reason}\n\n{USAGE}");
             return ExitCode::from(actions::USAGE_ERROR);
         }
     };
@@ -417,7 +417,7 @@ fn developer_list_items(arguments: &[String]) -> ExitCode {
         [] => None,
         [home] => Some(PathBuf::from(home)),
         _ => {
-            eprintln!("agentsweep: `--developer-list-items` takes one folder.\n\n{USAGE}");
+            eprintln!("agentpatrol: `--developer-list-items` takes one folder.\n\n{USAGE}");
             return ExitCode::from(2);
         }
     };
@@ -427,7 +427,7 @@ fn developer_list_items(arguments: &[String]) -> ExitCode {
             ExitCode::SUCCESS
         }
         Err(error) => {
-            eprintln!("agentsweep: the Items could not be listed: {error}");
+            eprintln!("agentpatrol: the Items could not be listed: {error}");
             ExitCode::from(2)
         }
     }
@@ -440,7 +440,7 @@ fn developer_scan_items(arguments: &[String]) -> ExitCode {
         [] => None,
         [home] => Some(PathBuf::from(home)),
         _ => {
-            eprintln!("agentsweep: `--developer-scan-items` takes one folder.\n\n{USAGE}");
+            eprintln!("agentpatrol: `--developer-scan-items` takes one folder.\n\n{USAGE}");
             return ExitCode::from(2);
         }
     };
@@ -450,7 +450,7 @@ fn developer_scan_items(arguments: &[String]) -> ExitCode {
             ExitCode::SUCCESS
         }
         Err(error) => {
-            eprintln!("agentsweep: the Items could not be scanned: {error}");
+            eprintln!("agentpatrol: the Items could not be scanned: {error}");
             ExitCode::from(2)
         }
     }
@@ -460,21 +460,21 @@ fn developer_scan_items(arguments: &[String]) -> ExitCode {
 mod tests {
     #[test]
     fn the_binary_name_is_the_machine_readable_product_name() {
-        assert_eq!(env!("CARGO_BIN_NAME"), agentsweep_core::NAME);
+        assert_eq!(env!("CARGO_BIN_NAME"), agentpatrol_core::NAME);
     }
 
     #[test]
     fn the_usage_names_the_folder_scan_the_app_shows_in_the_developer_posture() {
-        assert!(super::USAGE.contains("agentsweep scan <dir>"));
+        assert!(super::USAGE.contains("agentpatrol scan <dir>"));
     }
 
     /// A Folder Scan runs in this process. Depending on the daemon crate would
     /// be the first step towards asking it something, and the daemon is the
-    /// only writer of every store AgentSweep keeps.
+    /// only writer of every store AgentPatrol keeps.
     #[test]
     fn the_command_line_interface_does_not_depend_on_the_daemon() {
         let manifest = include_str!("../Cargo.toml");
-        assert!(!manifest.contains("agentsweep-daemon"), "{manifest}");
+        assert!(!manifest.contains("agentpatrol-daemon"), "{manifest}");
     }
 
     /// The in-bundle build is the daemon client, and its help text says what
@@ -498,7 +498,7 @@ mod tests {
         /// daemon answers, because Protection off is always shown.
         #[test]
         fn the_usage_names_status_and_what_it_says_without_a_daemon() {
-            assert!(USAGE.contains("agentsweep status"), "{USAGE}");
+            assert!(USAGE.contains("agentpatrol status"), "{USAGE}");
             assert!(USAGE.contains("says Protection is off"), "{USAGE}");
             assert!(USAGE.contains("exits 3 when no daemon answered"), "{USAGE}");
         }
@@ -507,9 +507,9 @@ mod tests {
         /// with the codes every other command that reaches the daemon uses.
         #[test]
         fn the_usage_names_the_gate_in_one_entry() {
-            assert_eq!(USAGE.matches("agentsweep gate ").count(), 1, "{USAGE}");
+            assert_eq!(USAGE.matches("agentpatrol gate ").count(), 1, "{USAGE}");
             assert!(
-                USAGE.contains("agentsweep gate --agent <claude-code | codex>"),
+                USAGE.contains("agentpatrol gate --agent <claude-code | codex>"),
                 "{USAGE}"
             );
             assert!(USAGE.contains("It always exits 0."), "{USAGE}");
@@ -519,7 +519,7 @@ mod tests {
         #[test]
         fn the_usage_names_the_bare_scan() {
             assert!(
-                USAGE.contains("agentsweep scan         Ask the running AgentSweep"),
+                USAGE.contains("agentpatrol scan         Ask the running AgentPatrol"),
                 "{USAGE}"
             );
         }
@@ -527,14 +527,14 @@ mod tests {
         /// The Rule Feed toggle is in the help text, with what off means.
         #[test]
         fn the_usage_names_the_rule_feed_toggle() {
-            assert!(USAGE.contains("agentsweep rule-feed [on | off]"));
+            assert!(USAGE.contains("agentpatrol rule-feed [on | off]"));
             assert!(USAGE.contains("bundled rules are in"));
         }
 
         /// The Gate switch is in the help text, with what off means.
         #[test]
         fn the_usage_names_the_gate_switch() {
-            assert!(USAGE.contains("agentsweep gate-hooks [on | off]"));
+            assert!(USAGE.contains("agentpatrol gate-hooks [on | off]"));
             assert!(USAGE.contains("Off takes them out"));
         }
 
@@ -543,7 +543,7 @@ mod tests {
         fn the_usage_names_every_action_command() {
             for command in super::super::actions::COMMANDS {
                 assert!(
-                    USAGE.contains(&format!("agentsweep {command}")),
+                    USAGE.contains(&format!("agentpatrol {command}")),
                     "{command}"
                 );
             }
@@ -558,7 +558,7 @@ mod tests {
 
         #[test]
         fn the_usage_lists_only_the_folder_scan() {
-            assert!(USAGE.contains("agentsweep scan <dir>"), "{USAGE}");
+            assert!(USAGE.contains("agentpatrol scan <dir>"), "{USAGE}");
             for command in [
                 "status",
                 "quarantine",
@@ -569,7 +569,10 @@ mod tests {
                 "gate-hooks",
                 "--developer",
             ] {
-                assert!(!USAGE.contains(&format!("agentsweep {command}")), "{USAGE}");
+                assert!(
+                    !USAGE.contains(&format!("agentpatrol {command}")),
+                    "{USAGE}"
+                );
             }
             assert!(!USAGE.contains("--socket"), "{USAGE}");
         }

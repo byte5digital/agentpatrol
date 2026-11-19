@@ -16,7 +16,7 @@
 //! parameters (the default model refuses them; the deterministic checks of
 //! [`crate::judgement`] are the guard against drift), no identifiers. The
 //! headers are the key, the API version, the content type and the User-Agent
-//! naming AgentSweep and its version.
+//! naming AgentPatrol and its version.
 //!
 //! The key is read from its [`ClaudeKeyStore`] for each call and dropped when
 //! the call ends. It travels in its header and nowhere else: no error, no

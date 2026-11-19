@@ -1,8 +1,8 @@
 # TypeSafe (Jev) as a classifier for the AI Judgement tier (T3)
 
-Research ticket: `.scratch/agentsweep/issues/17-typesafe-classifier.md`. Date: 2026-09-17.
+Research ticket: `.scratch/agentpatrol/issues/17-typesafe-classifier.md`. Date: 2026-09-17.
 
-Question: can TypeSafe's hosted "System One" model (https://docs.typesafe.ai/) serve as a fast, cheap classifier for AgentSweep, either as a T3 engine or as a signal feeding the T2 ambiguity band, and what would it cost us in the standing "nothing leaves the machine" preference.
+Question: can TypeSafe's hosted "System One" model (https://docs.typesafe.ai/) serve as a fast, cheap classifier for AgentPatrol, either as a T3 engine or as a signal feeding the T2 ambiguity band, and what would it cost us in the standing "nothing leaves the machine" preference.
 
 Method: every page linked from https://docs.typesafe.ai/llms.txt was read (introduction, concepts, primitives, confidence, patterns, models, api, legal, sdk, agent-skill, model-jaggedness, four cookbooks). No probe was run; there is no API key. Everything below is what the docs state, with the page it came from. Claims not found on the docs site are listed in section 8.
 
@@ -16,7 +16,7 @@ Method: every page linked from https://docs.typesafe.ai/llms.txt was read (intro
 ## 2. Runtime: nothing runs locally
 
 - Every classification is a network call to `api.typesafe.ai`. No page mentions a local model, WASM, offline mode, on-prem or self-hosting; there is no deployment page in the docs index. The Python SDK accepts a `base_url`, but nothing says the model can be run by the user. Source: https://docs.typesafe.ai/sdk, https://docs.typesafe.ai/models
-- Consequence for AgentSweep: TypeSafe can only ever be an opt-in cloud engine in the same class as the Claude API path. It cannot be the local default, and it cannot sit inside T2 (which is local heuristics by definition).
+- Consequence for AgentPatrol: TypeSafe can only ever be an opt-in cloud engine in the same class as the Claude API path. It cannot be the local default, and it cannot sit inside T2 (which is local heuristics by definition).
 
 ## 3. Model, limits, speed
 
@@ -42,7 +42,7 @@ Method: every page linked from https://docs.typesafe.ai/llms.txt was read (intro
 
 - The jaggedness page for jev-1.13 says the model "does not treat [state] as hostile by default" and that injected instructions in the state "can move the answer. We expect to improve on this in the future." Other listed weaknesses: literal reading, counting and arithmetic, date comparison, indirection, large irrelevant state, contradictory instructions. Source: https://docs.typesafe.ai/model-jaggedness/jev-1.13
 - The RAG cookbook shows a planted forum injection scored 0.99 on a `contains_prompt_injection` Noul, and the guardrails cookbook scored the DAN jailbreak 0.98, but both are small hand-picked samples run on jev-1.12, and the RAG page states "Nothing here is a security boundary." Source: https://docs.typesafe.ai/cookbooks/classifying_rag_passages, https://docs.typesafe.ai/cookbooks/llm_guardrails
-- So the item under judgement, which is hostile input by design in AgentSweep, can steer the verdict. This is the same failure the Apple on-device model showed in the local-engines probe. The mitigation would be identical: T2 pre-screens for injection text and the verdict stays advisory.
+- So the item under judgement, which is hostile input by design in AgentPatrol, can steer the verdict. This is the same failure the Apple on-device model showed in the local-engines probe. The mitigation would be identical: T2 pre-screens for injection text and the verdict stays advisory.
 
 ## 7. Data handling and company
 
@@ -53,9 +53,9 @@ Method: every page linked from https://docs.typesafe.ai/llms.txt was read (intro
 
 Model size and architecture; supported languages; latency SLA; free tier; local, on-prem or self-hosted runtime; custom training or fine-tuning; retention period and region; company launch date; SDK licences.
 
-## 9. Assessment for AgentSweep
+## 9. Assessment for AgentPatrol
 
 - **Cannot replace the local default.** It is hosted only, so the standing preferences (local by default, no hosted judgement service, nothing leaves the machine except the rule feed and the opt-in Claude call) rule it out as the default T3 engine. It could only join as a second opt-in cloud engine with the user's own key, and the legal pages would need reading first.
 - **Where it genuinely wins**: cost (two orders of magnitude below Claude) and speed (sub-second, batched questions), and calibrated probabilities that slot straight into threshold logic. For a user who has opted into cloud judgement anyway, judging every T2 flag rather than only the ambiguous band becomes affordable.
-- **Where it loses**: no `reason` field, so it cannot satisfy the Simple posture's plain-language explanation on its own; documented susceptibility to injected instructions in the state, the exact adversarial condition AgentSweep operates in; zero-shot only, so quality on malicious skill files, hooks and MCP configs is unverified; a second vendor and key for non-technical users to manage.
+- **Where it loses**: no `reason` field, so it cannot satisfy the Simple posture's plain-language explanation on its own; documented susceptibility to injected instructions in the state, the exact adversarial condition AgentPatrol operates in; zero-shot only, so quality on malicious skill files, hooks and MCP configs is unverified; a second vendor and key for non-technical users to manage.
 - **Plausible shapes for the T3 design ticket to weigh**: (a) reject, keep Claude as the only cloud engine; (b) accept as an opt-in "fast cloud" engine whose verdict is shown as probability plus category, with the reason line supplied by the matching T2 indicator text; (c) accept as a cheap pre-classifier in front of the Claude call, so Claude only writes a reason for items TypeSafe scores above a threshold. Any accept path needs a benchmark against the known-bad corpus before it goes in the spec.

@@ -32,14 +32,14 @@ use std::sync::Arc;
 
 use serde_json::Value;
 
-use agentsweep_core::baseline::{Baseline, BaselineWriter};
-use agentsweep_core::chain::{ChainState, KEY_MISSING, Record, Verification};
-use agentsweep_core::envelope::{ChainId, RecordKind};
-use agentsweep_core::eventlog::{EventLog, EventLogWriter};
-use agentsweep_core::integrity::{CHAIN_BROKEN, IntegrityRecord, ResetUnanswered};
-use agentsweep_core::state::Trigger;
-use agentsweep_ipc::integrity::{ChainRecords, IntegrityAnswer, RECORDS_PAGE, RecordLine};
-use agentsweep_ipc::protocol::RequestError;
+use agentpatrol_core::baseline::{Baseline, BaselineWriter};
+use agentpatrol_core::chain::{ChainState, KEY_MISSING, Record, Verification};
+use agentpatrol_core::envelope::{ChainId, RecordKind};
+use agentpatrol_core::eventlog::{EventLog, EventLogWriter};
+use agentpatrol_core::integrity::{CHAIN_BROKEN, IntegrityRecord, ResetUnanswered};
+use agentpatrol_core::state::Trigger;
+use agentpatrol_ipc::integrity::{ChainRecords, IntegrityAnswer, RECORDS_PAGE, RecordLine};
+use agentpatrol_ipc::protocol::RequestError;
 
 use crate::service::Daemon;
 
@@ -300,7 +300,7 @@ mod tests {
         assert_eq!(shown(&ChainState::Intact, true), ChainState::KeyMissing);
         let broken = ChainState::Broken {
             sequence: 2,
-            reason: agentsweep_core::chain::BreakReason::MacFailed,
+            reason: agentpatrol_core::chain::BreakReason::MacFailed,
         };
         assert_eq!(shown(&broken, true), broken);
     }

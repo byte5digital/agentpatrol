@@ -22,20 +22,20 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, Once};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::baseline::{Baseline, BaselineView};
-use agentsweep_core::health::Rung;
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::overview::ProjectCheck;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::state::StateFile;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::permission::{FIRST_READ_THREAD, Folders};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, Status};
+use agentpatrol_core::baseline::{Baseline, BaselineView};
+use agentpatrol_core::health::Rung;
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::overview::ProjectCheck;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::state::StateFile;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::permission::{FIRST_READ_THREAD, Folders};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, Status};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -186,7 +186,7 @@ impl Sandbox {
     /// Documents, one in Developer.
     fn new(purpose: &str, instruction_file: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-permission-{purpose}-{}-{}",
+            "agentpatrol-permission-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -336,13 +336,13 @@ fn until(condition: impl Fn() -> bool) -> bool {
 fn a_full_scan_after(
     sandbox: &Sandbox,
     daemon: &Arc<Daemon>,
-    after: agentsweep_core::envelope::Timestamp,
+    after: agentpatrol_core::envelope::Timestamp,
 ) {
     assert!(
         until(|| {
             !daemon.health().scanning
                 && sandbox.status().scan.is_some_and(|scan| {
-                    scan.kind == agentsweep_core::scan_pass::ScanKind::Full
+                    scan.kind == agentpatrol_core::scan_pass::ScanKind::Full
                         && scan.started_at > after
                 })
         }),

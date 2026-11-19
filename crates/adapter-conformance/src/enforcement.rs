@@ -39,13 +39,13 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::{Primitive, SWITCH_ONLY, SurfaceAdapter, eligibility};
-use agentsweep_core::enforcement::primitives_for;
-use agentsweep_core::eventlog::Outcome;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Activation, InactiveReason, Item, ItemId, Kind, Scope};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::quarantine::{Conflict, QuarantineStore, Store};
+use agentpatrol_core::adapter::{Primitive, SWITCH_ONLY, SurfaceAdapter, eligibility};
+use agentpatrol_core::enforcement::primitives_for;
+use agentpatrol_core::eventlog::Outcome;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Activation, InactiveReason, Item, ItemId, Kind, Scope};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::quarantine::{Conflict, QuarantineStore, Store};
 
 use crate::{Report, fixtures};
 
@@ -124,7 +124,7 @@ pub fn check_case(
     let mut exercised = Vec::new();
     let kinds = enforces(adapter);
     for item in &enumeration.items {
-        // A Managed Item is read-only for AgentSweep whatever its kind, so the
+        // A Managed Item is read-only for AgentPatrol whatever its kind, so the
         // suite never asks an adapter to touch one.
         if item.scope == Scope::Managed || !kinds.contains(&item.kind) {
             continue;
@@ -347,7 +347,7 @@ fn moved_out_cleanly(
     case: &str,
     store: &QuarantineStore,
     item: &Item,
-    receipt: &agentsweep_core::quarantine::Receipt,
+    receipt: &agentpatrol_core::quarantine::Receipt,
     report: &mut Report,
 ) -> bool {
     if !receipt.steps.iter().any(|step| {
@@ -523,9 +523,9 @@ mod tests {
     use super::*;
     use crate::adapters;
 
-    use agentsweep_core::adapter::{Descriptor, Detection, Enumeration, ProjectRegistration};
-    use agentsweep_core::quarantine::{EnforcementError, Receipt};
-    use agentsweep_core::views::ParsedView;
+    use agentpatrol_core::adapter::{Descriptor, Detection, Enumeration, ProjectRegistration};
+    use agentpatrol_core::quarantine::{EnforcementError, Receipt};
+    use agentpatrol_core::views::ParsedView;
 
     use std::path::PathBuf;
 
@@ -535,8 +535,8 @@ mod tests {
     struct Wrapping;
 
     impl Wrapping {
-        fn inner() -> agentsweep_adapter_claude_code::ClaudeCode {
-            agentsweep_adapter_claude_code::ClaudeCode::new()
+        fn inner() -> agentpatrol_adapter_claude_code::ClaudeCode {
+            agentpatrol_adapter_claude_code::ClaudeCode::new()
         }
     }
 
@@ -620,7 +620,7 @@ mod tests {
             store: &dyn Store,
             receipt: &Receipt,
             conflict: Conflict,
-        ) -> agentsweep_core::quarantine::RestoreReport {
+        ) -> agentpatrol_core::quarantine::RestoreReport {
             Wrapping::inner().restore(host, store, receipt, conflict)
         }
     }
@@ -663,7 +663,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            declared(&agentsweep_adapter_codex::Codex::new()),
+            declared(&agentpatrol_adapter_codex::Codex::new()),
             vec![
                 (Kind::InstructionFile, Primitive::MoveOut),
                 (Kind::Skill, Primitive::NativeDisable),
@@ -676,7 +676,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            declared(&agentsweep_adapter_workspace::Workspace::new()),
+            declared(&agentpatrol_adapter_workspace::Workspace::new()),
             vec![
                 (Kind::RepositoryMetadata, Primitive::NeutraliseInPlace),
                 (Kind::EnvFile, Primitive::NeutraliseInPlace),
@@ -849,11 +849,11 @@ mod tests {
         assert_eq!(receipt.steps.len(), 2, "{:?}", receipt.steps);
         assert_eq!(
             receipt.steps[0].primitive,
-            agentsweep_core::eventlog::Primitive::RemoveEntry
+            agentpatrol_core::eventlog::Primitive::RemoveEntry
         );
         assert_eq!(
             receipt.steps[1].primitive,
-            agentsweep_core::eventlog::Primitive::MoveOut
+            agentpatrol_core::eventlog::Primitive::MoveOut
         );
 
         let report = adapter.restore(&bench.host, &bench.store, &receipt, Conflict::Refuse);
@@ -911,7 +911,7 @@ mod tests {
     /// comments and the formatting of every untouched line where they were.
     #[test]
     fn removing_a_codex_server_leaves_every_comment_and_untouched_line_alone() {
-        let adapter = agentsweep_adapter_codex::Codex::new();
+        let adapter = agentpatrol_adapter_codex::Codex::new();
         let bench = Bench::of(&adapter, "user-and-project-layers");
         let item = bench.item(Kind::McpServer, "config.toml#kit");
         let before = std::fs::read_to_string(&item.path).expect("the layer");
@@ -952,7 +952,7 @@ mod tests {
     /// layer back to the byte.
     #[test]
     fn switching_off_a_codex_server_changes_one_value_and_flips_back_byte_for_byte() {
-        let adapter = agentsweep_adapter_codex::Codex::new();
+        let adapter = agentpatrol_adapter_codex::Codex::new();
         for (server, expected) in [
             (
                 "config.toml#written",
@@ -989,7 +989,7 @@ mod tests {
             assert_eq!(receipt.steps.len(), 1, "{:?}", receipt.steps);
             assert_eq!(
                 receipt.steps[0].primitive,
-                agentsweep_core::eventlog::Primitive::NativeDisable
+                agentpatrol_core::eventlog::Primitive::NativeDisable
             );
             let after = std::fs::read_to_string(&item.path).expect("the layer");
             assert_eq!(after, expected(&before), "{server}");
@@ -1016,8 +1016,8 @@ mod tests {
     /// says which primitive it was.
     #[test]
     fn a_hook_or_a_skill_is_switched_off_only_where_its_switch_is_written() {
-        let adapter = agentsweep_adapter_codex::Codex::new();
-        use agentsweep_core::eventlog::Primitive as Recorded;
+        let adapter = agentpatrol_adapter_codex::Codex::new();
+        use agentpatrol_core::eventlog::Primitive as Recorded;
         for (kind, locator, first) in [
             (Kind::Hook, "SessionStart", Recorded::NativeDisable),
             (Kind::Hook, "Stop", Recorded::RemoveEntry),

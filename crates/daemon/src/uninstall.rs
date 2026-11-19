@@ -1,6 +1,6 @@
 //! Uninstall, as the daemon carries it out (spec section 9.6).
 //!
-//! The Settings flow and `agentsweep uninstall` send one `uninstall` request
+//! The Settings flow and `agentpatrol uninstall` send one `uninstall` request
 //! with the user's choice. The daemon is the only writer of the stores and the
 //! Agents' settings, so it does everything that touches them, in this order:
 //!
@@ -15,7 +15,7 @@
 //!    all** replays every Receipt as a single Restore would, under the same
 //!    conflict rule (spec section 5.4): what meets something else at its
 //!    original place is not put back and stays in quarantine, and the report
-//!    says so. **Delete everything** removes everything AgentSweep made (the
+//!    says so. **Delete everything** removes everything AgentPatrol made (the
 //!    owner's decision of 2026-10-14): the data directory with the
 //!    quarantined payloads, both Keychain items, the log directory, the
 //!    caches, the app's preferences and the web view's temporary folder.
@@ -32,17 +32,17 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use agentsweep_core::BUNDLE_ID;
-use agentsweep_core::quarantine::Conflict;
-use agentsweep_ipc::protocol::{UninstallChoice, UninstallReport};
-use agentsweep_ipc::socket::SOCKET_NAME;
+use agentpatrol_core::BUNDLE_ID;
+use agentpatrol_core::quarantine::Conflict;
+use agentpatrol_ipc::protocol::{UninstallChoice, UninstallReport};
+use agentpatrol_ipc::socket::SOCKET_NAME;
 
 use crate::log::counted;
 use crate::service::Daemon;
 
 /// The app's folder in the per-user temporary directory, where its web view
 /// keeps its temporary files: the folder named after the bundle identifier
-/// beside the documented socket, `$TMPDIR/de.byte5.agentsweep`. A daemon
+/// beside the documented socket, `$TMPDIR/de.byte5.agentpatrol`. A daemon
 /// that listens on a socket of another name, which only a developer run or a
 /// test does, has none, so it never reaches into the real temporary
 /// directory.
@@ -52,8 +52,8 @@ pub fn temporary_folder(socket: &Path) -> Option<PathBuf> {
 
 /// What Delete everything removes, as (what it is called, where it is), for
 /// a data directory, a home and the app's temporary folder. Each is
-/// AgentSweep's own and nothing else's: a directory or a file named after
-/// AgentSweep or its bundle identifier.
+/// AgentPatrol's own and nothing else's: a directory or a file named after
+/// AgentPatrol or its bundle identifier.
 pub fn what_delete_everything_removes(
     data: &Path,
     home: &Path,
@@ -138,7 +138,7 @@ impl Daemon {
         self.remove_the_temporary_folder();
         if !report.gate_failed.is_empty() {
             report.message.push_str(&format!(
-                " AgentSweep's hooks could not be taken out of {}; remove them by hand.",
+                " AgentPatrol's hooks could not be taken out of {}; remove them by hand.",
                 report.gate_failed.join(" and ")
             ));
         }
@@ -151,8 +151,8 @@ impl Daemon {
     fn keep(&self, report: &mut UninstallReport) {
         let held = self.manifest().map(|manifest| manifest.len()).unwrap_or(0);
         report.message = format!(
-            "AgentSweep's hooks are out of Claude Code and Codex. {} in quarantine, so \
-             installing AgentSweep again picks up where it left off.",
+            "AgentPatrol's hooks are out of Claude Code and Codex. {} in quarantine, so \
+             installing AgentPatrol again picks up where it left off.",
             match held {
                 1 => "The 1 quarantined item stays".to_string(),
                 held => format!("The {held} quarantined items stay"),
@@ -186,7 +186,7 @@ impl Daemon {
         let done = report
             .restored
             .iter()
-            .filter(|restored| restored.result == agentsweep_core::eventlog::Outcome::Ok)
+            .filter(|restored| restored.result == agentpatrol_core::eventlog::Outcome::Ok)
             .count();
         say!(
             "uninstalling: {done} of {} restored",
@@ -205,7 +205,7 @@ impl Daemon {
         };
     }
 
-    /// Delete everything: what AgentSweep made goes, and the Keychain items
+    /// Delete everything: what AgentPatrol made goes, and the Keychain items
     /// with it. Nothing outside [`what_delete_everything_removes`] is
     /// touched.
     fn delete_everything(&self, report: &mut UninstallReport) {
@@ -239,10 +239,10 @@ impl Daemon {
         }
         report.message = match report.failed.is_empty() {
             true => {
-                "Deleted everything AgentSweep made, the quarantined items with it.".to_string()
+                "Deleted everything AgentPatrol made, the quarantined items with it.".to_string()
             }
             false => format!(
-                "Deleted what AgentSweep made, apart from {}.",
+                "Deleted what AgentPatrol made, apart from {}.",
                 report.failed.join(", ")
             ),
         };
@@ -275,12 +275,12 @@ mod tests {
     use super::*;
 
     /// Every place Delete everything removes is under the data directory or
-    /// the home's Library, and named after AgentSweep.
+    /// the home's Library, and named after AgentPatrol.
     #[test]
-    fn delete_everything_removes_only_agentsweeps_own_places() {
+    fn delete_everything_removes_only_agentpatrols_own_places() {
         let data = Path::new("/sandbox/data");
         let home = Path::new("/sandbox/home");
-        let temporary = Path::new("/sandbox/tmp/de.byte5.agentsweep");
+        let temporary = Path::new("/sandbox/tmp/de.byte5.agentpatrol");
         for (_, path) in what_delete_everything_removes(data, home, Some(temporary)) {
             assert!(
                 path == data || path == temporary || path.starts_with(home.join("Library")),
@@ -292,7 +292,7 @@ mod tests {
                 .and_then(|name| name.to_str())
                 .unwrap_or_default();
             assert!(
-                path == data || name.starts_with(BUNDLE_ID) || name == "AgentSweep",
+                path == data || name.starts_with(BUNDLE_ID) || name == "AgentPatrol",
                 "{name}"
             );
         }
@@ -303,8 +303,8 @@ mod tests {
     #[test]
     fn the_temporary_folder_is_beside_the_documented_socket_only() {
         assert_eq!(
-            temporary_folder(Path::new("/var/folders/x/T/de.byte5.agentsweep.sock")),
-            Some(PathBuf::from("/var/folders/x/T/de.byte5.agentsweep"))
+            temporary_folder(Path::new("/var/folders/x/T/de.byte5.agentpatrol.sock")),
+            Some(PathBuf::from("/var/folders/x/T/de.byte5.agentpatrol"))
         );
         assert_eq!(
             temporary_folder(Path::new("/var/folders/x/T/asu-1-2.sock")),

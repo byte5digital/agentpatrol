@@ -6,12 +6,12 @@
 //! core's `daemon` feature on, so no other binary can even name the types
 //! below.
 
-use agentsweep_core::baseline::{Baseline, BaselineWriter};
-use agentsweep_core::chain::{ChainError, ChainState};
-use agentsweep_core::eventlog::{EventLog, EventLogWriter};
-use agentsweep_core::keychain::KeySource;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::verdicts::{CacheError, VerdictCache, VerdictCacheWriter};
+use agentpatrol_core::baseline::{Baseline, BaselineWriter};
+use agentpatrol_core::chain::{ChainError, ChainState};
+use agentpatrol_core::eventlog::{EventLog, EventLogWriter};
+use agentpatrol_core::keychain::KeySource;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::verdicts::{CacheError, VerdictCache, VerdictCacheWriter};
 
 /// Verifies the Event Log and opens it for appending.
 ///
@@ -74,8 +74,8 @@ pub fn open_the_verdict_cache(
 mod tests {
     use super::*;
 
-    use agentsweep_core::eventlog::{Action, Actor, Event};
-    use agentsweep_core::keychain::MemoryKeySource;
+    use agentpatrol_core::eventlog::{Action, Actor, Event};
+    use agentpatrol_core::keychain::MemoryKeySource;
 
     #[test]
     fn the_daemon_writes_the_event_log_and_reads_it_back() {
@@ -101,10 +101,10 @@ mod tests {
     /// same one binary.
     #[test]
     fn the_daemon_writes_the_baseline_and_reads_it_back() {
-        use agentsweep_core::baseline::{AcceptedBy, BaselineRecord};
-        use agentsweep_core::coverage::{CoverageKey, CoverageRecord};
-        use agentsweep_core::envelope::Timestamp;
-        use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
+        use agentpatrol_core::baseline::{AcceptedBy, BaselineRecord};
+        use agentpatrol_core::coverage::{CoverageKey, CoverageRecord};
+        use agentpatrol_core::envelope::Timestamp;
+        use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
 
         let temporary = tempfile::TempDir::new().expect("a temporary directory");
         let directory = DataDirectory::at(temporary.path());
@@ -163,10 +163,10 @@ mod tests {
     /// the first and tampering on the second.
     #[test]
     fn a_missing_key_restarts_both_chains_rather_than_breaking_the_second() {
-        use agentsweep_core::baseline::{AcceptedBy, BaselineRecord};
-        use agentsweep_core::envelope::Timestamp;
-        use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
-        use agentsweep_core::keychain::KeySource as _;
+        use agentpatrol_core::baseline::{AcceptedBy, BaselineRecord};
+        use agentpatrol_core::envelope::Timestamp;
+        use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
+        use agentpatrol_core::keychain::KeySource as _;
 
         let temporary = tempfile::TempDir::new().expect("a temporary directory");
         let directory = DataDirectory::at(temporary.path());
@@ -214,8 +214,8 @@ mod tests {
     #[test]
     fn the_key_source_is_the_login_keychain_item_of_the_daemon() {
         assert_eq!(
-            agentsweep_core::keychain::KEYCHAIN_SERVICE,
-            agentsweep_core::DAEMON_LABEL
+            agentpatrol_core::keychain::KEYCHAIN_SERVICE,
+            agentpatrol_core::DAEMON_LABEL
         );
     }
 }

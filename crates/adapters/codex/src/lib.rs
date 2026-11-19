@@ -24,7 +24,7 @@
 //!
 //! **One view per kind, across Agents.** A Codex `[mcp_servers.x]` table and a
 //! Claude Code `"mcpServers": {"x": …}` object reach
-//! [`agentsweep_core::views::McpView`] as one shape, and a hook written as TOML
+//! [`agentpatrol_core::views::McpView`] as one shape, and a hook written as TOML
 //! and the same hook written as JSON share one identity, because both are read
 //! into JSON first and hashed through the normal form the core defines. That is
 //! what lets one MCP Rule and one hook Rule cover both Agents.
@@ -33,7 +33,7 @@
 //! that is the workspace adapter's, once, for every Agent, and the core stamps
 //! the Repository Provenance it computed onto the Items here. It never follows
 //! a relocation it found in a configuration file; `CODEX_HOME` is an explicit
-//! AgentSweep setting the Host carries. And it never lets a sensitive value
+//! AgentPatrol setting the Host carries. And it never lets a sensitive value
 //! into a parsed view: an MCP `env` block and an `http_headers` block reach a
 //! view as key names only.
 
@@ -49,22 +49,22 @@ pub mod settings;
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::{
+use agentpatrol_core::adapter::{
     Descriptor, Detection, Enumeration, Primitive, Problem, ProblemReason, ProjectHooks,
     ProjectRegistration, Surface, SurfaceAdapter, WatchRoots,
 };
-use agentsweep_core::gate_registration::{
+use agentpatrol_core::gate_registration::{
     GateCheck, GateCommand, GateError, GateWrite, SurfaceWriter,
 };
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{
     Activation, FileFacts, InactiveReason, Invocation, Item, ItemId, Kind, Provenance, Scope,
     canonical_entry,
 };
-use agentsweep_core::quarantine::{
+use agentpatrol_core::quarantine::{
     self, Conflict, EnforcementError, Receipt, RestoreReport, Store,
 };
-use agentsweep_core::views::{HookView, McpView, ParsedView, SettingsView, SkillView};
+use agentpatrol_core::views::{HookView, McpView, ParsedView, SettingsView, SkillView};
 use serde_json::{Value, json};
 
 use crate::document::{Document, Format};
@@ -120,7 +120,7 @@ pub const SKILL_FILE: &str = "SKILL.md";
 /// them. The first non-empty one wins and the others are never read.
 pub const INSTRUCTION_FILES: [&str; 2] = ["AGENTS.override.md", "AGENTS.md"];
 
-/// The managed directory, read-only for AgentSweep and reached only through
+/// The managed directory, read-only for AgentPatrol and reached only through
 /// the Host's system root.
 pub const MANAGED_DIRECTORY: &str = "/etc/codex";
 
@@ -306,7 +306,7 @@ struct Layer {
     /// on a Folder Scan there is no table to ask, so nothing is claimed.
     trusted: Option<bool>,
     /// True when the layer is the administrator's. Its hooks are pre-trusted
-    /// and its Items are never AgentSweep's to touch.
+    /// and its Items are never AgentPatrol's to touch.
     managed: bool,
     /// Whether Codex holds session history for the project this layer
     /// belongs to, which is what `settings.trust_has_sessions` reports. Only a
@@ -359,7 +359,7 @@ impl Codex {
         Codex
     }
 
-    /// The config directory in effect: the override AgentSweep holds for this
+    /// The config directory in effect: the override AgentPatrol holds for this
     /// Agent, otherwise the default directory under the home. Relocation is
     /// never followed from an env file or a settings block.
     pub fn config_dir(&self, host: &Host) -> Option<PathBuf> {
@@ -1355,8 +1355,8 @@ mod tests {
     use std::fs;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    use agentsweep_core::adapter::eligibility;
-    use agentsweep_core::item::Shape;
+    use agentpatrol_core::adapter::eligibility;
+    use agentpatrol_core::item::Shape;
 
     use super::*;
 
@@ -1371,7 +1371,7 @@ mod tests {
     impl Machine {
         fn new(name: &str) -> Machine {
             let root = std::env::temp_dir().join(format!(
-                "agentsweep-codex-{name}-{}-{}",
+                "agentpatrol-codex-{name}-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
@@ -1499,10 +1499,10 @@ mod tests {
         assert_eq!(leading_version("2026-aarch64"), None);
     }
 
-    /// A relocated config directory is an AgentSweep setting the Host carries,
+    /// A relocated config directory is an AgentPatrol setting the Host carries,
     /// never something followed out of a file.
     #[test]
-    fn the_config_directory_is_the_one_agentsweep_was_told_about() {
+    fn the_config_directory_is_the_one_agentpatrol_was_told_about() {
         let machine = Machine::new("relocated");
         let elsewhere = machine.root.join("elsewhere");
         fs::create_dir_all(&elsewhere).expect("a relocated config directory");
@@ -1790,7 +1790,7 @@ mod tests {
     }
 
     /// A config layer that cannot be parsed is a Problem rather than silence:
-    /// Codex would have read it and AgentSweep cannot say what is in it.
+    /// Codex would have read it and AgentPatrol cannot say what is in it.
     #[test]
     fn a_config_layer_that_cannot_be_parsed_travels_as_a_problem() {
         let machine = Machine::new("broken");

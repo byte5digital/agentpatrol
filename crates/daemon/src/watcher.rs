@@ -27,7 +27,7 @@ use std::time::{Duration, Instant};
 
 use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 
-use agentsweep_core::adapter::WatchRoots;
+use agentpatrol_core::adapter::WatchRoots;
 
 /// How long the watcher waits for quiet before it decides a batch is over.
 pub const QUIET: Duration = Duration::from_secs(2);
@@ -361,7 +361,7 @@ pub fn watch(
     let flag = Arc::clone(&stopping);
     let declared = roots.clone();
     let thread = std::thread::Builder::new()
-        .name("agentsweep-watcher".to_string())
+        .name("agentpatrol-watcher".to_string())
         .spawn(move || {
             pump(
                 receiver,
@@ -623,25 +623,27 @@ mod tests {
     #[test]
     fn a_root_reached_through_a_link_is_spelled_the_way_the_adapter_declared_it() {
         let mut roots = WatchRoots::default();
-        roots.watch_recursively(PathBuf::from("/var/agentsweep/.claude"));
+        roots.watch_recursively(PathBuf::from("/var/agentpatrol/.claude"));
         let declared = Declared {
             roots,
             spelled: vec![(
-                PathBuf::from("/private/var/agentsweep/.claude"),
-                PathBuf::from("/var/agentsweep/.claude"),
+                PathBuf::from("/private/var/agentpatrol/.claude"),
+                PathBuf::from("/var/agentpatrol/.claude"),
             )],
         };
 
         let seen = inside(
             Observation::Changed(vec![
-                PathBuf::from("/private/var/agentsweep/.claude/settings.json"),
+                PathBuf::from("/private/var/agentpatrol/.claude/settings.json"),
                 PathBuf::from("/private/var/elsewhere/settings.json"),
             ]),
             &declared,
         );
         assert_eq!(
             seen,
-            Observation::Changed(vec![PathBuf::from("/var/agentsweep/.claude/settings.json")])
+            Observation::Changed(vec![PathBuf::from(
+                "/var/agentpatrol/.claude/settings.json"
+            )])
         );
     }
 

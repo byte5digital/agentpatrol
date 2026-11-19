@@ -1,4 +1,4 @@
-//! The Claude engine's answers for `agentsweep scan <dir>` (spec section 4.4).
+//! The Claude engine's answers for `agentpatrol scan <dir>` (spec section 4.4).
 //!
 //! The in-bundle command line interface runs its Folder Scan in its own
 //! process and asks a local Judgement Engine itself, but it never holds the
@@ -20,12 +20,12 @@
 //!
 //! Nothing else is recorded: a Folder Scan opens no Finding.
 
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::judgement::{self, Verdict};
-use agentsweep_core::judgement_request::JudgementRequest;
-use agentsweep_core::settings::JudgementEngine as EngineChoice;
-use agentsweep_core::verdicts::{CachedVerdict, VerdictCache, VerdictCacheWriter};
-use agentsweep_ipc::judge::{JudgeAnswer, JudgeOutcome, JudgeRequest};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::judgement::{self, Verdict};
+use agentpatrol_core::judgement_request::JudgementRequest;
+use agentpatrol_core::settings::JudgementEngine as EngineChoice;
+use agentpatrol_core::verdicts::{CachedVerdict, VerdictCache, VerdictCacheWriter};
+use agentpatrol_ipc::judge::{JudgeAnswer, JudgeOutcome, JudgeRequest};
 
 use crate::full_scan::read_the_verdicts;
 use crate::service::Daemon;

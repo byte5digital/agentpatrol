@@ -27,7 +27,7 @@ use crate::quarantine::EnforcementError;
 /// What stands behind one Quarantine: who asked for it and what was found.
 #[derive(Clone, Debug)]
 pub struct Cause {
-    /// Whether AgentSweep or a person is acting.
+    /// Whether AgentPatrol or a person is acting.
     pub actor: Actor,
     /// Threat or Exposure. Only a Threat is ever quarantined.
     pub category: Category,
@@ -79,7 +79,7 @@ impl Cause {
 ///
 /// MoveOut takes the Item away and RemoveEntry takes the entry out of its
 /// file, so neither leaves a hash behind. NeutraliseInPlace comments the key
-/// or the line out and the Item stays, at content AgentSweep wrote: the next
+/// or the line out and the Item stays, at content AgentPatrol wrote: the next
 /// Scan must read that as a known action rather than as a question. A native
 /// disable that is the whole Quarantine leaves the Item in place too, and
 /// where the switch sits inside the entry (an MCP server's `enabled`) the
@@ -137,7 +137,7 @@ pub fn may_quarantine(item: &Item, cause: &Cause) -> Result<(), EnforcementError
         );
     }
     if item.scope == crate::item::Scope::Managed {
-        return refuse("a Managed Item is read-only for AgentSweep, so it is only ever flagged");
+        return refuse("a Managed Item is read-only for AgentPatrol, so it is only ever flagged");
     }
     match cause.actor {
         Actor::User => Ok(()),
@@ -184,15 +184,15 @@ pub fn may_fix(item: &Item, cause: &Cause) -> Result<(), EnforcementError> {
         return refuse("only the Exposures of Rules 0018 and 0019 offer the one-click fix");
     }
     if cause.actor != Actor::User {
-        return refuse("a fix is the user's to ask for, never AgentSweep's");
+        return refuse("a fix is the user's to ask for, never AgentPatrol's");
     }
     if item.scope == crate::item::Scope::Managed {
-        return refuse("a Managed Item is read-only for AgentSweep, so it is only ever flagged");
+        return refuse("a Managed Item is read-only for AgentPatrol, so it is only ever flagged");
     }
     if eligibility(item.kind).primitives != [Primitive::RemoveEntry] {
         return Err(EnforcementError::NotEligible {
             reason: format!(
-                "a {} has no one-click fix: it is not an entry AgentSweep can take out of its file",
+                "a {} has no one-click fix: it is not an entry AgentPatrol can take out of its file",
                 item.kind
             ),
         });
@@ -200,7 +200,7 @@ pub fn may_fix(item: &Item, cause: &Cause) -> Result<(), EnforcementError> {
     Ok(())
 }
 
-/// What else one of AgentSweep's own writes moved, besides the Item it was
+/// What else one of AgentPatrol's own writes moved, besides the Item it was
 /// about: the settings entry a native disable flipped, the registry record a
 /// marketplace composite took out. Asked once the write is done and before it
 /// is recorded, so the record names every hash the write left (ADR 0007).
@@ -344,7 +344,7 @@ mod writer {
         ///
         /// It is recorded as the Quarantine it physically is, with a Receipt a
         /// Restore replays, so the fix can be undone like anything else
-        /// AgentSweep took out. The record says it was a fix.
+        /// AgentPatrol took out. The record says it was a fix.
         pub fn fix_with(
             &mut self,
             adapter: &dyn SurfaceAdapter,
@@ -382,7 +382,7 @@ mod writer {
             let mut event = Event::new(Action::Quarantine, cause.actor)
                 .about(&item.id, item.kind, &item.content_hash)
                 .because_of(cause.finding_id.as_str(), cause.tier, cause.rule_id);
-            // What AgentSweep's own write left on the Surface is a known
+            // What AgentPatrol's own write left on the Surface is a known
             // action, so the next Scan does not ask the user about it (ADR
             // 0007). A neutralised Item is still there, at a new hash.
             if let Some(hash) = left_in_place(adapter, host, item, receipt) {
@@ -400,7 +400,7 @@ mod writer {
             Ok(())
         }
 
-        /// Takes an Item that AgentSweep quarantined by itself out again,
+        /// Takes an Item that AgentPatrol quarantined by itself out again,
         /// after something put it back (spec section 5.3).
         ///
         /// A running Claude Code session holds `~/.claude.json` in memory and
@@ -424,7 +424,7 @@ mod writer {
             };
             if entry.actor != Actor::Auto {
                 return Err(refuse(
-                    "only what AgentSweep took out by itself is taken out again by itself",
+                    "only what AgentPatrol took out by itself is taken out again by itself",
                 ));
             }
             if entry.item_id != item.id || entry.content_hash != item.content_hash {
@@ -434,7 +434,7 @@ mod writer {
             }
             if item.scope == crate::item::Scope::Managed {
                 return Err(refuse(
-                    "a Managed Item is read-only for AgentSweep, so it is only ever flagged",
+                    "a Managed Item is read-only for AgentPatrol, so it is only ever flagged",
                 ));
             }
             let primitives = primitives_for(adapter, host, item)?;
@@ -469,7 +469,7 @@ mod writer {
         }
 
         /// Puts one quarantined Item back, and grants Trust in the same
-        /// transaction when AgentSweep took it out by itself.
+        /// transaction when AgentPatrol took it out by itself.
         ///
         /// A Quarantine a person asked for restores without Trust: the user
         /// asked for the content back, not for it to be called safe.
@@ -559,7 +559,7 @@ mod writer {
                 return Err(refuse("only a plugin is re-enabled without being restored"));
             }
             if !entry.natively_disabled {
-                return Err(refuse("this plugin is not switched off by AgentSweep"));
+                return Err(refuse("this plugin is not switched off by AgentPatrol"));
             }
             if fixed.content_hash == receipt.content_hash {
                 return Err(refuse(
@@ -978,7 +978,7 @@ mod tests {
         assert_eq!(record.granted_on, Some(item.id.clone()));
     }
 
-    /// Acceptance of ticket 15: restoring what AgentSweep took out by itself
+    /// Acceptance of ticket 15: restoring what AgentPatrol took out by itself
     /// has to clear the content at T0, or the very next Scan would quarantine
     /// it again and the Restore would mean nothing (spec sections 4.1 and
     /// 5.4).
@@ -1203,7 +1203,7 @@ mod tests {
 
     /// The one-click fix of Rules 0018 and 0019 takes a settings entry out and
     /// is refused for anything else: another Exposure, a Threat, a kind that is
-    /// not an entry, and AgentSweep acting by itself.
+    /// not an entry, and AgentPatrol acting by itself.
     #[test]
     fn only_the_exposures_of_0018_and_0019_on_an_entry_offer_the_fix() {
         let bench = Bench::new();
@@ -1220,7 +1220,7 @@ mod tests {
         for (item, cause, expected) in [
             (&entry, exposure(10, Actor::User), "0018 and 0019"),
             (&entry, cause(Actor::User), "0018 and 0019"),
-            (&entry, exposure(18, Actor::Auto), "never AgentSweep"),
+            (&entry, exposure(18, Actor::Auto), "never AgentPatrol"),
         ] {
             let error = may_fix(item, &cause).expect_err("a refusal");
             assert!(error.to_string().contains(expected), "{error}");
@@ -1283,7 +1283,7 @@ mod tests {
         );
 
         // A person may quarantine any Threat by hand, but never a Managed
-        // Item: the whole Scope is read-only for AgentSweep and is only ever
+        // Item: the whole Scope is read-only for AgentPatrol and is only ever
         // flagged (spec section 5.2).
         let mut managed = bench.item("MANAGED.md", "# demo\n");
         managed.scope = Scope::Managed;
@@ -1431,7 +1431,7 @@ mod tests {
         assert!(error.to_string().contains("only a plugin"), "{error}");
     }
 
-    /// Something put back what AgentSweep took out by itself: it is taken out
+    /// Something put back what AgentPatrol took out by itself: it is taken out
     /// again, the record counts against the first Receipt, and the store keeps
     /// one copy of the content, not two (spec section 5.3).
     #[test]
@@ -1495,7 +1495,7 @@ mod tests {
         assert_eq!(last.sessions_running, SessionsRunning::Yes);
     }
 
-    /// A Quarantine the user asked for is theirs: AgentSweep does not take a
+    /// A Quarantine the user asked for is theirs: AgentPatrol does not take a
     /// reappearance of it out by itself.
     #[test]
     fn only_an_automatic_quarantine_is_re_enforced() {

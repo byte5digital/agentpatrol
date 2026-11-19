@@ -15,7 +15,7 @@
 //! **Adding an adapter.** Implement [`SurfaceAdapter`] in a crate of its own,
 //! add it to [`adapters`], put one fixture tree per case at
 //! `fixtures/<agent id>/<case>/` and record the first snapshot by running the
-//! suite once with `AGENTSWEEP_UPDATE_SNAPSHOTS=1`. Nothing in the core has to
+//! suite once with `AGENTPATROL_UPDATE_SNAPSHOTS=1`. Nothing in the core has to
 //! change for that; if it does, the adapter contract is what is wrong.
 //!
 //! The other half of the contract is what an adapter does rather than what it
@@ -36,23 +36,23 @@ use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::path::Path;
 
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter, eligibility};
-use agentsweep_core::item::{Item, Kind};
-use agentsweep_core::views::{ParsedView, Views};
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter, eligibility};
+use agentpatrol_core::item::{Item, Kind};
+use agentpatrol_core::views::{ParsedView, Views};
 use serde_json::Value;
 
 /// The environment variable that rewrites the snapshots instead of comparing
 /// against them.
-pub const UPDATE: &str = "AGENTSWEEP_UPDATE_SNAPSHOTS";
+pub const UPDATE: &str = "AGENTPATROL_UPDATE_SNAPSHOTS";
 
 /// The Agent ids of the adapters v1 ships, in the order the suite runs them:
 /// the workspace adapter first, because it is the reference adapter.
 pub fn agent_ids() -> [&'static str; 3] {
     [
-        agentsweep_adapter_workspace::AGENT_ID,
-        agentsweep_adapter_claude_code::AGENT_ID,
-        agentsweep_adapter_codex::AGENT_ID,
+        agentpatrol_adapter_workspace::AGENT_ID,
+        agentpatrol_adapter_claude_code::AGENT_ID,
+        agentpatrol_adapter_codex::AGENT_ID,
     ]
 }
 
@@ -60,8 +60,8 @@ pub fn agent_ids() -> [&'static str; 3] {
 pub fn adapters() -> Vec<Box<dyn SurfaceAdapter>> {
     vec![
         Box::new(Workspace::new()),
-        Box::new(agentsweep_adapter_claude_code::ClaudeCode::new()),
-        Box::new(agentsweep_adapter_codex::Codex::new()),
+        Box::new(agentpatrol_adapter_claude_code::ClaudeCode::new()),
+        Box::new(agentpatrol_adapter_codex::Codex::new()),
     ]
 }
 
@@ -611,7 +611,7 @@ mod tests {
         let adapters = adapters();
         assert_eq!(
             adapters[0].descriptor().agent,
-            agentsweep_adapter_workspace::AGENT_ID
+            agentpatrol_adapter_workspace::AGENT_ID
         );
     }
 
@@ -635,12 +635,12 @@ mod tests {
     struct Wrong;
 
     static WRONG_KINDS: &[Kind] = &[Kind::InstructionFile];
-    static WRONG_CAPABILITIES: &[(Kind, &[agentsweep_core::adapter::Primitive])] = &[(
+    static WRONG_CAPABILITIES: &[(Kind, &[agentpatrol_core::adapter::Primitive])] = &[(
         Kind::InstructionFile,
-        &[agentsweep_core::adapter::Primitive::NeutraliseInPlace],
+        &[agentpatrol_core::adapter::Primitive::NeutraliseInPlace],
     )];
-    static WRONG_DESCRIPTOR: agentsweep_core::adapter::Descriptor =
-        agentsweep_core::adapter::Descriptor {
+    static WRONG_DESCRIPTOR: agentpatrol_core::adapter::Descriptor =
+        agentpatrol_core::adapter::Descriptor {
             agent: "wrong",
             display_name: "Wrong",
             kinds: WRONG_KINDS,
@@ -651,30 +651,30 @@ mod tests {
         };
 
     impl SurfaceAdapter for Wrong {
-        fn descriptor(&self) -> &'static agentsweep_core::adapter::Descriptor {
+        fn descriptor(&self) -> &'static agentpatrol_core::adapter::Descriptor {
             &WRONG_DESCRIPTOR
         }
         fn detect(
             &self,
-            _host: &agentsweep_core::host::Host,
-        ) -> agentsweep_core::adapter::Detection {
-            agentsweep_core::adapter::Detection::default()
+            _host: &agentpatrol_core::host::Host,
+        ) -> agentpatrol_core::adapter::Detection {
+            agentpatrol_core::adapter::Detection::default()
         }
         fn projects(
             &self,
-            _host: &agentsweep_core::host::Host,
-        ) -> Vec<agentsweep_core::adapter::ProjectRegistration> {
+            _host: &agentpatrol_core::host::Host,
+        ) -> Vec<agentpatrol_core::adapter::ProjectRegistration> {
             Vec::new()
         }
         fn enumerate(
             &self,
-            _host: &agentsweep_core::host::Host,
+            _host: &agentpatrol_core::host::Host,
             _roots: &[std::path::PathBuf],
         ) -> Enumeration {
             Enumeration::default()
         }
-        fn watch_roots(&self, _enumeration: &Enumeration) -> agentsweep_core::adapter::WatchRoots {
-            let mut roots = agentsweep_core::adapter::WatchRoots::default();
+        fn watch_roots(&self, _enumeration: &Enumeration) -> agentpatrol_core::adapter::WatchRoots {
+            let mut roots = agentpatrol_core::adapter::WatchRoots::default();
             roots.watch(std::path::PathBuf::from("/nowhere"));
             roots
         }
@@ -688,15 +688,15 @@ mod tests {
     fn an_adapter_that_breaks_the_contract_is_told_so() {
         let mut item = Item::file(
             "wrong",
-            agentsweep_core::item::Scope::User,
+            agentpatrol_core::item::Scope::User,
             Kind::EnvFile,
             ".env",
             std::path::PathBuf::from("/elsewhere/.env"),
-            agentsweep_core::item::Provenance::Unknown,
-            agentsweep_core::item::Activation::Unknown,
+            agentpatrol_core::item::Provenance::Unknown,
+            agentpatrol_core::item::Activation::Unknown,
             b"CODEX_HOME=./.codex\n".to_vec(),
         );
-        item.view = ParsedView::Skill(agentsweep_core::views::SkillView::default());
+        item.view = ParsedView::Skill(agentpatrol_core::views::SkillView::default());
         let enumeration = Enumeration {
             items: vec![item],
             problems: Vec::new(),

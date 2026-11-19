@@ -17,9 +17,9 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::finding::Category;
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::RecordedFinding;
+use agentpatrol_core::finding::Category;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::RecordedFinding;
 use serde_json::{Value, json};
 
 /// What the button that shows the how-to says.
@@ -138,8 +138,8 @@ mod tests {
 
     use std::cell::RefCell;
 
-    use agentsweep_core::finding::FindingState;
-    use agentsweep_core::item::Kind;
+    use agentpatrol_core::finding::FindingState;
+    use agentpatrol_core::item::Kind;
 
     use crate::findings::tests::recorded;
 

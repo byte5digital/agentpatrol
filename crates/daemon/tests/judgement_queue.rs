@@ -24,23 +24,23 @@ use std::sync::mpsc::{Receiver, channel};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::finding::{FindingState, Tier};
-use agentsweep_core::judgement::{EngineError, JudgementEngine, Prompt};
-use agentsweep_core::keychain::{ChainKey, ClaudeKeyStore, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::settings::{self, JudgementSettings, Settings, SettingsFile, SettingsWriter};
-use agentsweep_core::state::Trigger;
-use agentsweep_core::verdicts::VerdictCache;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::due::PowerState;
-use agentsweep_daemon::judgement_queue::{Engines, Opened, SystemEngines};
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::{Batch, Decision, Timings};
-use agentsweep_ipc::Client;
-use agentsweep_ipc::engine::EngineChange;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{FolderScanResult, Role, StateEvent, Status};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::finding::{FindingState, Tier};
+use agentpatrol_core::judgement::{EngineError, JudgementEngine, Prompt};
+use agentpatrol_core::keychain::{ChainKey, ClaudeKeyStore, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::settings::{self, JudgementSettings, Settings, SettingsFile, SettingsWriter};
+use agentpatrol_core::state::Trigger;
+use agentpatrol_core::verdicts::VerdictCache;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::due::PowerState;
+use agentpatrol_daemon::judgement_queue::{Engines, Opened, SystemEngines};
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::{Batch, Decision, Timings};
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::engine::EngineChange;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{FolderScanResult, Role, StateEvent, Status};
 
 #[path = "../../core/tests/fixture_ollama/mod.rs"]
 mod fixture_ollama;
@@ -208,7 +208,7 @@ fn request_hash_of(prompt: &Prompt) -> String {
     let user = prompt.user();
     let start = user.find(&open).map(|at| at + open.len()).unwrap_or(0);
     let end = user.rfind(&close).unwrap_or(user.len());
-    agentsweep_core::item::sha256_hex(&user.as_bytes()[start..end])
+    agentpatrol_core::item::sha256_hex(&user.as_bytes()[start..end])
 }
 
 /// The engine seam: every engine the settings name is the one fake, under a
@@ -249,7 +249,7 @@ impl Sandbox {
     /// Judgement Engine and `fake` the engine every request reaches.
     fn new(purpose: &str, engine: settings::JudgementEngine, fake: Arc<FakeEngine>) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-queue-{purpose}-{}-{}",
+            "agentpatrol-queue-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -284,8 +284,8 @@ impl Sandbox {
         sandbox
     }
 
-    fn data(&self) -> agentsweep_core::paths::DataDirectory {
-        agentsweep_core::paths::DataDirectory::at(self.root.join("data"))
+    fn data(&self) -> agentpatrol_core::paths::DataDirectory {
+        agentpatrol_core::paths::DataDirectory::at(self.root.join("data"))
     }
 
     fn write(&self, relative: &str, content: &str) {
@@ -487,7 +487,7 @@ fn wait_for_the_queue(daemon: &Background) {
 fn findings_on<'s>(
     status: &'s Status,
     name: &str,
-) -> Vec<&'s agentsweep_core::state::RecordedFinding> {
+) -> Vec<&'s agentpatrol_core::state::RecordedFinding> {
     status
         .findings
         .iter()
@@ -837,8 +837,8 @@ fn an_engine_error_leaves_the_item_ambiguous_and_the_next_scan_asks_again() {
 /// force is applied without asking.
 #[test]
 fn a_verdict_cached_under_an_older_prompt_version_opens_nothing() {
-    use agentsweep_core::judgement::{Category, Verdict};
-    use agentsweep_core::verdicts::{CachedVerdict, VerdictCacheWriter, cache_key};
+    use agentpatrol_core::judgement::{Category, Verdict};
+    use agentpatrol_core::verdicts::{CachedVerdict, VerdictCacheWriter, cache_key};
 
     let sandbox = Sandbox::new(
         "old-prompt",
@@ -1056,8 +1056,8 @@ fn switching_off_closes_the_ai_findings_at_once_with_one_activity_line() {
 /// cached Verdict applies at once, as today, without asking.
 #[test]
 fn switching_the_engine_keeps_only_the_new_engine_s_verdicts() {
-    use agentsweep_core::judgement::{Category, Verdict};
-    use agentsweep_core::verdicts::{CachedVerdict, VerdictCacheWriter, cache_key};
+    use agentpatrol_core::judgement::{Category, Verdict};
+    use agentpatrol_core::verdicts::{CachedVerdict, VerdictCacheWriter, cache_key};
 
     let sandbox = Sandbox::new(
         "switch-closes",
@@ -1153,7 +1153,7 @@ fn switching_the_engine_keeps_only_the_new_engine_s_verdicts() {
 /// under.
 #[test]
 fn ollama_verdicts_are_cached_and_kept_under_the_tag_and_digest() {
-    use agentsweep_core::verdicts::{CachedVerdict, VerdictCacheWriter};
+    use agentpatrol_core::verdicts::{CachedVerdict, VerdictCacheWriter};
     use fixture_ollama::{Behaviour, FixtureOllama, tags};
 
     let malicious = serde_json::json!({
@@ -1223,7 +1223,7 @@ fn ollama_verdicts_are_cached_and_kept_under_the_tag_and_digest() {
             "ollama",
             "qwen3:8b",
             Timestamp::now(),
-            &agentsweep_core::judgement::Verdict::Unsure,
+            &agentpatrol_core::judgement::Verdict::Unsure,
         ))
         .expect("a Verdict under the bare tag");
     sandbox.scan_now(&daemon);
@@ -1257,7 +1257,7 @@ fn ollama_verdicts_are_cached_and_kept_under_the_tag_and_digest() {
 }
 
 /// The T3 Findings of a Folder Scan: the ones a malicious Verdict opened.
-fn judged_in(result: &FolderScanResult) -> Vec<&agentsweep_core::state::RecordedFinding> {
+fn judged_in(result: &FolderScanResult) -> Vec<&agentpatrol_core::state::RecordedFinding> {
     result
         .findings
         .iter()

@@ -119,7 +119,7 @@ pub enum Verdict {
         /// The version in use.
         in_use: u64,
     },
-    /// Newer, but it needs a newer AgentSweep. Ignored with a visible notice.
+    /// Newer, but it needs a newer AgentPatrol. Ignored with a visible notice.
     NeedsNewerEngine {
         /// The version the pack states.
         offered: u64,

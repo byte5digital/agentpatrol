@@ -14,9 +14,9 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::Problem;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Kind, Scope};
+use agentpatrol_core::adapter::Problem;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Kind, Scope};
 use serde_json::Value;
 
 use crate::document::{self, Document};

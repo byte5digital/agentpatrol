@@ -3,7 +3,7 @@
 //!
 //! Nothing here runs a git binary and nothing here authenticates: every URL is
 //! a public archive or a public file at a pinned commit. A download lands in
-//! `target/agentsweep-benign-corpus/cache` under a name that carries the
+//! `target/agentpatrol-benign-corpus/cache` under a name that carries the
 //! commit, so a re-pin never reads the previous content and a machine that has
 //! run once can run again with the network unplugged.
 
@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn a_cached_download_is_read_without_reaching_the_network() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-benign-cache-")
+            .prefix("agentpatrol-benign-cache-")
             .tempdir()
             .expect("a cache directory");
         let directory = temporary.path().to_path_buf();
@@ -147,7 +147,7 @@ mod tests {
     #[test]
     fn a_host_that_does_not_resolve_reads_as_offline() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-benign-cache-")
+            .prefix("agentpatrol-benign-cache-")
             .tempdir()
             .expect("a temporary folder");
         // A cache directory nothing has created yet.

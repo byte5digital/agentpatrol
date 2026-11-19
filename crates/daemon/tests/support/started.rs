@@ -11,7 +11,7 @@
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 
-use agentsweep_daemon::service::Daemon;
+use agentpatrol_daemon::service::Daemon;
 
 /// How long a sandbox waits for its daemons at most. A daemon a subscriber
 /// still holds stays alive until the process ends, so the wait is bounded.

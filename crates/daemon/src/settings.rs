@@ -19,11 +19,11 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use agentsweep_core::eventlog::Actor;
-use agentsweep_core::settings::{
+use agentpatrol_core::eventlog::Actor;
+use agentpatrol_core::settings::{
     CONFIG_DIRS, ChoiceRefused, ConfigDir, Posture, SettingsFile, SettingsWriter,
 };
-use agentsweep_ipc::protocol::{RequestError, SettingsChange, SettingsState, StateEvent};
+use agentpatrol_ipc::protocol::{RequestError, SettingsChange, SettingsState, StateEvent};
 
 use crate::machine::{Machine, agents};
 use crate::service::Daemon;

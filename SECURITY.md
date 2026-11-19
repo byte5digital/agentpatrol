@@ -1,10 +1,10 @@
 # Security policy
 
-AgentSweep is a security utility, so a weakness in it is a weakness in whatever it was meant to protect. This file says where to report one and how the project handles the keys a user's machine has to trust.
+AgentPatrol is a security utility, so a weakness in it is a weakness in whatever it was meant to protect. This file says where to report one and how the project handles the keys a user's machine has to trust.
 
 ## Reporting a vulnerability
 
-Report privately through GitHub's private vulnerability reporting on `byte5digital/agentsweep`: open the Security tab and choose "Report a vulnerability". Please do not open a public issue for anything that puts users at risk before there is a fix.
+Report privately through GitHub's private vulnerability reporting on `byte5digital/agentpatrol`: open the Security tab and choose "Report a vulnerability". Please do not open a public issue for anything that puts users at risk before there is a fix.
 
 Say what you found, what an attacker gets out of it, and how to reproduce it. If a proof of concept touches a coding agent's configuration, defang it the way the rule corpus does: hosts under `.invalid` and payloads that decode to `echo`. We will tell you what we found and when a fix ships.
 
@@ -16,9 +16,9 @@ Only the most recent release receives fixes. There are no update channels and no
 
 ## What the project promises
 
-Self protection is tamper evident, not tamper resistant (ADR 0001). AgentSweep runs with the user's own privileges and no root helper, so it shows that protection is off or that its records were tampered with rather than claiming it can prevent either. The README lists what AgentSweep does not defend against.
+Self protection is tamper evident, not tamper resistant (ADR 0001). AgentPatrol runs with the user's own privileges and no root helper, so it shows that protection is off or that its records were tampered with rather than claiming it can prevent either. The README lists what AgentPatrol does not defend against.
 
-Nothing leaves the machine except the three disclosed requests: the Rule Feed fetch, the application update check and the opt-in Claude API call under the user's own key. There is no telemetry and no crash reporting. A report that AgentSweep sent something else is a security report.
+Nothing leaves the machine except the three disclosed requests: the Rule Feed fetch, the application update check and the opt-in Claude API call under the user's own key. There is no telemetry and no crash reporting. A report that AgentPatrol sent something else is a security report.
 
 ## The keys a client trusts
 

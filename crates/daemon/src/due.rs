@@ -20,7 +20,7 @@
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
-use agentsweep_core::envelope::Timestamp;
+use agentpatrol_core::envelope::Timestamp;
 
 /// How old the last completed Full Scan has to be before the next one is due.
 pub const DUE_AFTER_MS: i64 = 24 * 3_600_000;
@@ -203,7 +203,7 @@ pub fn every(schedule: Schedule, ask: impl Fn(Occasion) + Send + 'static) -> Due
     let stopping = Arc::new(Stop::default());
     let flag = Arc::clone(&stopping);
     let thread = std::thread::Builder::new()
-        .name("agentsweep-due-check".to_string())
+        .name("agentpatrol-due-check".to_string())
         .spawn(move || run(&schedule, &flag, ask))
         .expect("the due check thread starts");
     DueCheck {

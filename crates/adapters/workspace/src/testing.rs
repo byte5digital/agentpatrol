@@ -30,7 +30,7 @@ impl TemporaryRepository {
     /// about.
     pub fn new(name: &str) -> TemporaryRepository {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-workspace-{name}-{}-{}",
+            "agentpatrol-workspace-{name}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

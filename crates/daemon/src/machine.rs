@@ -14,11 +14,11 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_core::adapter::SurfaceAdapter;
-use agentsweep_core::host::Host;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_core::adapter::SurfaceAdapter;
+use agentpatrol_core::host::Host;
 
 /// The root every absolute system path is resolved against on a real machine.
 const SYSTEM_ROOT: &str = "/";
@@ -169,7 +169,7 @@ mod tests {
 
     #[test]
     fn the_real_machine_reads_the_system_root_and_the_search_path() {
-        let machine = Machine::real(PathBuf::from("/nowhere/agentsweep"));
+        let machine = Machine::real(PathBuf::from("/nowhere/agentpatrol"));
         let host = machine.inventory();
         assert_eq!(host.system_root(), Some(Path::new(SYSTEM_ROOT)));
     }

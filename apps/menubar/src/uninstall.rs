@@ -1,11 +1,11 @@
-//! **Uninstall AgentSweep…** in Settings (spec sections 8.10 and 9.6).
+//! **Uninstall AgentPatrol…** in Settings (spec sections 8.10 and 9.6).
 //!
 //! The pane offers three choices about what is in quarantine, **Restore all N
 //! quarantined items**, **Keep them in quarantine** (the default) and
 //! **Delete everything**, and then, in this order:
 //!
 //! 1. asks the daemon with the one `uninstall` request, the same request and
-//!    the same default as `agentsweep uninstall`: the daemon takes the
+//!    the same default as `agentpatrol uninstall`: the daemon takes the
 //!    Gate's entries and the Codex pin away from every Agent and applies the
 //!    choice, since it is the only writer of the stores;
 //! 2. unregisters the daemon and the login item through [`Services`];
@@ -13,28 +13,28 @@
 //!
 //! A daemon that does not answer stops the flow before anything is
 //! unregistered: only the daemon can take its hooks out of the Agents'
-//! settings, and the user is told to start AgentSweep first. Both seams have
+//! settings, and the user is told to start AgentPatrol first. Both seams have
 //! stand-ins in the suite, so no test touches launchd, Login Items or the real
 //! Trash; [`SystemTrash`] is the thin part that asks the operating system and
 //! is checked by hand (`docs/hand-checks.md`).
 //!
-//! `agentsweep uninstall` asks the daemon the same way and then runs this
+//! `agentpatrol uninstall` asks the daemon the same way and then runs this
 //! app's executable with `--finish-uninstall`, since the registrations are
 //! the app's and only its own executable takes them off. That run is
-//! [`finish`]: it quits a running AgentSweep through [`Running`], then
+//! [`finish`]: it quits a running AgentPatrol through [`Running`], then
 //! unregisters both. The command line cannot move the bundle it runs from,
 //! so it asks the user to.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use agentsweep_ipc::protocol::{UninstallChoice, UninstallReport};
+use agentpatrol_ipc::protocol::{UninstallChoice, UninstallReport};
 use serde_json::{Value, json};
 
 use crate::asking::{Asking, refusal};
 use crate::supervision::{self, Services};
 
-/// How long a running AgentSweep is given to quit.
+/// How long a running AgentPatrol is given to quit.
 pub const QUIT_WAIT: Duration = Duration::from_secs(10);
 
 /// The copies of the app that run now, other than this process.
@@ -58,7 +58,7 @@ impl Running for SystemRunning {
         use objc2_foundation::NSString;
 
         let own = libc::pid_t::try_from(std::process::id()).unwrap_or(-1);
-        let bundle = NSString::from_str(agentsweep_core::BUNDLE_ID);
+        let bundle = NSString::from_str(agentpatrol_core::BUNDLE_ID);
         let mut quitting: Vec<libc::pid_t> = Vec::new();
         for app in NSRunningApplication::runningApplicationsWithBundleIdentifier(&bundle) {
             let pid = app.processIdentifier();
@@ -92,14 +92,14 @@ impl Running for SystemRunning {
     }
 }
 
-/// `--finish-uninstall`, which `agentsweep uninstall` runs once the daemon
-/// has applied the choice: quits a running AgentSweep, so nothing of it is
+/// `--finish-uninstall`, which `agentpatrol uninstall` runs once the daemon
+/// has applied the choice: quits a running AgentPatrol, so nothing of it is
 /// left open, then unregisters the daemon and the login item, which stops
 /// the daemon. Answers what could not be done, one line each.
 pub fn finish(running: &dyn Running, services: &dyn Services) -> Vec<String> {
     let mut left = Vec::new();
     if running.quit(QUIT_WAIT) > 0 {
-        left.push("AgentSweep did not quit".to_string());
+        left.push("AgentPatrol did not quit".to_string());
     }
     left.extend(supervision::unregister_everything(services));
     left
@@ -171,11 +171,11 @@ fn explanation(choice: UninstallChoice) -> &'static str {
              now stays in quarantine."
         }
         UninstallChoice::Keep => {
-            "Nothing is put back and nothing is deleted. Installing AgentSweep again picks up \
+            "Nothing is put back and nothing is deleted. Installing AgentPatrol again picks up \
              where it left off."
         }
         UninstallChoice::DeleteEverything => {
-            "The quarantined items, AgentSweep's records, its logs, its caches and its settings \
+            "The quarantined items, AgentPatrol's records, its logs, its caches and its settings \
              are deleted for good."
         }
     }
@@ -184,10 +184,10 @@ fn explanation(choice: UninstallChoice) -> &'static str {
 /// The Uninstall section of the Settings pane, at its foot.
 pub fn section() -> Value {
     json!({
-        "title": "Uninstall AgentSweep",
-        "line": "Takes AgentSweep's hooks out of Claude Code and Codex, stops it, and moves the \
+        "title": "Uninstall AgentPatrol",
+        "line": "Takes AgentPatrol's hooks out of Claude Code and Codex, stops it, and moves the \
                  app to the Trash.",
-        "button": "Uninstall AgentSweep…",
+        "button": "Uninstall AgentPatrol…",
     })
 }
 
@@ -217,7 +217,7 @@ pub fn choice_of(asked: &Value) -> Result<UninstallChoice, String> {
         Some(choice) => choice
             .as_str()
             .and_then(UninstallChoice::parse)
-            .ok_or_else(|| "That is not a choice AgentSweep knows. Nothing was done.".to_string()),
+            .ok_or_else(|| "That is not a choice AgentPatrol knows. Nothing was done.".to_string()),
     }
 }
 
@@ -249,9 +249,9 @@ impl Uninstalled {
         );
         lines.extend(self.unregistered.iter().cloned());
         lines.push(match &self.trashed {
-            Ok(()) => "AgentSweep is in the Trash and quits now.".to_string(),
+            Ok(()) => "AgentPatrol is in the Trash and quits now.".to_string(),
             Err(why) => format!(
-                "AgentSweep could not be moved to the Trash ({why}). Quit it, then drag it {}to \
+                "AgentPatrol could not be moved to the Trash ({why}). Quit it, then drag it {}to \
                  the Trash.",
                 match self.bundle.as_deref().and_then(Path::parent) {
                     Some(folder) => format!("from {} ", folder.display()),
@@ -275,7 +275,7 @@ pub fn carry_out(
 ) -> Result<Uninstalled, String> {
     let report = asking.uninstall(choice).map_err(|error| {
         format!(
-            "{} Start AgentSweep and try again, so it can take its hooks out of Claude Code and \
+            "{} Start AgentPatrol and try again, so it can take its hooks out of Claude Code and \
              Codex first.",
             refusal(&error)
         )
@@ -301,12 +301,12 @@ mod tests {
     fn the_bundle_is_the_nearest_app_above_the_executable() {
         assert_eq!(
             bundle_of(Path::new(
-                "/Applications/AgentSweep.app/Contents/MacOS/agentsweep-menubar"
+                "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol-menubar"
             )),
-            Some(PathBuf::from("/Applications/AgentSweep.app"))
+            Some(PathBuf::from("/Applications/AgentPatrol.app"))
         );
         assert_eq!(
-            bundle_of(Path::new("/src/target/debug/agentsweep-menubar")),
+            bundle_of(Path::new("/src/target/debug/agentpatrol-menubar")),
             None
         );
     }
@@ -334,6 +334,6 @@ mod tests {
             view["choices"][0]["label"],
             "Restore all 2 quarantined items"
         );
-        assert_eq!(section()["button"], "Uninstall AgentSweep…");
+        assert_eq!(section()["button"], "Uninstall AgentPatrol…");
     }
 }

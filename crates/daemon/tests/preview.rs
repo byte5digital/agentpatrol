@@ -23,19 +23,19 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::judgement::{EngineError, JudgementEngine, Prompt, SYSTEM_PROMPT};
-use agentsweep_core::keychain::{ChainKey, ClaudeKeyStore, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::preview::SAMPLE_LOCATOR;
-use agentsweep_core::settings::{self, JudgementSettings, Settings, SettingsFile, SettingsWriter};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::judgement_queue::{Engines, Opened};
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::preview::{PreviewOutcome, RequestPreview};
-use agentsweep_ipc::protocol::Role;
+use agentpatrol_core::judgement::{EngineError, JudgementEngine, Prompt, SYSTEM_PROMPT};
+use agentpatrol_core::keychain::{ChainKey, ClaudeKeyStore, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::preview::SAMPLE_LOCATOR;
+use agentpatrol_core::settings::{self, JudgementSettings, Settings, SettingsFile, SettingsWriter};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::judgement_queue::{Engines, Opened};
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::preview::{PreviewOutcome, RequestPreview};
+use agentpatrol_ipc::protocol::Role;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -106,7 +106,7 @@ impl Sandbox {
     /// Judgement Engine.
     fn new(purpose: &str, engine: settings::JudgementEngine) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-preview-{purpose}-{}-{}",
+            "agentpatrol-preview-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -162,7 +162,7 @@ impl Sandbox {
     fn start(&self) -> Background {
         let daemon = Daemon::open_tuned(
             &self.options(),
-            Arc::new(agentsweep_ipc::peer::SameUser),
+            Arc::new(agentpatrol_ipc::peer::SameUser),
             Box::new(MemoryKeySource::holding(
                 ChainKey::generate().expect("a key"),
             )),
@@ -188,7 +188,7 @@ impl Sandbox {
         &self,
         item: Option<&str>,
         engine: settings::JudgementEngine,
-    ) -> Result<RequestPreview, agentsweep_ipc::ClientError> {
+    ) -> Result<RequestPreview, agentpatrol_ipc::ClientError> {
         Client::connect_at(&self.socket, Role::App)
             .expect("a client")
             .preview_request(item, engine)
@@ -422,7 +422,7 @@ fn too_large_for_apple_shows_windows_for_claude() {
             .expect("a preview"),
     );
     assert!(claude.windowed);
-    assert!(claude.user.contains("bytes elided by AgentSweep"));
+    assert!(claude.user.contains("bytes elided by AgentPatrol"));
     assert!(claude.user.contains("Developer mode is enabled"));
     drop(daemon);
 }

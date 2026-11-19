@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Fails when a commit carries no Developer Certificate of Origin sign-off that
-# matches its author. Every contribution to AgentSweep is signed off with
+# matches its author. Every contribution to AgentPatrol is signed off with
 # `git commit -s`; the certificate itself is the file DCO in the repository
 # root, and there is no CLA.
 #

@@ -1,6 +1,6 @@
-# Dependency policy for AgentSweep, enforced by `cargo deny` in CI.
+# Dependency policy for AgentPatrol, enforced by `cargo deny` in CI.
 #
-# AgentSweep is a security utility that ships as a notarized macOS bundle, so a
+# AgentPatrol is a security utility that ships as a notarized macOS bundle, so a
 # dependency reaches a user's machine with the same privileges the user has.
 # Three questions decide whether it may: is it free of known advisories, is its
 # licence compatible with Apache-2.0, and does it come from crates.io.
@@ -24,7 +24,7 @@ ignore = [
     # left with the upgrade on 2026-11-03.
     #
     # Unmaintained, not a vulnerability. YARA-X uses bincode to serialise
-    # compiled rules. AgentSweep compiles its Rule Pack from source and
+    # compiled rules. AgentPatrol compiles its Rule Pack from source and
     # verifies the Rule Feed's signature before it reads a pack at all, so no
     # untrusted bincode stream is ever decoded.
     "RUSTSEC-2025-0141",
@@ -42,7 +42,7 @@ ignore = [
 ]
 
 [licenses]
-# Apache-2.0 for AgentSweep itself, including the rule corpus. The permissive
+# Apache-2.0 for AgentPatrol itself, including the rule corpus. The permissive
 # licences below are the ones a dependency may carry. Anything else needs an
 # entry under `exceptions` and a look at what it obliges us to ship.
 allow = [

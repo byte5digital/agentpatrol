@@ -9,11 +9,11 @@ mod fixture_ollama;
 
 use std::path::Path;
 
-use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
-use agentsweep_core::judgement::judge;
-use agentsweep_core::judgement_request::Normalisation;
-use agentsweep_core::ollama::{OllamaClient, OllamaEngine, OllamaPresence, request_builder};
-use agentsweep_core::settings::OllamaAddress;
+use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
+use agentpatrol_core::judgement::judge;
+use agentpatrol_core::judgement_request::Normalisation;
+use agentpatrol_core::ollama::{OllamaClient, OllamaEngine, OllamaPresence, request_builder};
+use agentpatrol_core::settings::OllamaAddress;
 use serde_json::json;
 
 use fixture_ollama::{Behaviour, FixtureOllama, tags};

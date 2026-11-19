@@ -1,6 +1,6 @@
 name: App release
 
-# Pushing a protected `v<semver>` tag builds, signs and notarizes AgentSweep
+# Pushing a protected `v<semver>` tag builds, signs and notarizes AgentPatrol
 # into a draft GitHub release (spec sections 9.1 and 9.2). A human runs the
 # release checklist on the draft and publishes it; nothing here publishes.
 # Every check runs before the draft exists, so a draft is only ever made from
@@ -50,7 +50,7 @@ jobs:
       - name: Name the working paths
         run: |
           echo "RELEASE_DIR=${RUNNER_TEMP}/app-release" >> "${GITHUB_ENV}"
-          echo "KEYCHAIN=${RUNNER_TEMP}/agentsweep-release.keychain-db" >> "${GITHUB_ENV}"
+          echo "KEYCHAIN=${RUNNER_TEMP}/agentpatrol-release.keychain-db" >> "${GITHUB_ENV}"
           echo "APPLE_API_KEY_PATH=${RUNNER_TEMP}/app-store-connect-api-key.p8" >> "${GITHUB_ENV}"
 
       # The app, the daemon and the CLI share one version: the tag must name
@@ -175,7 +175,7 @@ jobs:
           ARCHIVE: ${{ steps.stage.outputs.archive }}
         run: |
           status=0
-          for subject in "${BUNDLE_DIR}/macos/AgentSweep.app" "${RELEASE_DIR}/${DMG}" "${RELEASE_DIR}/${ARCHIVE}"; do
+          for subject in "${BUNDLE_DIR}/macos/AgentPatrol.app" "${RELEASE_DIR}/${DMG}" "${RELEASE_DIR}/${ARCHIVE}"; do
             .github/scripts/check-bundle-signature.sh "${APPLE_SIGNING_IDENTITY}" "${subject}" || status=1
           done
           exit "${status}"
@@ -211,8 +211,8 @@ jobs:
         run: |
           id="$(gh api --method POST "repos/${GITHUB_REPOSITORY}/releases" \
             -f tag_name="${GITHUB_REF_NAME}" \
-            -f name="AgentSweep ${VERSION}" \
-            -f body="AgentSweep ${VERSION}, signed and notarized. Run the release checklist before publishing." \
+            -f name="AgentPatrol ${VERSION}" \
+            -f body="AgentPatrol ${VERSION}, signed and notarized. Run the release checklist before publishing." \
             -F draft=true \
             -F prerelease="${PRERELEASE}" \
             --jq .id)"

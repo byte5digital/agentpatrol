@@ -32,7 +32,7 @@ static NEXT: AtomicU32 = AtomicU32::new(0);
 
 /// The binary this suite was compiled as.
 fn this_build() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_agentsweep"))
+    PathBuf::from(env!("CARGO_BIN_EXE_agentpatrol"))
 }
 
 /// Runs Cargo from this package's own directory, offline and from the lock
@@ -58,7 +58,7 @@ fn built(arguments: &[&str], binary: &str) -> PathBuf {
         .parent()
         .and_then(Path::parent)
         .expect("the target directory")
-        .join("agentsweep-variants");
+        .join("agentpatrol-variants");
     let target_arg = target.to_string_lossy().to_string();
     let mut all = vec!["build", "--target-dir", target_arg.as_str()];
     all.extend_from_slice(arguments);
@@ -77,7 +77,12 @@ fn built(arguments: &[&str], binary: &str) -> PathBuf {
 fn crates_io_build() -> PathBuf {
     static BUILT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
     BUILT
-        .get_or_init(|| built(&["-p", "agentsweep", "--bin", "agentsweep"], "agentsweep"))
+        .get_or_init(|| {
+            built(
+                &["-p", "agentpatrol", "--bin", "agentpatrol"],
+                "agentpatrol",
+            )
+        })
         .clone()
 }
 
@@ -88,8 +93,8 @@ fn daemon_build() -> PathBuf {
     BUILT
         .get_or_init(|| {
             built(
-                &["-p", "agentsweep-daemon", "--bin", "agentsweepd"],
-                "agentsweepd",
+                &["-p", "agentpatrol-daemon", "--bin", "agentpatrold"],
+                "agentpatrold",
             )
         })
         .clone()
@@ -116,7 +121,7 @@ struct Temporary(PathBuf);
 impl Temporary {
     fn new(purpose: &str) -> Temporary {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-cli-{purpose}-{}-{}",
+            "agentpatrol-cli-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -234,7 +239,7 @@ fn the_crates_io_build_has_no_ipc_crate_in_its_dependency_graph() {
         let mut arguments = vec![
             "tree",
             "-p",
-            "agentsweep",
+            "agentpatrol",
             "-e",
             "normal",
             "--prefix",
@@ -251,14 +256,14 @@ fn the_crates_io_build_has_no_ipc_crate_in_its_dependency_graph() {
     };
 
     let crates_io = tree(&[]);
-    assert!(crates_io.contains("agentsweep-core"), "{crates_io}");
-    assert!(!crates_io.contains("agentsweep-ipc"), "{crates_io}");
+    assert!(crates_io.contains("agentpatrol-core"), "{crates_io}");
+    assert!(!crates_io.contains("agentpatrol-ipc"), "{crates_io}");
     assert!(!crates_io.contains("interprocess"), "{crates_io}");
-    assert!(!crates_io.contains("agentsweep-daemon"), "{crates_io}");
+    assert!(!crates_io.contains("agentpatrol-daemon"), "{crates_io}");
 
     let bundle = tree(&["--features", "bundle"]);
-    assert!(bundle.contains("agentsweep-ipc"), "{bundle}");
-    assert!(!bundle.contains("agentsweep-daemon"), "{bundle}");
+    assert!(bundle.contains("agentpatrol-ipc"), "{bundle}");
+    assert!(!bundle.contains("agentpatrol-daemon"), "{bundle}");
 
     // Neither build links the Claude client, which is the daemon's alone;
     // only the in-bundle build turns the Apple on-device engine on.
@@ -266,11 +271,11 @@ fn the_crates_io_build_has_no_ipc_crate_in_its_dependency_graph() {
         let mut arguments = vec![
             "tree",
             "-p",
-            "agentsweep",
+            "agentpatrol",
             "-e",
             "normal,features",
             "-i",
-            "agentsweep-core",
+            "agentpatrol-core",
         ];
         arguments.extend_from_slice(extra);
         let output = cargo(&arguments);
@@ -281,7 +286,7 @@ fn the_crates_io_build_has_no_ipc_crate_in_its_dependency_graph() {
         );
         text(&output.stdout)
     };
-    let apple = "agentsweep-core feature \"apple\"";
+    let apple = "agentpatrol-core feature \"apple\"";
     let crates_io_features = features(&[]);
     assert!(!crates_io_features.contains(apple), "{crates_io_features}");
     assert!(!crates_io.contains("ureq"), "{crates_io}");
@@ -301,12 +306,12 @@ mod crates_io {
         let output = run(&this_build(), &["--help"]);
         let help = text(&output.stdout);
         assert_eq!(output.status.code(), Some(0), "{help}");
-        assert!(help.contains("agentsweep scan <dir>"), "{help}");
+        assert!(help.contains("agentpatrol scan <dir>"), "{help}");
         assert!(
             help.contains("This build runs on its own and cannot show status"),
             "{help}"
         );
-        assert!(!help.contains("agentsweep status"), "{help}");
+        assert!(!help.contains("agentpatrol status"), "{help}");
         assert!(
             help.contains("Ollama, the only AI\n                          engine this build has"),
             "{help}"
@@ -408,7 +413,7 @@ mod bundle {
             help.contains("This build runs on its own and cannot show status"),
             "{help}"
         );
-        assert!(!help.contains("agentsweep status"), "{help}");
+        assert!(!help.contains("agentpatrol status"), "{help}");
 
         let bare = run(&crates_io, &["scan"]);
         let said = text(&bare.stderr);
@@ -433,7 +438,7 @@ mod bundle {
     #[test]
     fn a_bare_scan_without_a_daemon_is_protection_off() {
         let nowhere = std::env::temp_dir().join(format!(
-            "agentsweep-cli-nobody-{}-{}.sock",
+            "agentpatrol-cli-nobody-{}-{}.sock",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -620,10 +625,10 @@ mod bundle {
         assert!(printed.ends_with("Nothing is open.\n"), "{printed}");
     }
 
-    /// `agentsweep uninstall` without a flag is Keep: the daemon takes the
+    /// `agentpatrol uninstall` without a flag is Keep: the daemon takes the
     /// Gate it registered out of the temporary home's Claude Code settings,
     /// keeps the data directory, takes no further work, and the command
-    /// ends by asking the user to quit AgentSweep and drag it to the Trash.
+    /// ends by asking the user to quit AgentPatrol and drag it to the Trash.
     /// Run from outside a bundle, as here, it unregisters nothing.
     #[test]
     fn uninstall_without_a_flag_keeps_and_takes_the_gate_away() {
@@ -644,7 +649,7 @@ mod bundle {
             "{printed}"
         );
         assert!(
-            printed.ends_with("Quit AgentSweep, then drag it to the Trash.\n"),
+            printed.ends_with("Quit AgentPatrol, then drag it to the Trash.\n"),
             "{printed}"
         );
         assert!(!gate_in(), "the Gate entries are gone");
@@ -654,7 +659,7 @@ mod bundle {
         assert_ne!(refused.status.code(), Some(0), "{}", text(&refused.stdout));
     }
 
-    /// From a bundle, `agentsweep uninstall` runs the app's own executable
+    /// From a bundle, `agentpatrol uninstall` runs the app's own executable
     /// with `--finish-uninstall` once the daemon has applied the choice. Here
     /// a stand-in for it notes the flag and stops the test's daemon with the
     /// `SIGTERM` that unregistering sends, so no launchd job and no Login
@@ -666,14 +671,14 @@ mod bundle {
 
         let daemon = Daemon::over(clean_home());
         let place = Temporary::new("bundle");
-        let macos = place.path().join("Apps/AgentSweep.app/Contents/MacOS");
+        let macos = place.path().join("Apps/AgentPatrol.app/Contents/MacOS");
         fs::create_dir_all(&macos).expect("a bundle");
-        let cli = macos.join("agentsweep");
+        let cli = macos.join("agentpatrol");
         fs::copy(this_build(), &cli).expect("the CLI in the bundle");
-        let app = macos.join("agentsweep-menubar");
+        let app = macos.join("agentpatrol-menubar");
         fs::write(
             &app,
-            "#!/bin/sh\necho \"$@\" > \"$AGENTSWEEP_TEST_FLAG\"\nkill -TERM \"$AGENTSWEEP_TEST_DAEMON\"\n",
+            "#!/bin/sh\necho \"$@\" > \"$AGENTPATROL_TEST_FLAG\"\nkill -TERM \"$AGENTPATROL_TEST_DAEMON\"\n",
         )
         .expect("a stand-in for the app");
         fs::set_permissions(&app, fs::Permissions::from_mode(0o755)).expect("executable");
@@ -688,8 +693,8 @@ mod bundle {
                 &daemon.socket(),
             ])
             .env("HOME", home.path())
-            .env("AGENTSWEEP_TEST_FLAG", &flag)
-            .env("AGENTSWEEP_TEST_DAEMON", daemon.child.id().to_string())
+            .env("AGENTPATROL_TEST_FLAG", &flag)
+            .env("AGENTPATROL_TEST_DAEMON", daemon.child.id().to_string())
             .output()
             .expect("the CLI runs");
         let printed = text(&output.stdout);
@@ -701,7 +706,7 @@ mod bundle {
         assert!(!daemon.socket.exists(), "the daemon unlinked its socket");
         assert!(
             printed.ends_with(&format!(
-                "AgentSweep has stopped. Now drag it from {} to the Trash.\n",
+                "AgentPatrol has stopped. Now drag it from {} to the Trash.\n",
                 // The command names the folder as the file system resolves
                 // it, `/private/var` for the temporary directory.
                 fs::canonicalize(place.path().join("Apps"))
@@ -731,8 +736,8 @@ mod bundle {
         assert_eq!(output.status.code(), Some(3), "{printed}");
         assert_eq!(
             printed,
-            "Nothing was changed: AgentSweep is not running.\nIts hooks, its data and its \
-             background item stay. Open AgentSweep, then run this again.\n"
+            "Nothing was changed: AgentPatrol is not running.\nIts hooks, its data and its \
+             background item stay. Open AgentPatrol, then run this again.\n"
         );
     }
 
@@ -779,10 +784,10 @@ mod bundle {
             )
         };
         let deny = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\
-                    \"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"AgentSweep \
+                    \"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"AgentPatrol \
                     blocked this step: the skill, tool or script it uses is flagged and waits \
                     for the user's decision. Do not retry or work around it. Tell the user to \
-                    open AgentSweep.\"}}\n";
+                    open AgentPatrol.\"}}\n";
 
         for event in [
             call(caller.path(), "Skill", r#"{"skill":"setup"}"#),

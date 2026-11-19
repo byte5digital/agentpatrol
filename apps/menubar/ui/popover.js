@@ -61,7 +61,7 @@ function render(view) {
   // When no daemon answers the app shows its banner and offers nothing else
   // (spec section 6.2).
   asking.hidden = view.protectionOff;
-  // "Update ready, restart AgentSweep" once an update is downloaded and
+  // "Update ready, restart AgentPatrol" once an update is downloaded and
   // verified; quitting installs it (spec section 9.4).
   updateReady.textContent = view.updateReady ?? "";
   updateReady.hidden = !view.updateReady;
@@ -83,5 +83,5 @@ scanNow.addEventListener("click", async () => {
 });
 scanFolder.addEventListener("click", () => invoke("scan_folder").catch((why) => say(String(why))));
 
-await listen("agentsweep://view", (event) => render(event.payload));
+await listen("agentpatrol://view", (event) => render(event.payload));
 render(await invoke("popover"));

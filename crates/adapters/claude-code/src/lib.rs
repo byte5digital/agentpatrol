@@ -17,7 +17,7 @@
 //! that is the workspace adapter's, once, for every Agent, and the core stamps
 //! the Repository Provenance it computed onto the Items here. It never follows
 //! a relocation it found in a configuration file; `CLAUDE_CONFIG_DIR` is an
-//! explicit AgentSweep setting the Host carries. And it never lets a sensitive
+//! explicit AgentPatrol setting the Host carries. And it never lets a sensitive
 //! value into a parsed view: an MCP `env` block and a `headers` block reach a
 //! view as key names only.
 
@@ -37,22 +37,22 @@ pub mod tree;
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::{
+use agentpatrol_core::adapter::{
     Descriptor, Detection, Enumeration, Primitive, ProjectHooks, ProjectRegistration, Surface,
     SurfaceAdapter, WatchRoots,
 };
-use agentsweep_core::gate_registration::{
+use agentpatrol_core::gate_registration::{
     GateCheck, GateCommand, GateError, GateWrite, SurfaceWriter,
 };
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{
     Activation, FileFacts, InactiveReason, Invocation, Item, ItemId, Kind, Provenance, Scope,
     Shape, TreeCaps, canonical_entry,
 };
-use agentsweep_core::quarantine::{
+use agentpatrol_core::quarantine::{
     self, Conflict, EnforcementError, Receipt, RestoreReport, Store,
 };
-use agentsweep_core::views::{HookView, McpView, ParsedView, SettingsView};
+use agentpatrol_core::views::{HookView, McpView, ParsedView, SettingsView};
 use serde_json::{Value, json};
 
 use crate::document::Document;
@@ -119,7 +119,7 @@ pub const PROJECT_LOCAL_SETTINGS_FILE: &str = ".claude/settings.local.json";
 /// The project MCP file, shared with everyone who clones the project.
 pub const PROJECT_MCP_FILE: &str = ".mcp.json";
 
-/// The managed directory on macOS, read-only for AgentSweep and reached only
+/// The managed directory on macOS, read-only for AgentPatrol and reached only
 /// through the Host's system root.
 pub const MANAGED_DIRECTORY: &str = "/Library/Application Support/ClaudeCode";
 
@@ -390,7 +390,7 @@ impl ClaudeCode {
         ClaudeCode { caps }
     }
 
-    /// The config directory in effect: the override AgentSweep holds for this
+    /// The config directory in effect: the override AgentPatrol holds for this
     /// Agent, otherwise the default directory under the home. Relocation is
     /// never followed from an env file or a settings block.
     pub fn config_dir(&self, host: &Host) -> Option<PathBuf> {
@@ -538,7 +538,7 @@ impl ClaudeCode {
                     }
                     // A project file may set `disableAllHooks` back to false,
                     // so a user layer that turns hooks off does not settle the
-                    // question and AgentSweep does not guess (ADR 0007).
+                    // question and AgentPatrol does not guess (ADR 0007).
                     let disabled_here = document.flag("disableAllHooks") == Some(true);
                     let facts = ProjectFacts {
                         hooks_disabled: managed_disables_hooks,
@@ -1421,7 +1421,7 @@ fn project_activation(facts: &ProjectFacts) -> Activation {
 /// Whether a registered hook would run on the next launch.
 ///
 /// The managed tier settles the question; a lower layer does not, because a
-/// project file may set `disableAllHooks` back to false and AgentSweep never
+/// project file may set `disableAllHooks` back to false and AgentPatrol never
 /// guesses what another layer will say.
 fn hook_activation(facts: &ProjectFacts) -> Activation {
     if facts.hooks_disabled {
@@ -1489,10 +1489,10 @@ mod tests {
     use std::fs;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    use agentsweep_core::adapter::{ProblemReason, eligibility};
-    use agentsweep_core::item::Shape;
-    use agentsweep_core::provenance::{Provenances, RepositoryProvenance};
-    use agentsweep_core::views::Views;
+    use agentpatrol_core::adapter::{ProblemReason, eligibility};
+    use agentpatrol_core::item::Shape;
+    use agentpatrol_core::provenance::{Provenances, RepositoryProvenance};
+    use agentpatrol_core::views::Views;
 
     use super::*;
 
@@ -1507,7 +1507,7 @@ mod tests {
     impl Machine {
         fn new(name: &str) -> Machine {
             let root = std::env::temp_dir().join(format!(
-                "agentsweep-claude-code-{name}-{}-{}",
+                "agentpatrol-claude-code-{name}-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
@@ -2122,8 +2122,8 @@ mod tests {
         let managed = item(&enumeration, "#/policyHelper");
         assert_eq!(managed.scope, Scope::Managed);
         assert!(
-            !agentsweep_core::adapter::quarantines_automatically(managed),
-            "a Managed Item is read-only for AgentSweep"
+            !agentpatrol_core::adapter::quarantines_automatically(managed),
+            "a Managed Item is read-only for AgentPatrol"
         );
     }
 
@@ -2286,11 +2286,11 @@ mod tests {
         }
         assert_eq!(
             found.facts_of("bin/helper").file_type,
-            agentsweep_core::item::FileType::Executable
+            agentpatrol_core::item::FileType::Executable
         );
         assert_eq!(
             found.facts_of("SKILL.md").file_type,
-            agentsweep_core::item::FileType::Text
+            agentpatrol_core::item::FileType::Text
         );
         let ParsedView::Skill(view) = &found.view else {
             panic!("a Skill Item carries the skill view");

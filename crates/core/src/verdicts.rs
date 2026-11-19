@@ -235,7 +235,7 @@ impl SealedRecord {
         hmac_sha256_verify(key, &canonical(&self.body()), &expected)
     }
 
-    /// Reads a line back, insisting on the one form AgentSweep writes. A line
+    /// Reads a line back, insisting on the one form AgentPatrol writes. A line
     /// that is anything else is not a record.
     fn parse(line: &[u8]) -> Option<SealedRecord> {
         let value: Value = serde_json::from_slice(line).ok()?;

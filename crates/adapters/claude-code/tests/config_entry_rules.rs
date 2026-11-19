@@ -7,23 +7,23 @@
 //! Pack is run over the result.
 //!
 //! It is also the acceptance test of ticket 06 and the shape a Folder Scan
-//! takes: `agentsweep scan <dir>` builds exactly this enumeration and runs
+//! takes: `agentpatrol scan <dir>` builds exactly this enumeration and runs
 //! exactly this pack over it. Every payload is defanged: `.invalid` hosts, a
 //! command that points nowhere and a token that is a made-up string.
 
 use std::path::Path;
 
-use agentsweep_adapter_claude_code::{ClaudeCode, mcp};
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_adapter_workspace::testing::TemporaryRepository;
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter};
-use agentsweep_core::finding::{Category, Severity, Source, Tier};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Item, Provenance};
-use agentsweep_core::pack::Manifest;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
-use agentsweep_core::views::ParsedView;
+use agentpatrol_adapter_claude_code::{ClaudeCode, mcp};
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_adapter_workspace::testing::TemporaryRepository;
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter};
+use agentpatrol_core::finding::{Category, Severity, Source, Tier};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Item, Provenance};
+use agentpatrol_core::pack::Manifest;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
+use agentpatrol_core::views::ParsedView;
 
 /// The enumeration a Folder Scan of one repository produces: what the
 /// workspace adapter read out of git, stamped onto what this adapter found.

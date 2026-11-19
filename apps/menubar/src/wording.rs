@@ -27,16 +27,16 @@
 
 use std::path::Path;
 
-use agentsweep_core::finding::{Category, FindingState, RuleStatus, Severity, Tier};
-use agentsweep_core::finding_facts::{HeuristicLine, WhyNothingHappened};
-use agentsweep_core::item::Kind;
-use agentsweep_core::pack::Bands;
-use agentsweep_core::rules::PHRASE_ITEM;
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::RecordedFinding;
+use agentpatrol_core::finding::{Category, FindingState, RuleStatus, Severity, Tier};
+use agentpatrol_core::finding_facts::{HeuristicLine, WhyNothingHappened};
+use agentpatrol_core::item::Kind;
+use agentpatrol_core::pack::Bands;
+use agentpatrol_core::rules::PHRASE_ITEM;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::RecordedFinding;
 use serde_json::{Value, json};
 
-use agentsweep_ipc::protocol::{Offer, offers};
+use agentpatrol_ipc::protocol::{Offer, offers};
 
 use crate::findings::{neutralised_in_place, probation};
 use crate::verdict::{Verdict, ai_block, explained};
@@ -74,7 +74,7 @@ pub enum Part {
     Ai,
     /// Whether the Agent would use the Item.
     Activation,
-    /// Why AgentSweep did not act by itself.
+    /// Why AgentPatrol did not act by itself.
     WhyNothingHappened,
     /// That git will show the change in a project.
     Project,
@@ -234,47 +234,47 @@ pub const PROJECT_LINE: &str =
 
 /// The note on a Probation Rule Finding.
 pub const WHY_PROBATION: &str = "The check that caught this is new and still proving itself, so \
-     AgentSweep asks you instead of acting by itself.";
+     AgentPatrol asks you instead of acting by itself.";
 
 /// The note on a T2 or T3 Finding.
-pub const WHY_HEURISTIC_OR_AI: &str = "AgentSweep only acts by itself when it is certain, and \
+pub const WHY_HEURISTIC_OR_AI: &str = "AgentPatrol only acts by itself when it is certain, and \
      signs like these can have innocent explanations.";
 
 /// The note on a project's git settings, a never-auto kind.
-pub const WHY_NEVER_AUTO_GIT: &str = "AgentSweep never edits a project's git settings by itself. \
+pub const WHY_NEVER_AUTO_GIT: &str = "AgentPatrol never edits a project's git settings by itself. \
      One click switches off the single line that would run the command; the rest of the file \
      stays as it is.";
 
 /// The note on a project's env file, the other never-auto kind.
-pub const WHY_NEVER_AUTO_ENV: &str = "AgentSweep never edits a project's env file by itself. One \
+pub const WHY_NEVER_AUTO_ENV: &str = "AgentPatrol never edits a project's env file by itself. One \
      click switches off the single line that would point the agent elsewhere; the rest of the \
      file stays as it is.";
 
 /// The note on a Managed Item.
-pub const WHY_MANAGED: &str = "This is controlled by whoever administers this Mac. AgentSweep \
+pub const WHY_MANAGED: &str = "This is controlled by whoever administers this Mac. AgentPatrol \
      can see it but cannot change it. If you did not expect it, show them this message.";
 
 /// The note on an Exposure.
 pub const WHY_EXPOSURE: &str =
-    "This is your own setup, not an attack, so AgentSweep never moves it.";
+    "This is your own setup, not an attack, so AgentPatrol never moves it.";
 
 /// The short notes the Simple Posture folds under **More** (layout B of spec
 /// section 8.4), in place of the long ones the Developer Posture keeps: on a
 /// Probation Rule Finding.
-pub const SHORT_PROBATION: &str = "This check is new, so AgentSweep asks first.";
+pub const SHORT_PROBATION: &str = "This check is new, so AgentPatrol asks first.";
 /// On a T2 or T3 Finding.
-pub const SHORT_UNSURE: &str = "AgentSweep is not certain, so it asks you.";
+pub const SHORT_UNSURE: &str = "AgentPatrol is not certain, so it asks you.";
 /// On a project's git settings.
-pub const SHORT_NEVER_AUTO_GIT: &str = "AgentSweep never changes git settings by itself.";
+pub const SHORT_NEVER_AUTO_GIT: &str = "AgentPatrol never changes git settings by itself.";
 /// On a project's env file.
-pub const SHORT_NEVER_AUTO_ENV: &str = "AgentSweep never changes env files by itself.";
+pub const SHORT_NEVER_AUTO_ENV: &str = "AgentPatrol never changes env files by itself.";
 /// On an Item that keeps coming back.
 pub const SHORT_KEEPS_COMING_BACK: &str =
-    "AgentSweep removed it three times in the last hour. Something put it back each time.";
+    "AgentPatrol removed it three times in the last hour. Something put it back each time.";
 /// On a Managed Item.
-pub const SHORT_MANAGED: &str = "AgentSweep can see it but cannot change it.";
+pub const SHORT_MANAGED: &str = "AgentPatrol can see it but cannot change it.";
 /// On an Exposure.
-pub const SHORT_EXPOSURE: &str = "AgentSweep never moves your own setup.";
+pub const SHORT_EXPOSURE: &str = "AgentPatrol never moves your own setup.";
 /// On a Project Scope Item.
 pub const SHORT_PROJECT: &str = "Git will show the change. Restore undoes it.";
 
@@ -299,7 +299,7 @@ pub const TODO_STOPPED_SWITCH: &str = "Switch it back on only if you trust it.";
 /// What to do on an Item in quarantine with a clean newer version.
 pub const TODO_RE_ENABLE: &str = "A clean newer version is out. Re-enable it.";
 /// What to do on a Finding that offers nothing.
-pub const TODO_NOTHING: &str = "Nothing to do. AgentSweep checks it again next time.";
+pub const TODO_NOTHING: &str = "Nothing to do. AgentPatrol checks it again next time.";
 
 /// The Severity as the Simple Posture says it.
 pub fn severity_word(severity: Severity) -> &'static str {
@@ -419,8 +419,8 @@ pub fn admin_message(finding: &RecordedFinding, named: &Named) -> String {
         false => format!(" It says: \"{}\"", finding.plain),
     };
     format!(
-        "Hello, AgentSweep, the checker for coding agents on my Mac, flagged {} in {agent}. It \
-         comes from the settings this Mac is managed with, so AgentSweep cannot change it and I \
+        "Hello, AgentPatrol, the checker for coding agents on my Mac, flagged {} in {agent}. It \
+         comes from the settings this Mac is managed with, so AgentPatrol cannot change it and I \
          cannot either.{why} Could you check whether it is meant to be there?",
         named.item(),
     )
@@ -533,9 +533,9 @@ pub(crate) fn noun(kind: Kind, project: bool) -> &'static str {
 }
 
 /// The part of an Item id a person knows the Item by, as the daemon names it
-/// in an un-notified change too ([`agentsweep_ipc::notifications::item_name`]).
+/// in an un-notified change too ([`agentpatrol_ipc::notifications::item_name`]).
 pub(crate) fn name(kind: Kind, id: &str) -> String {
-    agentsweep_ipc::notifications::item_name(kind, id)
+    agentpatrol_ipc::notifications::item_name(kind, id)
 }
 
 /// The title: a verdict sentence about a named thing, or a question for
@@ -555,7 +555,7 @@ fn title(finding: &RecordedFinding, named: &Named) -> String {
         );
     }
     if finding.source.starts_with("problem") {
-        return format!("AgentSweep could not check {}", named.item());
+        return format!("AgentPatrol could not check {}", named.item());
     }
     if finding.tier == Tier::AiJudgement {
         return format!("{} looks malicious", named.item_first());
@@ -637,7 +637,7 @@ fn activation(finding: &RecordedFinding, named: &Named) -> Option<String> {
     }
 }
 
-/// The one fixed note on why AgentSweep did not act by itself, while the
+/// The one fixed note on why AgentPatrol did not act by itself, while the
 /// Finding still asks the user.
 fn why_nothing_happened(finding: &RecordedFinding, named: &Named) -> Option<String> {
     if !finding.is_open() {
@@ -651,7 +651,7 @@ fn why_nothing_happened(finding: &RecordedFinding, named: &Named) -> Option<Stri
             _ => WHY_NEVER_AUTO_GIT.to_string(),
         },
         WhyNothingHappened::KeepsComingBack => format!(
-            "AgentSweep removed it three times in the last hour and something put it back each \
+            "AgentPatrol removed it three times in the last hour and something put it back each \
              time, most likely an agent session that is still open. Close all {} windows, then \
              quarantine it once more.",
             named.agent_or("agent")
@@ -1021,7 +1021,7 @@ pub fn rows_value(rows: Vec<(String, String)>) -> Value {
 mod tests {
     use super::*;
 
-    use agentsweep_core::eventlog::Actor;
+    use agentpatrol_core::eventlog::Actor;
 
     use crate::findings::tests::recorded;
 
@@ -1216,7 +1216,7 @@ mod tests {
     #[test]
     fn a_score_finding_reads_in_three_parts_and_folds_its_signs() {
         let mut off = in_invoice_app(HOOKS_OFF, Kind::SettingsEntry, "score 6", Category::Threat);
-        off.facts.why = "It can switch off your checks, AgentSweep's included.".to_string();
+        off.facts.why = "It can switch off your checks, AgentPatrol's included.".to_string();
         off.facts.setting_plain = "can switch off your checks".to_string();
         off.facts.why_nothing_happened = Some(WhyNothingHappened::HeuristicOrAi);
         off.facts.heuristics = vec![
@@ -1232,7 +1232,7 @@ mod tests {
         );
         assert_eq!(
             parts.why,
-            "It can switch off your checks, AgentSweep's included."
+            "It can switch off your checks, AgentPatrol's included."
         );
         assert_eq!(parts.todo, "Quarantine it unless you know it.");
         assert_eq!(
@@ -1678,7 +1678,7 @@ mod tests {
             (
                 finding(HOOK, Kind::Hook, "keeps coming back", Category::Threat),
                 WhyNothingHappened::KeepsComingBack,
-                "AgentSweep removed it three times in the last hour and something put it back \
+                "AgentPatrol removed it three times in the last hour and something put it back \
                  each time, most likely an agent session that is still open. Close all Claude \
                  Code windows, then quarantine it once more."
                     .to_string(),
@@ -1981,7 +1981,7 @@ mod tests {
 
     /// The owner's rule for every text of layout B: as short and plain as
     /// the mock-up. A title names the thing in a few words, What it is and
-    /// What to do are two short sentences at most, and AgentSweep's own notes
+    /// What to do are two short sentences at most, and AgentPatrol's own notes
     /// under More are one short line each, on every case.
     #[test]
     fn every_part_is_as_short_as_the_mock_up() {

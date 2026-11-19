@@ -44,7 +44,7 @@ use crate::scan::{ScanFailure, ScanReport, Scanners};
 /// Which Scan is running (spec section 6.4).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ScanKind {
-    /// Everything AgentSweep protects, enumerated again. The only kind that
+    /// Everything AgentPatrol protects, enumerated again. The only kind that
     /// has seen it all, and so the only one that may mark an Item absent.
     Full,
     /// Only the Items behind a batch of changed paths. It never claims to have
@@ -193,7 +193,7 @@ pub struct ScanPass<'a> {
     pub coverage: &'a CoveragePlan,
     /// Which content hashes carry Trust.
     pub trusted: &'a TrustTable,
-    /// The changes AgentSweep already has a reason for.
+    /// The changes AgentPatrol already has a reason for.
     pub known: &'a KnownActions,
     /// What the Surface Adapters declare about their own keys, which a Drift
     /// decision reads.
@@ -366,7 +366,7 @@ impl<'a> ScanPass<'a> {
         let unsettled = self.unsettled_marketplaces(enumeration);
 
         // The known actions are applied to the Baseline before the Rules run,
-        // so content AgentSweep wrote, content that carries Trust and content
+        // so content AgentPatrol wrote, content that carries Trust and content
         // the user acknowledged reads `unchanged` (ADR 0007). Every Item
         // carries its `item.baseline` before a Tier sees it, because that is
         // what the Rules read.
@@ -574,7 +574,7 @@ impl<'a> ScanPass<'a> {
     ) -> Result<Assessment, ScanFailure> {
         // A Gate entry is cleared by the registration that stands now, not by
         // its content alone, so its clearance is neither read from the cache
-        // nor kept there: once AgentSweep takes the entry away, the same
+        // nor kept there: once AgentPatrol takes the entry away, the same
         // content is judged again like any other hook.
         if allowlist.clears(item) == Some(Clearance::GateEntry) {
             return allowlist::assess(allowlist, scanners, item);
@@ -683,7 +683,7 @@ impl<'a> ScanPass<'a> {
             }
             Some(_) => BaselineState::Changed,
             // Coverage decides before anything else: an Item first seen where
-            // AgentSweep had not looked yet is `none`, which is never Drift,
+            // AgentPatrol had not looked yet is `none`, which is never Drift,
             // whatever else is known about its content.
             None if !covered => BaselineState::None,
             None if known.is_some() => BaselineState::Unchanged,
@@ -696,7 +696,7 @@ impl<'a> ScanPass<'a> {
         }
     }
 
-    /// The known action behind this content, if AgentSweep has one. The closed
+    /// The known action behind this content, if AgentPatrol has one. The closed
     /// list of ADR 0007: its own writes, Trust on the hash, an Acknowledge.
     fn known_action(&self, item: &Item) -> Option<(AcceptedBy, String)> {
         if self.trusted.trusts(item.kind, &item.content_hash) {
@@ -1687,7 +1687,7 @@ mod tests {
         );
     }
 
-    /// An Agent or a root AgentSweep has not looked at yet bootstraps as
+    /// An Agent or a root AgentPatrol has not looked at yet bootstraps as
     /// `none`, however long it has been protecting the rest of the Mac.
     #[test]
     fn a_surface_that_was_never_covered_bootstraps_as_none() {
@@ -1740,7 +1740,7 @@ mod tests {
         assert_eq!(scanned.accepted, Some(AcceptedBy::Trust));
     }
 
-    /// The same for AgentSweep's own write: it is known by the bytes it left,
+    /// The same for AgentPatrol's own write: it is known by the bytes it left,
     /// so the Scan after a Quarantine asks nothing.
     #[test]
     fn a_quarantine_between_two_scans_leaves_the_item_unchanged() {
@@ -1749,7 +1749,7 @@ mod tests {
         let daemon = Daemon::new();
         daemon.scan(&host, "2026-09-24T09:00:00.000Z");
 
-        host.instruction_file("# demo\n\n# agentsweep: quarantined r-1\n");
+        host.instruction_file("# demo\n\n# agentpatrol: quarantined r-1\n");
         let neutralised = host.enumerate();
         let item = neutralised
             .items
@@ -1766,7 +1766,7 @@ mod tests {
         assert_eq!(state_of(&second, "CLAUDE.md"), BaselineState::Unchanged);
         assert_eq!(
             second.item(&item.id).and_then(|scanned| scanned.accepted),
-            Some(AcceptedBy::AgentsweepWrite)
+            Some(AcceptedBy::AgentpatrolWrite)
         );
     }
 
@@ -2546,7 +2546,7 @@ mod tests {
         assert_eq!(third.notes[0].line, crate::drift::CHANGED_BACK);
     }
 
-    /// The hash AgentSweep's own write left at another Item is a known action
+    /// The hash AgentPatrol's own write left at another Item is a known action
     /// too: switching a plugin off rewrites an `enabledPlugins` entry, and
     /// nobody is asked about that.
     #[test]

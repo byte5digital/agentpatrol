@@ -12,7 +12,7 @@ use serde_json::Value;
 
 /// The file name of the Apple judgement helper, beside the daemon and the
 /// in-bundle CLI in the bundle.
-pub const HELPER_NAME: &str = "agentsweep-apple-judge";
+pub const HELPER_NAME: &str = "agentpatrol-apple-judge";
 
 /// The reason given when the helper is not where it belongs or could not be
 /// started.
@@ -38,7 +38,7 @@ pub enum AppleAvailability {
     /// `model_not_ready`, `unknown`), or [`HELPER_MISSING`] or
     /// [`HELPER_FAILED`].
     Unavailable {
-        /// The reason, as the helper or AgentSweep names it.
+        /// The reason, as the helper or AgentPatrol names it.
         reason: String,
     },
 }

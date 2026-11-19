@@ -1,4 +1,4 @@
-//! The Event Log: the single tamper-evident record of what AgentSweep did.
+//! The Event Log: the single tamper-evident record of what AgentPatrol did.
 //!
 //! `events.jsonl` is the source of truth (ADR 0003, spec section 5.5). Every
 //! Quarantine, Restore, Trust decision, Acknowledge, purge and change of
@@ -38,7 +38,7 @@ use crate::spend::{SpendLedger, SpendRecord};
 /// Who caused the event.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Actor {
-    /// AgentSweep itself, on a stable Rule at T0 or T1.
+    /// AgentPatrol itself, on a stable Rule at T0 or T1.
     Auto,
     /// The person in front of the Mac.
     User,
@@ -243,7 +243,7 @@ impl fmt::Display for Outcome {
 }
 
 /// Whether Agent sessions looked to be running when the action was taken.
-/// Detected read-only; AgentSweep never signals or kills a session.
+/// Detected read-only; AgentPatrol never signals or kills a session.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum SessionsRunning {
     /// At least one session looked live.
@@ -370,18 +370,18 @@ impl ReceiptStep {
     }
 }
 
-/// The detail key under which an event carries the content hash AgentSweep's
+/// The detail key under which an event carries the content hash AgentPatrol's
 /// own write left at the Item.
 pub const LEFT_HASH: &str = "left_hash";
 
 /// The prefix of the detail keys under which an event carries the content hash
-/// AgentSweep's own write left at *another* Item.
+/// AgentPatrol's own write left at *another* Item.
 ///
 /// One write moves more than the Item it is about: switching a plugin off
 /// rewrites an `enabledPlugins` entry, and commenting a key out in place
 /// leaves the file it sits in at a new hash. Those Items would otherwise read
 /// `changed` on the next Scan with nothing to account for it, and the user
-/// would be asked about a change AgentSweep made itself (ADR 0007).
+/// would be asked about a change AgentPatrol made itself (ADR 0007).
 pub const LEFT_HASH_AT: &str = "left_hash:";
 
 /// One record of the Event Log, with the fields of spec section 5.5. The
@@ -468,7 +468,7 @@ impl Event {
         self
     }
 
-    /// Records the content hash AgentSweep's own write left at the Item.
+    /// Records the content hash AgentPatrol's own write left at the Item.
     ///
     /// A Quarantine, a Restore, a re-enforce, a Re-enable or a Gate
     /// registration changes what is on the Surface, and the next Scan would
@@ -633,7 +633,7 @@ pub enum PackChange {
     Accepted,
     /// The stored pack from the Rule Feed was discarded at start, because it
     /// no longer verified, the bundled pack had caught up with it, or it
-    /// needs a newer AgentSweep. The pack named is the one in force instead.
+    /// needs a newer AgentPatrol. The pack named is the one in force instead.
     Discarded,
     /// The Rule Feed was switched off, so the stored pack from the Rule Feed
     /// was set aside, kept on disk for the day the feed goes on again, and
@@ -1359,7 +1359,7 @@ mod tests {
 
     #[test]
     fn the_event_log_is_the_events_chain_of_the_data_directory() {
-        let directory = DataDirectory::at("/tmp/agentsweep-test");
+        let directory = DataDirectory::at("/tmp/agentpatrol-test");
         let log = EventLog::in_data_directory(&directory);
         assert_eq!(log.chain().path(), directory.event_log());
         assert_eq!(log.chain().id(), ChainId::Events);

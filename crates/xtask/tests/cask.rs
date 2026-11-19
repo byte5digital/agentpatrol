@@ -11,8 +11,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use agentsweep_xtask::repo_root;
-use agentsweep_xtask::workflows::{self, HardeningRule};
+use agentpatrol_xtask::repo_root;
+use agentpatrol_xtask::workflows::{self, HardeningRule};
 use tempfile::TempDir;
 
 const WORKFLOW: &str = "cask-bump.yml";
@@ -38,7 +38,7 @@ fn stderr(output: &Output) -> String {
 
 fn expected_cask() -> String {
     fs::read_to_string(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/cask-fixtures/agentsweep-0.1.0.rb"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/cask-fixtures/agentpatrol-0.1.0.rb"),
     )
     .expect("the committed expected cask")
 }
@@ -55,12 +55,12 @@ fn event(tag: &str, prerelease: bool, draft: bool) -> TempDir {
   "release": {{
     "id": 1,
     "tag_name": "{tag}",
-    "name": "AgentSweep",
+    "name": "AgentPatrol",
     "draft": {draft},
     "prerelease": {prerelease},
     "assets": []
   }},
-  "repository": {{ "full_name": "byte5digital/agentsweep" }}
+  "repository": {{ "full_name": "byte5digital/agentpatrol" }}
 }}
 "#
     );
@@ -140,7 +140,7 @@ fn dmg(version: &str) -> (TempDir, PathBuf) {
     let directory = TempDir::new().expect("a temporary directory");
     let path = directory
         .path()
-        .join(format!("AgentSweep_{version}_universal.dmg"));
+        .join(format!("AgentPatrol_{version}_universal.dmg"));
     fs::write(&path, "stand-in disk image\n").expect("a DMG");
     (directory, path)
 }
@@ -192,9 +192,9 @@ fn the_rendered_version_url_and_digest_match_the_dmg() {
     let bundle = directory.path().join("bundle");
     fs::create_dir_all(bundle.join("macos")).unwrap();
     fs::create_dir_all(bundle.join("dmg")).unwrap();
-    fs::write(bundle.join("macos/AgentSweep.app.tar.gz"), "archive").unwrap();
-    fs::write(bundle.join("macos/AgentSweep.app.tar.gz.sig"), "signature").unwrap();
-    fs::write(bundle.join("dmg/AgentSweep_0.4.2_universal.dmg"), "dmg").unwrap();
+    fs::write(bundle.join("macos/AgentPatrol.app.tar.gz"), "archive").unwrap();
+    fs::write(bundle.join("macos/AgentPatrol.app.tar.gz.sig"), "signature").unwrap();
+    fs::write(bundle.join("dmg/AgentPatrol_0.4.2_universal.dmg"), "dmg").unwrap();
     let staged = run(
         "stage-release-assets.sh",
         &[
@@ -212,7 +212,9 @@ fn the_rendered_version_url_and_digest_match_the_dmg() {
         .expect("a staged DMG");
     assert_eq!(
         url,
-        format!("https://github.com/byte5digital/agentsweep/releases/download/v0.4.2/{staged_dmg}")
+        format!(
+            "https://github.com/byte5digital/agentpatrol/releases/download/v0.4.2/{staged_dmg}"
+        )
     );
 }
 
@@ -244,11 +246,11 @@ fn the_cask_has_exactly_the_stanzas_the_ticket_lists() {
     );
     assert!(cask.contains("\n  auto_updates true\n"));
     assert!(cask.contains("\n  depends_on macos: :sonoma\n"));
-    assert!(cask.contains("\n  app \"AgentSweep.app\"\n"));
-    // The in-bundle CLI, the Tauri sidecar named `agentsweep` (ADR 0008).
-    assert!(cask.contains("\n  binary \"#{appdir}/AgentSweep.app/Contents/MacOS/agentsweep\"\n"));
-    assert!(cask.contains("uninstall launchctl: \"de.byte5.agentsweep.daemon\",\n"));
-    assert!(cask.contains("quit:      \"de.byte5.agentsweep\"\n"));
+    assert!(cask.contains("\n  app \"AgentPatrol.app\"\n"));
+    // The in-bundle CLI, the Tauri sidecar named `agentpatrol` (ADR 0008).
+    assert!(cask.contains("\n  binary \"#{appdir}/AgentPatrol.app/Contents/MacOS/agentpatrol\"\n"));
+    assert!(cask.contains("uninstall launchctl: \"de.byte5.agentpatrol.daemon\",\n"));
+    assert!(cask.contains("quit:      \"de.byte5.agentpatrol\"\n"));
     for absent in ["postflight", "preflight", "delete:", "rmdir:", "livecheck"] {
         assert!(!cask.contains(absent), "{absent}");
     }
@@ -257,11 +259,11 @@ fn the_cask_has_exactly_the_stanzas_the_ticket_lists() {
 #[test]
 fn the_daemon_label_in_the_cask_is_the_one_the_bundle_registers() {
     let plist = fs::read_to_string(
-        repo_root().join("apps/menubar/LaunchAgents/de.byte5.agentsweep.daemon.plist"),
+        repo_root().join("apps/menubar/LaunchAgents/de.byte5.agentpatrol.daemon.plist"),
     )
     .expect("the daemon's launch agent");
-    assert!(plist.contains("<string>de.byte5.agentsweep.daemon</string>"));
-    assert!(rendered("0.1.0").contains("launchctl: \"de.byte5.agentsweep.daemon\""));
+    assert!(plist.contains("<string>de.byte5.agentpatrol.daemon</string>"));
+    assert!(rendered("0.1.0").contains("launchctl: \"de.byte5.agentpatrol.daemon\""));
 }
 
 /// The paths of the cask's `zap trash:` list.
@@ -290,8 +292,8 @@ fn the_zap_list_names_the_documented_paths_and_nothing_outside_the_users_library
         assert!(path.starts_with("~/Library/"), "{path}");
         assert!(!path.contains(".."), "{path}");
         assert!(
-            path.contains("de.byte5.agentsweep") || path.ends_with("/AgentSweep"),
-            "{path} is not AgentSweep's own"
+            path.contains("de.byte5.agentpatrol") || path.ends_with("/AgentPatrol"),
+            "{path} is not AgentPatrol's own"
         );
     }
     // Spec section 6.9 names the data directory and the log directory; the
@@ -302,13 +304,13 @@ fn the_zap_list_names_the_documented_paths_and_nothing_outside_the_users_library
     assert_eq!(
         paths,
         [
-            "~/Library/Application Support/de.byte5.agentsweep",
-            "~/Library/Caches/de.byte5.agentsweep",
-            "~/Library/HTTPStorages/de.byte5.agentsweep",
-            "~/Library/Logs/AgentSweep",
-            "~/Library/Preferences/de.byte5.agentsweep.plist",
-            "~/Library/Saved Application State/de.byte5.agentsweep.savedState",
-            "~/Library/WebKit/de.byte5.agentsweep",
+            "~/Library/Application Support/de.byte5.agentpatrol",
+            "~/Library/Caches/de.byte5.agentpatrol",
+            "~/Library/HTTPStorages/de.byte5.agentpatrol",
+            "~/Library/Logs/AgentPatrol",
+            "~/Library/Preferences/de.byte5.agentpatrol.plist",
+            "~/Library/Saved Application State/de.byte5.agentpatrol.savedState",
+            "~/Library/WebKit/de.byte5.agentpatrol",
         ]
     );
 }
@@ -316,7 +318,7 @@ fn the_zap_list_names_the_documented_paths_and_nothing_outside_the_users_library
 #[test]
 fn the_rendered_cask_is_valid_ruby() {
     let directory = TempDir::new().expect("a temporary directory");
-    let path = directory.path().join("agentsweep.rb");
+    let path = directory.path().join("agentpatrol.rb");
     fs::write(&path, rendered("0.1.0")).expect("a cask");
     let output = Command::new("ruby")
         .args(["-c", path.to_str().unwrap()])
@@ -341,7 +343,7 @@ fn the_renderer_refuses_a_prerelease_version() {
 #[test]
 fn the_renderer_refuses_a_missing_or_empty_dmg() {
     let directory = TempDir::new().expect("a temporary directory");
-    let missing = directory.path().join("AgentSweep_0.1.0_universal.dmg");
+    let missing = directory.path().join("AgentPatrol_0.1.0_universal.dmg");
     let output = render("0.1.0", &missing);
     assert_eq!(output.status.code(), Some(1));
     assert!(stdout(&output).is_empty());
@@ -509,7 +511,7 @@ fn the_cask_is_committed_to_the_tap_and_nothing_else_is_changed() {
     let checkout = step("Check out the tap");
     assert!(checkout.contains("repository: byte5digital/homebrew-tap"));
     let commit = step("Commit the cask to the tap");
-    assert!(commit.contains("Casks/agentsweep.rb"));
+    assert!(commit.contains("Casks/agentpatrol.rb"));
     assert!(commit.contains("push origin HEAD:main"));
     assert!(!commit.contains("--force"));
     // The release itself is only read.

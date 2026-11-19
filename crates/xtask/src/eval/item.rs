@@ -11,14 +11,14 @@
 
 use std::path::PathBuf;
 
-use agentsweep_core::finding::FiredHeuristic;
-use agentsweep_core::heuristics::{Assessment, assess_hits};
-use agentsweep_core::item::{
+use agentpatrol_core::finding::FiredHeuristic;
+use agentpatrol_core::heuristics::{Assessment, assess_hits};
+use agentpatrol_core::item::{
     Activation, FileFacts, InactiveReason, Item, Provenance, Scope, Shape, Tree, TreeFile,
     canonical_entry, sha256_hex,
 };
-use agentsweep_core::judgement_request::Normalisation;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_core::judgement_request::Normalisation;
+use agentpatrol_core::scan::Scanners;
 use serde_json::Value;
 
 use crate::eval::wrappers::Wrapper;

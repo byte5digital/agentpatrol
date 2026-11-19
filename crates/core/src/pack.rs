@@ -130,7 +130,7 @@ pub struct Manifest {
     /// The pack version, a monotonic integer. A fetched pack replaces the
     /// bundled one only when this is higher.
     pub pack_version: u64,
-    /// The lowest AgentSweep version that may load the pack. A client below it
+    /// The lowest AgentPatrol version that may load the pack. A client below it
     /// ignores the pack with a visible notice.
     pub minimum_engine_version: String,
     /// The Band thresholds of this pack.

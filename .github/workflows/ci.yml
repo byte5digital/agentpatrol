@@ -63,9 +63,9 @@ jobs:
       # print the same bytes for a Folder Scan.
       - name: Build, lint and test the in-bundle build of the command line interface
         run: |
-          cargo build -p agentsweep --features bundle --locked
-          cargo clippy -p agentsweep --features bundle --all-targets --locked -- -D warnings
-          cargo test -p agentsweep --features bundle --locked
+          cargo build -p agentpatrol --features bundle --locked
+          cargo clippy -p agentpatrol --features bundle --all-targets --locked -- -D warnings
+          cargo test -p agentpatrol --features bundle --locked
 
       # The crates that go to crates.io (the core, the three adapters, the IPC
       # crate and the command line interface) are packaged in publishing order,
@@ -149,12 +149,12 @@ jobs:
 
       - name: Check what the bundle carries
         run: |
-          app=target/universal-apple-darwin/release/bundle/macos/AgentSweep.app
-          test -x "$app/Contents/MacOS/agentsweep-menubar"
-          test -x "$app/Contents/MacOS/agentsweepd"
-          test -x "$app/Contents/MacOS/agentsweep"
-          test -x "$app/Contents/MacOS/agentsweep-apple-judge"
-          plutil -lint "$app/Contents/Library/LaunchAgents/de.byte5.agentsweep.daemon.plist"
+          app=target/universal-apple-darwin/release/bundle/macos/AgentPatrol.app
+          test -x "$app/Contents/MacOS/agentpatrol-menubar"
+          test -x "$app/Contents/MacOS/agentpatrold"
+          test -x "$app/Contents/MacOS/agentpatrol"
+          test -x "$app/Contents/MacOS/agentpatrol-apple-judge"
+          plutil -lint "$app/Contents/Library/LaunchAgents/de.byte5.agentpatrol.daemon.plist"
           test "$(plutil -extract LSMinimumSystemVersion raw "$app/Contents/Info.plist")" = "14.0"
           test "$(plutil -extract LSUIElement raw "$app/Contents/Info.plist")" = "true"
           # The updater archive and its signature (spec section 9.4).
@@ -176,14 +176,14 @@ jobs:
         run: .github/scripts/check-bundle-signature-test.sh
 
       - name: Check the bundle with the release bundle checker in ad hoc mode
-        run: .github/scripts/check-bundle-signature.sh - target/universal-apple-darwin/release/bundle/macos/AgentSweep.app
+        run: .github/scripts/check-bundle-signature.sh - target/universal-apple-darwin/release/bundle/macos/AgentPatrol.app
 
       # Release checklist item 16, and the dependency list cargo auditable
       # embeds, checked in each architecture of each sidecar.
       - name: Check that every executable is universal and every sidecar auditable
         run: |
-          macos=target/universal-apple-darwin/release/bundle/macos/AgentSweep.app/Contents/MacOS
-          for binary in agentsweep-menubar agentsweepd agentsweep agentsweep-apple-judge; do
+          macos=target/universal-apple-darwin/release/bundle/macos/AgentPatrol.app/Contents/MacOS
+          for binary in agentpatrol-menubar agentpatrold agentpatrol agentpatrol-apple-judge; do
             archs="$(lipo -archs "$macos/$binary")"
             echo "$binary: $archs"
             for arch in arm64 x86_64; do
@@ -193,7 +193,7 @@ jobs:
               esac
             done
           done
-          for binary in agentsweepd agentsweep; do
+          for binary in agentpatrold agentpatrol; do
             for arch in arm64 x86_64; do
               if ! otool -arch "$arch" -l "$macos/$binary" | grep -q 'sectname .dep-v0'; then
                 echo "$binary ($arch) carries no .dep-v0 dependency list" >&2
@@ -208,7 +208,7 @@ jobs:
       # Intelligence, so the check is held to its shape, not its value.
       - name: Check the Apple judgement helper in the bundle
         run: |
-          judge=target/universal-apple-darwin/release/bundle/macos/AgentSweep.app/Contents/MacOS/agentsweep-apple-judge
+          judge=target/universal-apple-darwin/release/bundle/macos/AgentPatrol.app/Contents/MacOS/agentpatrol-apple-judge
           codesign -dvv "$judge" 2>&1 | grep 'flags=.*runtime'
           for arch in arm64 x86_64; do
             otool -arch "$arch" -L "$judge" | grep 'FoundationModels.*weak'
@@ -240,8 +240,8 @@ jobs:
       # and said nothing would be a green tick over an unproven Rule Pack.
       - name: Scan the benign corpus
         env:
-          AGENTSWEEP_CORPUS_REQUIRED: "1"
-        run: cargo run -p agentsweep-xtask --locked -- benign-corpus
+          AGENTPATROL_CORPUS_REQUIRED: "1"
+        run: cargo run -p agentpatrol-xtask --locked -- benign-corpus
 
   dependencies:
     name: Dependency policy

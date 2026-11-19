@@ -2,7 +2,7 @@
 //! before an Agent opens it (spec sections 6.4 and 8.9).
 //!
 //! It is the same pass the command line interface runs in-process for
-//! `agentsweep scan <dir>`: the folder as the one project root of a Host with
+//! `agentpatrol scan <dir>`: the folder as the one project root of a Host with
 //! no home, the workspace adapter's Provenance stamped onto what the Claude
 //! Code and Codex adapters find there, and the Tiers over it. It runs under
 //! the daemon's file access with the Rule Pack in force, whose version the
@@ -36,20 +36,20 @@ use std::sync::mpsc::{self, Sender};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter};
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::finding::{FindingId, FindingState, FiredHeuristic, Standing, Tier};
-use agentsweep_core::host::Host;
-use agentsweep_core::judged::{self, AppliedVerdict};
-use agentsweep_core::judgement;
-use agentsweep_core::packs::LoadedPack;
-use agentsweep_core::scan::{ScanReport, scan_enumeration};
-use agentsweep_core::settings::JudgementEngine as EngineChoice;
-use agentsweep_core::state::RecordedFinding;
-use agentsweep_ipc::protocol::{FolderFinding, FolderScanResult, RequestError};
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::finding::{FindingId, FindingState, FiredHeuristic, Standing, Tier};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::judged::{self, AppliedVerdict};
+use agentpatrol_core::judgement;
+use agentpatrol_core::packs::LoadedPack;
+use agentpatrol_core::scan::{ScanReport, scan_enumeration};
+use agentpatrol_core::settings::JudgementEngine as EngineChoice;
+use agentpatrol_core::state::RecordedFinding;
+use agentpatrol_ipc::protocol::{FolderFinding, FolderScanResult, RequestError};
 
 use crate::full_scan::read_the_verdicts;
 use crate::judgement_queue::{Ask, Asking, Awaiting, InForce, chosen};
@@ -186,7 +186,7 @@ impl Daemon {
             let pending = Arc::clone(&pending);
             let sender = sender.clone();
             let started = std::thread::Builder::new()
-                .name("agentsweep-folder-judgement".to_string())
+                .name("agentpatrol-folder-judgement".to_string())
                 .spawn(move || daemon.ask_in_turn(&asking, &pending, deadline, &sender));
             if started.is_err() {
                 say!("a Folder Scan's AI Judgement worker could not be started");
@@ -276,9 +276,9 @@ impl Daemon {
         self.tuning
             .folder_wait
             .unwrap_or_else(|| match self.judgement().engine {
-                EngineChoice::Apple => agentsweep_core::apple_engine::JUDGE_TIMEOUT,
-                EngineChoice::Ollama => agentsweep_core::ollama::JUDGEMENT_TIMEOUT,
-                _ => agentsweep_core::claude_engine::CLAUDE_REQUEST_TIMEOUT,
+                EngineChoice::Apple => agentpatrol_core::apple_engine::JUDGE_TIMEOUT,
+                EngineChoice::Ollama => agentpatrol_core::ollama::JUDGEMENT_TIMEOUT,
+                _ => agentpatrol_core::claude_engine::CLAUDE_REQUEST_TIMEOUT,
             })
     }
 }
@@ -400,7 +400,7 @@ fn line_of(heuristic: &FiredHeuristic) -> String {
 mod tests {
     use super::*;
 
-    use agentsweep_core::pack::Manifest;
+    use agentpatrol_core::pack::Manifest;
 
     /// The bundled pack, compiled once for the module: compiling it is the
     /// slow part of a debug build's test.
@@ -413,7 +413,7 @@ mod tests {
     /// when the test fails.
     fn temporary(name: &str) -> tempfile::TempDir {
         tempfile::Builder::new()
-            .prefix(&format!("agentsweep-daemon-folder-{name}-"))
+            .prefix(&format!("agentpatrol-daemon-folder-{name}-"))
             .tempdir()
             .expect("a temporary folder")
     }
@@ -450,7 +450,7 @@ mod tests {
     fn only_an_absolute_path_to_a_folder_is_scanned() {
         for path in [
             "relative/folder",
-            "/nowhere/agentsweep-there-is-no-such-folder",
+            "/nowhere/agentpatrol-there-is-no-such-folder",
         ] {
             let refused = folder_root(path).expect_err("refused");
             assert_eq!(refused.code, "not-a-folder", "{path}");

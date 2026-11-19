@@ -1,6 +1,6 @@
 //! Switching one line of a project's own files off where it lies.
 //!
-//! Repository Metadata and env files are the two kinds AgentSweep never
+//! Repository Metadata and env files are the two kinds AgentPatrol never
 //! quarantines by itself, however sure a Rule is (spec section 5.2). They are
 //! the user's own repository and the user's own secrets, and taking either out
 //! of the way would break a working directory rather than protect it. So the
@@ -26,12 +26,12 @@
 
 use std::path::Path;
 
-use agentsweep_core::adapter::Primitive;
-use agentsweep_core::composite::{Step, carry_out};
-use agentsweep_core::entry_edit::{is_neutralised, lines_of};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Item, Kind, Shape};
-use agentsweep_core::quarantine::{EnforcementError, Receipt, Store, settled};
+use agentpatrol_core::adapter::Primitive;
+use agentpatrol_core::composite::{Step, carry_out};
+use agentpatrol_core::entry_edit::{is_neutralised, lines_of};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Item, Kind, Shape};
+use agentpatrol_core::quarantine::{EnforcementError, Receipt, Store, settled};
 
 use crate::env;
 
@@ -127,7 +127,7 @@ fn config_key(item: &Item, text: &str) -> Option<(Vec<usize>, String)> {
         value_outside_repo: false,
     }
     .canonical_form();
-    Some((vec![number], agentsweep_core::item::sha256_hex(&canonical)))
+    Some((vec![number], agentpatrol_core::item::sha256_hex(&canonical)))
 }
 
 /// A key as an Item names it, as the section it sits in and the name inside
@@ -163,7 +163,7 @@ fn matches(header: &str, wanted: &str) -> bool {
 /// itself reads gives up every line it has, because every line of a hook is
 /// what runs and a pointer file is one line that says where the repository is.
 fn whole_file(item: &Item, text: &str) -> Option<(Vec<usize>, String)> {
-    let hash = agentsweep_core::item::sha256_hex(text.as_bytes());
+    let hash = agentpatrol_core::item::sha256_hex(text.as_bytes());
     let chosen = lines_of(text)
         .into_iter()
         .filter(|(_, line)| {

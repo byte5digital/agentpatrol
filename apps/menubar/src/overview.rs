@@ -30,11 +30,11 @@
 //! registration check stay too. Agent versions, Item counts and the Rule
 //! Pack's date are the Developer Posture's.
 
-use agentsweep_core::health::{Health, Rung};
-use agentsweep_core::overview::{AgentRecord, Overview};
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::ScanSummary;
-use agentsweep_ipc::protocol::Status;
+use agentpatrol_core::health::{Health, Rung};
+use agentpatrol_core::overview::{AgentRecord, Overview};
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::ScanSummary;
+use agentpatrol_ipc::protocol::Status;
 use serde_json::{Value, json};
 
 use crate::banner::{self, Daemon, Shown};
@@ -61,7 +61,7 @@ pub struct OverviewView {
     pub off: bool,
     /// The status sentence, by the Health precedence (spec section 6.6).
     pub sentence: String,
-    /// One line per Agent AgentSweep has an adapter for, installed or not.
+    /// One line per Agent AgentPatrol has an adapter for, installed or not.
     pub agents: Vec<AgentLine>,
     /// When the last Full Scan finished, RFC 3339, absent before the first
     /// and while Protection is off. The window writes it in local time, as
@@ -183,7 +183,7 @@ pub fn tiles(health: &Health) -> Vec<Tile> {
     ]
 }
 
-/// The Agents AgentSweep watches, on one line: those installed on this Mac,
+/// The Agents AgentPatrol watches, on one line: those installed on this Mac,
 /// by name. None before the first Full Scan named any Agent.
 pub fn watching(overview: &Overview) -> Option<String> {
     if overview.agents.is_empty() {
@@ -454,11 +454,11 @@ pub fn summary_line(scan: &ScanSummary) -> String {
 mod tests {
     use super::*;
 
-    use agentsweep_core::envelope::Timestamp;
-    use agentsweep_core::overview::{ProjectAgent, ProjectCheck, ProjectRecord};
-    use agentsweep_core::packs::PackOrigin;
-    use agentsweep_core::scan_pass::ScanKind;
-    use agentsweep_core::state::Trigger;
+    use agentpatrol_core::envelope::Timestamp;
+    use agentpatrol_core::overview::{ProjectAgent, ProjectCheck, ProjectRecord};
+    use agentpatrol_core::packs::PackOrigin;
+    use agentpatrol_core::scan_pass::ScanKind;
+    use agentpatrol_core::state::Trigger;
 
     fn at(text: &str) -> Timestamp {
         Timestamp::parse(text).expect("a moment")
@@ -895,7 +895,7 @@ mod tests {
     /// in the Posture's wording.
     #[test]
     fn the_gate_lines_under_a_worse_rung_are_listed() {
-        use agentsweep_core::health::{GateLine, GateTrouble};
+        use agentpatrol_core::health::{GateLine, GateTrouble};
 
         let mut status = status();
         status.health.projects_need_permission = 1;

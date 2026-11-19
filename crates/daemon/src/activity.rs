@@ -21,16 +21,16 @@
 
 use std::collections::BTreeSet;
 
-use agentsweep_core::drift::Note;
-use agentsweep_core::envelope::{ChainId, Timestamp};
-use agentsweep_core::eventlog::{
+use agentpatrol_core::drift::Note;
+use agentpatrol_core::envelope::{ChainId, Timestamp};
+use agentpatrol_core::eventlog::{
     Action, Actor, Event, EventLogView, Outcome, RecordedEvent, RecordedIntegrity, RecordedRestart,
     RecordedRulePack,
 };
-use agentsweep_core::integrity::IntegrityRecord;
-use agentsweep_core::item::{ItemId, Kind};
-use agentsweep_core::state::RecordedFinding;
-use agentsweep_ipc::protocol::ActivityLine;
+use agentpatrol_core::integrity::IntegrityRecord;
+use agentpatrol_core::item::{ItemId, Kind};
+use agentpatrol_core::state::RecordedFinding;
+use agentpatrol_ipc::protocol::ActivityLine;
 
 /// Every line the Event Log stands for, in the order the records were
 /// written.
@@ -88,7 +88,7 @@ fn of_restart(recorded: &RecordedRestart) -> ActivityLine {
     ActivityLine {
         sequence: Some(recorded.sequence),
         recorded_at: recorded.recorded_at,
-        line: "AgentSweep's records started again under a new key. The records before \
+        line: "AgentPatrol's records started again under a new key. The records before \
                this cannot be checked."
             .to_string(),
         action: "chain-restart".to_string(),
@@ -236,7 +236,7 @@ fn sentence(event: &Event) -> String {
     let what = named(event.kind, item);
     let detail = |name: &str| event.detail.get(name).map(String::as_str).unwrap_or("");
     let line = match (event.action, event.actor) {
-        (Action::Quarantine, Actor::Auto) => format!("AgentSweep stopped the {what}."),
+        (Action::Quarantine, Actor::Auto) => format!("AgentPatrol stopped the {what}."),
         (Action::Quarantine, _) => format!("You quarantined the {what}."),
         (Action::Restore, _) => format!("You restored the {what}."),
         (Action::ReEnable, _) => format!("You switched the {what} back on (Re-enable)."),
@@ -247,7 +247,7 @@ fn sentence(event: &Event) -> String {
         (Action::Untrust, _) => format!("You withdrew Trust from a version of the {what}."),
         (Action::Purge, _) => purge_line(event.kind, item, &event.receipt_id),
         (Action::ReEnforce, _) => {
-            format!("The {what} came back, and AgentSweep took it out again.")
+            format!("The {what} came back, and AgentPatrol took it out again.")
         }
         (Action::Acknowledge, _) if event.item_id.is_none() => {
             "You said a change was your own.".to_string()
@@ -328,12 +328,12 @@ fn agent_name(agent: &str) -> &str {
 mod tests {
     use super::*;
 
-    use agentsweep_core::eventlog::{EventLog, EventLogWriter, ReceiptStep};
-    use agentsweep_core::eventlog::{PackChange, Primitive, RulePackRecord};
-    use agentsweep_core::finding::Tier;
-    use agentsweep_core::item::Scope;
-    use agentsweep_core::keychain::{KeySource, MemoryKeySource};
-    use agentsweep_core::packs::PackOrigin;
+    use agentpatrol_core::eventlog::{EventLog, EventLogWriter, ReceiptStep};
+    use agentpatrol_core::eventlog::{PackChange, Primitive, RulePackRecord};
+    use agentpatrol_core::finding::Tier;
+    use agentpatrol_core::item::Scope;
+    use agentpatrol_core::keychain::{KeySource, MemoryKeySource};
+    use agentpatrol_core::packs::PackOrigin;
     use tempfile::TempDir;
 
     /// A secret no line may ever carry, nor its hash.
@@ -479,7 +479,7 @@ mod tests {
         assert!(sequences.windows(2).all(|pair| pair[0] <= pair[1]));
 
         let said: Vec<&str> = lines.iter().map(|line| line.line.as_str()).collect();
-        assert_eq!(said[0], "AgentSweep stopped the mcp server 'tracker'.");
+        assert_eq!(said[0], "AgentPatrol stopped the mcp server 'tracker'.");
         assert_eq!(said[1], "You restored the mcp server 'tracker'.");
         assert_eq!(
             said[3],
@@ -517,7 +517,7 @@ mod tests {
     #[test]
     fn no_line_carries_a_sensitive_value_its_hash_or_any_content() {
         let (_directory, view) = fixture_log();
-        let hash = agentsweep_core::eventlog::Redacted::of(SECRET);
+        let hash = agentpatrol_core::eventlog::Redacted::of(SECRET);
         assert!(
             view.events.iter().any(|recorded| recorded
                 .event

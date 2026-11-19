@@ -22,27 +22,27 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::finding::Tier;
-use agentsweep_core::judgement::{EngineError, JudgementEngine as Judging, Prompt};
-use agentsweep_core::keychain::{ClaudeKeyStore, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::{
+use agentpatrol_core::finding::Tier;
+use agentpatrol_core::judgement::{EngineError, JudgementEngine as Judging, Prompt};
+use agentpatrol_core::keychain::{ClaudeKeyStore, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::{
     JudgementEngine, JudgementSettings, Posture, Settings, SettingsFile, SettingsWriter,
 };
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::due::PowerState;
-use agentsweep_daemon::judgement_queue::{Engines, Opened};
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::notifications::NotificationClass;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::preview::PreviewOutcome;
-use agentsweep_menubar::ai_check;
-use agentsweep_menubar::asking::Asking;
-use agentsweep_menubar::frame::Frame;
-use agentsweep_menubar::link::Socket;
-use agentsweep_menubar::notifications::{NEEDS_YOU_BODY, Notice, Notifications, Notifier};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::due::PowerState;
+use agentpatrol_daemon::judgement_queue::{Engines, Opened};
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::notifications::NotificationClass;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::preview::PreviewOutcome;
+use agentpatrol_menubar::ai_check;
+use agentpatrol_menubar::asking::Asking;
+use agentpatrol_menubar::frame::Frame;
+use agentpatrol_menubar::link::Socket;
+use agentpatrol_menubar::notifications::{NEEDS_YOU_BODY, Notice, Notifications, Notifier};
 use serde_json::{Value, json};
 
 /// A defanged key of a plausible shape. It is no real key.
@@ -61,7 +61,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-ai-check-{purpose}-{}-{}",
+            "agentpatrol-ai-check-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

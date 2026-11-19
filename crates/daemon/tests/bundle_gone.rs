@@ -24,27 +24,27 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_core::adapter::SurfaceAdapter;
-use agentsweep_core::eventlog::{Action, EventLog};
-use agentsweep_core::gate_registration::{AtomicWriter, GateCheck, GateCommand};
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::state::Trigger;
-use agentsweep_daemon::bundle_watch::Change;
-use agentsweep_daemon::machine::Machine;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::{Daemon, Tuning};
-use agentsweep_ipc::peer::SameUser;
+use agentpatrol_core::adapter::SurfaceAdapter;
+use agentpatrol_core::eventlog::{Action, EventLog};
+use agentpatrol_core::gate_registration::{AtomicWriter, GateCheck, GateCommand};
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::state::Trigger;
+use agentpatrol_daemon::bundle_watch::Change;
+use agentpatrol_daemon::machine::Machine;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::{Daemon, Tuning};
+use agentpatrol_ipc::peer::SameUser;
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
 /// Where the bundle puts the command line interface. Nothing runs it.
-const CLI: &str = "/Applications/AgentSweep.app/Contents/MacOS/agentsweep";
+const CLI: &str = "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol";
 
-/// Another tool's handler, which the test puts into a group AgentSweep's
+/// Another tool's handler, which the test puts into a group AgentPatrol's
 /// handler sits in.
 const FOREIGN: &str = "bash ~/.claude/other-tool.sh";
 
@@ -119,7 +119,7 @@ impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let number = NEXT.fetch_add(1, Ordering::Relaxed);
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-bundle-gone-{purpose}-{}-{number}",
+            "agentpatrol-bundle-gone-{purpose}-{}-{number}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&root);
@@ -157,18 +157,18 @@ impl Sandbox {
 
     /// Where the bundle was. Nothing is there unless a test puts it there.
     fn bundle(&self) -> PathBuf {
-        self.root.join("Applications/AgentSweep.app")
+        self.root.join("Applications/AgentPatrol.app")
     }
 
     /// A bundle the Finder put into the sandbox home's Trash, renamed the way
     /// it renames one whose name is taken there. Nothing is in it.
     fn trashed_bundle(&self) -> PathBuf {
-        self.root.join("home/.Trash/AgentSweep 12.50.04.app")
+        self.root.join("home/.Trash/AgentPatrol 12.50.04.app")
     }
 
     /// The command line interface inside the trashed bundle.
     fn trashed_cli(&self) -> GateCommand {
-        GateCommand::at(self.trashed_bundle().join("Contents/MacOS/agentsweep"))
+        GateCommand::at(self.trashed_bundle().join("Contents/MacOS/agentpatrol"))
     }
 
     fn options(&self) -> Options {
@@ -259,14 +259,14 @@ impl Sandbox {
             .count()
     }
 
-    /// Puts another tool's handler into the group AgentSweep's
+    /// Puts another tool's handler into the group AgentPatrol's
     /// `UserPromptSubmit` handler sits in, so the group is shared.
     fn share_a_group(&self) {
         let mut settings: serde_json::Value =
             serde_json::from_str(&read(&self.claude_settings())).expect("JSON settings");
         let groups = settings["hooks"]["UserPromptSubmit"]
             .as_array_mut()
-            .expect("AgentSweep's group");
+            .expect("AgentPatrol's group");
         groups[0]["hooks"]
             .as_array_mut()
             .expect("its handlers")
@@ -308,7 +308,7 @@ fn full_scan(daemon: &Arc<Daemon>) {
     panic!("the Full Scan did not finish");
 }
 
-/// Spec section 9.6: a bundle still away at exit takes every AgentSweep
+/// Spec section 9.6: a bundle still away at exit takes every AgentPatrol
 /// handler and pin out of both Agents, one `gate-removed` event each, keeps
 /// the user's own hooks and another tool's handler in a shared group, and
 /// exits 0.
@@ -409,7 +409,7 @@ fn leaving_the_trash_takes_the_gate_out_without_starting() {
     let command = sandbox.trashed_cli();
     sandbox.register_by_hand(&command);
 
-    let removal = agentsweep_daemon::service::leave_the_trash(
+    let removal = agentpatrol_daemon::service::leave_the_trash(
         &sandbox.options(),
         &sandbox.trashed_bundle(),
         &sandbox.keys,
@@ -455,8 +455,8 @@ fn a_daemon_started_from_the_trash_takes_the_gate_out_and_exits_0() {
     let sandbox = Sandbox::new("started");
     let macos = sandbox.trashed_bundle().join("Contents/MacOS");
     std::fs::create_dir_all(&macos).expect("a trashed bundle");
-    let daemon = macos.join("agentsweepd");
-    let built = Path::new(env!("CARGO_BIN_EXE_agentsweepd"));
+    let daemon = macos.join("agentpatrold");
+    let built = Path::new(env!("CARGO_BIN_EXE_agentpatrold"));
     if std::fs::hard_link(built, &daemon).is_err() {
         std::fs::copy(built, &daemon).expect("the daemon in the trashed bundle");
     }

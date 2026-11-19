@@ -13,14 +13,14 @@ use started::Started;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use agentsweep_core::keychain::MemoryKeySource;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::JudgementEngine;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Daemon};
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{EngineChange, Role};
-use agentsweep_ipc::{Client, ClientError};
+use agentpatrol_core::keychain::MemoryKeySource;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::JudgementEngine;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Daemon};
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{EngineChange, Role};
+use agentpatrol_ipc::{Client, ClientError};
 
 /// A defanged stand-in for a Claude API key in the environment.
 const ENVIRONMENT_KEY: &str = "sk-ant-api03-defanged-environment-0000-e9e9";
@@ -28,7 +28,7 @@ const ENVIRONMENT_KEY: &str = "sk-ant-api03-defanged-environment-0000-e9e9";
 #[test]
 fn ollama_host_and_anthropic_api_key_in_the_environment_change_nothing() {
     let temporary = tempfile::Builder::new()
-        .prefix("agentsweep-engine-environment-")
+        .prefix("agentpatrol-engine-environment-")
         .tempdir()
         .expect("a temporary folder");
     let root = temporary.path().to_path_buf();
@@ -75,8 +75,8 @@ fn ollama_host_and_anthropic_api_key_in_the_environment_change_nothing() {
 
     // An engine outside the eval bar runs in the Developer Posture only.
     client
-        .change_settings(agentsweep_ipc::protocol::SettingsChange {
-            posture: Some(agentsweep_core::settings::Posture::Developer),
+        .change_settings(agentpatrol_ipc::protocol::SettingsChange {
+            posture: Some(agentpatrol_core::settings::Posture::Developer),
             ..Default::default()
         })
         .expect("the Developer Posture");

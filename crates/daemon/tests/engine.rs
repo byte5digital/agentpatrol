@@ -15,17 +15,19 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use agentsweep_core::eventlog::{Action, Actor, Event, EventLog};
-use agentsweep_core::keychain::{ChainKey, ClaudeKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::ollama::OllamaPresence;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::{JudgementEngine, Posture, Settings, SettingsFile, SettingsWriter};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_ipc::peer::{Nobody, PeerCheck, SameUser};
-use agentsweep_ipc::protocol::{EngineChange, Hello, Message, Request, Role, SettingsChange};
-use agentsweep_ipc::{Client, ClientError, connect};
+use agentpatrol_core::eventlog::{Action, Actor, Event, EventLog};
+use agentpatrol_core::keychain::{ChainKey, ClaudeKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::ollama::OllamaPresence;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::{
+    JudgementEngine, Posture, Settings, SettingsFile, SettingsWriter,
+};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_ipc::peer::{Nobody, PeerCheck, SameUser};
+use agentpatrol_ipc::protocol::{EngineChange, Hello, Message, Request, Role, SettingsChange};
+use agentpatrol_ipc::{Client, ClientError, connect};
 
 #[path = "../../core/tests/fixture_ollama/mod.rs"]
 mod fixture_ollama;
@@ -98,7 +100,7 @@ impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         captured_log();
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-engine-{purpose}-{}-{}",
+            "agentpatrol-engine-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -330,7 +332,7 @@ fn developer_switches_an_untested_engine_on_and_simple_switches_it_off() {
 
 /// Settings an earlier version left with an untested engine on in the Simple
 /// Posture: the daemon switches it off as it starts, with one
-/// `engine-changed` event by AgentSweep itself.
+/// `engine-changed` event by AgentPatrol itself.
 #[test]
 fn a_start_switches_off_an_untested_engine_left_on_in_simple() {
     let sandbox = Sandbox::new("untested-start");
@@ -469,11 +471,11 @@ fn the_engine_state_names_ollama_s_presence_and_its_models() {
 #[cfg(unix)]
 #[test]
 fn the_engine_state_names_apple_s_availability_and_its_reason() {
-    use agentsweep_core::apple::AppleAvailability;
+    use agentpatrol_core::apple::AppleAvailability;
     use std::os::unix::fs::PermissionsExt;
 
     let sandbox = Sandbox::new("apple-availability");
-    let fake = sandbox.root.join("agentsweep-apple-judge");
+    let fake = sandbox.root.join("agentpatrol-apple-judge");
     let answer = sandbox.root.join("check");
     let script = format!(
         "#!/bin/sh\ncat > /dev/null\necho \"$$\" >> \"{}\"\ncat \"{}\"\n",
@@ -743,7 +745,7 @@ fn every_engine_change_is_one_event_and_the_key_is_nowhere() {
         .expect("Apple on");
     daemon
         .daemon()
-        .scan(agentsweep_core::state::Trigger::ScanNow);
+        .scan(agentpatrol_core::state::Trigger::ScanNow);
     wait_for_a_scan(daemon.daemon());
     assert_eq!(
         client.engine().expect("the state").engine,

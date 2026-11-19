@@ -5,7 +5,7 @@
 //! of spec section 1.1. The address comes from the settings file, where it is
 //! loopback by construction; `OLLAMA_HOST` is never read, and no proxy is
 //! ever asked, because the client is a few lines of HTTP over one TCP
-//! connection to that one address. AgentSweep never pulls a model and never
+//! connection to that one address. AgentPatrol never pulls a model and never
 //! starts `ollama serve`: it only asks what is already there.
 //!
 //! Three requests exist:
@@ -26,7 +26,7 @@
 //! Neither the Prompt nor any Item content is ever put in an error, so
 //! nothing a caller logs from here carries either.
 //!
-//! Ollama counts no tokens for AgentSweep beforehand, so the Judgement
+//! Ollama counts no tokens for AgentPatrol beforehand, so the Judgement
 //! Request is cut to the byte estimate of three bytes per token, 3 x 8192
 //! bytes (the owner's decision). The prompt evaluation count Ollama reports
 //! back is kept as a number, for the caller to log and for the eval report to
@@ -476,7 +476,7 @@ pub struct OllamaEngine {
 impl OllamaEngine {
     /// The engine for the model the settings name, which must already be
     /// pulled: its digest is read from the model list, for the Verdict cache
-    /// key. A model that is not there is an engine error; AgentSweep never
+    /// key. A model that is not there is an engine error; AgentPatrol never
     /// pulls one.
     pub fn for_model(client: OllamaClient, model: &str) -> Result<OllamaEngine, EngineError> {
         if model.is_empty() {

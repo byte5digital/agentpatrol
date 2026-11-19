@@ -15,28 +15,28 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, Once};
 use std::time::Duration;
 
-use agentsweep_adapter_conformance::fixtures;
-use agentsweep_core::baseline::AcceptedBy;
-use agentsweep_core::chain::ChainState;
-use agentsweep_core::enforcement::Enforcement;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::{Actor, EventLog};
-use agentsweep_core::health::StateFileHealth;
-use agentsweep_core::item::{ItemId, Kind, Scope};
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::scan_pass::ScanKind;
-use agentsweep_core::state::{StateFile, Trigger};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::due::{self, Schedule, Stated};
-use agentsweep_daemon::full_scan::{self, Unwatched};
-use agentsweep_daemon::machine::Machine;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::{Batch, Decision, Escalation, PATHS_PER_BATCH, Timings};
-use agentsweep_ipc::peer::{Nobody, Peer, PeerCheck, SameUser, this_user};
-use agentsweep_ipc::protocol::{Hello, Message, Refusal, Role, ScanPhase, StateEvent, Status};
-use agentsweep_ipc::{Client, RESTART_AGENTSWEEP, connect};
+use agentpatrol_adapter_conformance::fixtures;
+use agentpatrol_core::baseline::AcceptedBy;
+use agentpatrol_core::chain::ChainState;
+use agentpatrol_core::enforcement::Enforcement;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::{Actor, EventLog};
+use agentpatrol_core::health::StateFileHealth;
+use agentpatrol_core::item::{ItemId, Kind, Scope};
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::scan_pass::ScanKind;
+use agentpatrol_core::state::{StateFile, Trigger};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::due::{self, Schedule, Stated};
+use agentpatrol_daemon::full_scan::{self, Unwatched};
+use agentpatrol_daemon::machine::Machine;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::{Batch, Decision, Escalation, PATHS_PER_BATCH, Timings};
+use agentpatrol_ipc::peer::{Nobody, Peer, PeerCheck, SameUser, this_user};
+use agentpatrol_ipc::protocol::{Hello, Message, Refusal, Role, ScanPhase, StateEvent, Status};
+use agentpatrol_ipc::{Client, RESTART_AGENTPATROL, connect};
 
 /// Keeps one test's temporary paths apart from another's.
 static NEXT: AtomicU32 = AtomicU32::new(0);
@@ -103,7 +103,7 @@ impl Sandbox {
     /// A machine with nothing planted on it.
     fn empty(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-daemon-{purpose}-{}-{}",
+            "agentpatrol-daemon-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -198,8 +198,8 @@ impl Sandbox {
 
     /// The Baseline as it stands, read with the key this sandbox's daemons
     /// share.
-    fn baseline(&self) -> agentsweep_core::baseline::BaselineView {
-        agentsweep_core::baseline::Baseline::in_data_directory(&self.data())
+    fn baseline(&self) -> agentpatrol_core::baseline::BaselineView {
+        agentpatrol_core::baseline::Baseline::in_data_directory(&self.data())
             .read(&self.keys)
             .expect("a readable Baseline")
     }
@@ -299,7 +299,7 @@ fn the_daemon_answers_while_its_rules_still_compile() {
         Tuning {
             pack: Some(Arc::new(move || {
                 let _ = held.lock().expect("the hold is not poisoned").recv();
-                agentsweep_core::rules::RulePack::bundled()
+                agentpatrol_core::rules::RulePack::bundled()
             })),
             ..Tuning::default()
         },
@@ -345,7 +345,7 @@ fn the_status_command_renders_health_the_scan_and_the_open_findings() {
 /// A client of another version is refused with the one sentence spec section
 /// 6.3 fixes, and nothing else is answered on that connection.
 #[test]
-fn a_client_of_the_wrong_version_is_told_to_restart_agentsweep() {
+fn a_client_of_the_wrong_version_is_told_to_restart_agentpatrol() {
     let sandbox = Sandbox::empty("version");
     let daemon = sandbox.start();
 
@@ -360,7 +360,7 @@ fn a_client_of_the_wrong_version_is_told_to_restart_agentsweep() {
     match connection.receive().expect("an answer") {
         Some(Message::Refused(refusal)) => {
             assert_eq!(refusal.reason(), "version-mismatch");
-            assert_eq!(refusal.message(), RESTART_AGENTSWEEP);
+            assert_eq!(refusal.message(), RESTART_AGENTPATROL);
         }
         other => panic!("expected a refusal, got {other:?}"),
     }
@@ -808,7 +808,7 @@ fn a_full_scan_names_the_project_of_the_items_in_hand() {
     struct Recording(Mutex<Vec<Told>>);
 
     impl full_scan::Progress for Recording {
-        fn enumerating(&self, agent: Option<&agentsweep_core::adapter::Descriptor>) {
+        fn enumerating(&self, agent: Option<&agentpatrol_core::adapter::Descriptor>) {
             self.0.lock().expect("the record").push((
                 0,
                 0,
@@ -817,7 +817,7 @@ fn a_full_scan_names_the_project_of_the_items_in_hand() {
             ));
         }
 
-        fn at(&self, done: usize, total: usize, item: Option<&agentsweep_core::item::Item>) {
+        fn at(&self, done: usize, total: usize, item: Option<&agentpatrol_core::item::Item>) {
             self.0.lock().expect("the record").push((
                 done,
                 total,

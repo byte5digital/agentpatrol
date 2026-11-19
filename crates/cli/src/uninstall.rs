@@ -1,4 +1,4 @@
-//! `agentsweep uninstall [--keep | --restore-all | --delete-everything]`:
+//! `agentpatrol uninstall [--keep | --restore-all | --delete-everything]`:
 //! Uninstall from the command line (spec section 9.6).
 //!
 //! It sends the daemon the same `uninstall` request the Settings flow sends,
@@ -9,7 +9,7 @@
 //! Then it does what the Settings flow does next. The daemon and the login
 //! item are registrations of the app through SMAppService, which the app's
 //! own executable takes off, so this command runs that executable from its
-//! own bundle with [`FINISH`]: it quits a running AgentSweep and unregisters
+//! own bundle with [`FINISH`]: it quits a running AgentPatrol and unregisters
 //! both, which stops the daemon. This command waits for the daemon to go and
 //! says what is left. What no process can do for the user, moving the bundle
 //! this command runs from to the Trash, it asks for, naming the folder the
@@ -21,8 +21,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-use agentsweep_ipc::protocol::{Role, UninstallChoice, UninstallReport};
-use agentsweep_ipc::{Client, ClientError};
+use agentpatrol_ipc::protocol::{Role, UninstallChoice, UninstallReport};
+use agentpatrol_ipc::{Client, ClientError};
 
 use crate::actions::{DONE, NOT_DONE, UNREACHABLE};
 
@@ -83,9 +83,9 @@ pub fn parse(arguments: &[String]) -> Result<Invocation, String> {
 }
 
 /// The app's own executable, beside this one in `Contents/MacOS`.
-pub const APP_EXECUTABLE: &str = "agentsweep-menubar";
+pub const APP_EXECUTABLE: &str = "agentpatrol-menubar";
 
-/// The flag with which the app's executable quits a running AgentSweep and
+/// The flag with which the app's executable quits a running AgentPatrol and
 /// unregisters the daemon and the login item, then exits.
 pub const FINISH: &str = "--finish-uninstall";
 
@@ -93,13 +93,13 @@ pub const FINISH: &str = "--finish-uninstall";
 pub const STOP_WAIT: Duration = Duration::from_secs(10);
 
 /// What no daemon answering means: nothing was touched, and what is left.
-pub const NOTHING_CHANGED: &str = "Nothing was changed: AgentSweep is not running.\n\
-     Its hooks, its data and its background item stay. Open AgentSweep, then run this again.\n";
+pub const NOTHING_CHANGED: &str = "Nothing was changed: AgentPatrol is not running.\n\
+     Its hooks, its data and its background item stay. Open AgentPatrol, then run this again.\n";
 
 /// The app bundle this command runs out of.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Bundle {
-    /// The bundle, `.../AgentSweep.app`.
+    /// The bundle, `.../AgentPatrol.app`.
     pub app: PathBuf,
     /// The app's own executable inside it.
     pub executable: PathBuf,
@@ -148,7 +148,7 @@ pub fn run_in(invocation: &Invocation, bundle: Option<&Bundle>, wait: Duration) 
         Err(ClientError::Unreachable(_)) => return (NOTHING_CHANGED.to_string(), UNREACHABLE),
         Err(error) => {
             return (
-                format!("Nothing was changed: AgentSweep could not be asked ({error}).\n"),
+                format!("Nothing was changed: AgentPatrol could not be asked ({error}).\n"),
                 NOT_DONE,
             );
         }
@@ -219,20 +219,20 @@ fn stopped(socket: &Option<PathBuf>, wait: Duration) -> bool {
     }
 }
 
-/// The step left to the user: drag AgentSweep out of its folder to the
+/// The step left to the user: drag AgentPatrol out of its folder to the
 /// Trash, quitting it first where it may still be open, since macOS refuses
 /// to trash an app that is open.
 pub fn last_step(bundle: Option<&Bundle>, stopped: bool) -> String {
     match (bundle, stopped) {
         (Some(bundle), true) => format!(
-            "AgentSweep has stopped. Now drag it from {} to the Trash.",
+            "AgentPatrol has stopped. Now drag it from {} to the Trash.",
             bundle.folder().display()
         ),
         (Some(bundle), false) => format!(
-            "Quit AgentSweep, then drag it from {} to the Trash.",
+            "Quit AgentPatrol, then drag it from {} to the Trash.",
             bundle.folder().display()
         ),
-        (None, _) => "Quit AgentSweep, then drag it to the Trash.".to_string(),
+        (None, _) => "Quit AgentPatrol, then drag it to the Trash.".to_string(),
     }
 }
 
@@ -300,7 +300,7 @@ mod tests {
             use std::sync::atomic::{AtomicU32, Ordering};
             static NEXT: AtomicU32 = AtomicU32::new(0);
             let path = std::env::temp_dir().join(format!(
-                "agentsweep-cli-uninstall-{}-{}",
+                "agentpatrol-cli-uninstall-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
@@ -323,7 +323,7 @@ mod tests {
     /// A socket nothing listens on.
     fn nowhere(name: &str) -> PathBuf {
         let nowhere = std::env::temp_dir().join(format!(
-            "agentsweep-uninstall-{name}-{}.sock",
+            "agentpatrol-uninstall-{name}-{}.sock",
             std::process::id()
         ));
         let _ = std::fs::remove_file(&nowhere);
@@ -335,13 +335,13 @@ mod tests {
     fn fake_bundle(folder: &Path, script: &str) -> Bundle {
         use std::os::unix::fs::PermissionsExt as _;
 
-        let macos = folder.join("Apps/AgentSweep.app/Contents/MacOS");
+        let macos = folder.join("Apps/AgentPatrol.app/Contents/MacOS");
         std::fs::create_dir_all(&macos).expect("a bundle");
         let executable = macos.join(APP_EXECUTABLE);
         std::fs::write(&executable, format!("#!/bin/sh\n{script}\n")).expect("a script");
         std::fs::set_permissions(&executable, std::fs::Permissions::from_mode(0o755))
             .expect("executable");
-        Bundle::of(&macos.join("agentsweep")).expect("a bundle")
+        Bundle::of(&macos.join("agentpatrol")).expect("a bundle")
     }
 
     /// No daemon: nothing is touched and nothing is run, the exit is
@@ -373,20 +373,20 @@ mod tests {
     #[test]
     fn the_bundle_is_the_nearest_app_above_the_cli_and_its_folder_is_named() {
         let bundle = Bundle::of(Path::new(
-            "/Users/someone/agentsweep-hand-check/AgentSweep.app/Contents/MacOS/agentsweep",
+            "/Users/someone/agentpatrol-hand-check/AgentPatrol.app/Contents/MacOS/agentpatrol",
         ))
         .expect("a bundle");
         assert_eq!(
             bundle.executable,
             Path::new(
-                "/Users/someone/agentsweep-hand-check/AgentSweep.app/Contents/MacOS/agentsweep-menubar"
+                "/Users/someone/agentpatrol-hand-check/AgentPatrol.app/Contents/MacOS/agentpatrol-menubar"
             )
         );
         assert_eq!(
             bundle.folder(),
-            Path::new("/Users/someone/agentsweep-hand-check")
+            Path::new("/Users/someone/agentpatrol-hand-check")
         );
-        assert_eq!(Bundle::of(Path::new("/src/target/debug/agentsweep")), None);
+        assert_eq!(Bundle::of(Path::new("/src/target/debug/agentpatrol")), None);
     }
 
     /// The app's executable runs with the finishing flag; what it could not
@@ -398,31 +398,31 @@ mod tests {
         let bundle = fake_bundle(
             folder.path(),
             &format!(
-                "echo \"$@\" > '{}'\necho 'AgentSweep did not quit' >&2\nexit 1",
+                "echo \"$@\" > '{}'\necho 'AgentPatrol did not quit' >&2\nexit 1",
                 flag.display()
             ),
         );
         let left = finish(&bundle, &Some(nowhere("unfinished")), Duration::ZERO);
-        assert_eq!(left, vec!["AgentSweep did not quit".to_string()]);
+        assert_eq!(left, vec!["AgentPatrol did not quit".to_string()]);
         assert_eq!(
             std::fs::read_to_string(&flag).expect("it ran").trim(),
             FINISH
         );
         let rendered = render(
             &UninstallReport {
-                message: "AgentSweep's hooks are out of Claude Code and Codex.".to_string(),
+                message: "AgentPatrol's hooks are out of Claude Code and Codex.".to_string(),
                 ..UninstallReport::default()
             },
             &left,
             Some(&bundle),
         );
         assert!(
-            rendered.contains("Not done: AgentSweep did not quit.\n"),
+            rendered.contains("Not done: AgentPatrol did not quit.\n"),
             "{rendered}"
         );
         assert!(
             rendered.trim_end().ends_with(&format!(
-                "Quit AgentSweep, then drag it from {} to the Trash.",
+                "Quit AgentPatrol, then drag it from {} to the Trash.",
                 folder.path().join("Apps").display()
             )),
             "{rendered}"
@@ -432,7 +432,7 @@ mod tests {
     /// Once the app's executable has done its part and no daemon answers,
     /// nothing is left and the last step names the bundle's folder.
     #[test]
-    fn a_finished_uninstall_names_the_folder_to_drag_agentsweep_from() {
+    fn a_finished_uninstall_names_the_folder_to_drag_agentpatrol_from() {
         let folder = Folder::new();
         let bundle = fake_bundle(folder.path(), "exit 0");
         assert!(finish(&bundle, &Some(nowhere("finished")), Duration::ZERO).is_empty());
@@ -440,7 +440,7 @@ mod tests {
             &UninstallReport {
                 choice: UninstallChoice::DeleteEverything,
                 deleted: vec!["the data directory".to_string(), "the caches".to_string()],
-                message: "Deleted everything AgentSweep made.".to_string(),
+                message: "Deleted everything AgentPatrol made.".to_string(),
                 ..UninstallReport::default()
             },
             &[],
@@ -450,7 +450,7 @@ mod tests {
         assert!(rendered.contains("Deleted: the data directory, the caches."));
         assert!(
             rendered.trim_end().ends_with(&format!(
-                "AgentSweep has stopped. Now drag it from {} to the Trash.",
+                "AgentPatrol has stopped. Now drag it from {} to the Trash.",
                 folder.path().join("Apps").display()
             )),
             "{rendered}"

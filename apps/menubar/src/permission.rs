@@ -21,14 +21,14 @@
 //! 9.7). The popover's sentence is the Health rung "N projects need
 //! permission." as the command line interface prints it, and a project that
 //! Needs Permission never counts towards an all-clear; both are the Health's
-//! ([`agentsweep_core::health`]).
+//! ([`agentpatrol_core::health`]).
 
 use std::path::Path;
 use std::sync::Mutex;
 
-use agentsweep_core::overview::{Overview, ProjectCheck};
-use agentsweep_core::settings::Posture;
-use agentsweep_ipc::ClientError;
+use agentpatrol_core::overview::{Overview, ProjectCheck};
+use agentpatrol_core::settings::Posture;
+use agentpatrol_ipc::ClientError;
 use serde_json::{Value, json};
 
 use crate::asking::Asking;
@@ -42,7 +42,7 @@ pub const CHECK_NOW: &str = "Check now";
 pub const CHECKING: &str = "Checking…";
 
 /// The sentence beside the link to System Settings.
-pub const PRIVACY_SENTENCE: &str = "If macOS did not allow it, switch on AgentSweep under \
+pub const PRIVACY_SENTENCE: &str = "If macOS did not allow it, switch on AgentPatrol under \
      Files and Folders in Privacy & Security.";
 
 /// The button that opens System Settings at Files and Folders.
@@ -193,7 +193,7 @@ pub fn check_now(
 mod tests {
     use super::*;
 
-    use agentsweep_core::overview::ProjectRecord;
+    use agentpatrol_core::overview::ProjectRecord;
 
     fn project(root: &str, check: ProjectCheck) -> ProjectRecord {
         ProjectRecord {

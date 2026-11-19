@@ -1,6 +1,6 @@
 //! Who the daemon answers: a peer of the same user carrying byte5's signature.
 //!
-//! The daemon holds the file access macOS attributed to AgentSweep, the
+//! The daemon holds the file access macOS attributed to AgentPatrol, the
 //! Keychain key behind both chains and the only write path into the quarantine
 //! store, so a uid check alone is not enough: every process the user runs has
 //! the user's uid, including an Agent that has been prompt-injected. ADR 0008
@@ -15,8 +15,8 @@
 
 use std::sync::Arc;
 
-use agentsweep_ipc::peer::{Nobody, Peer, PeerCheck, SameUser};
-use agentsweep_ipc::protocol::Refusal;
+use agentpatrol_ipc::peer::{Nobody, Peer, PeerCheck, SameUser};
+use agentpatrol_ipc::protocol::Refusal;
 
 /// byte5's Apple Developer Team ID, written once, so the constant and the
 /// record the release bundle checker reads cannot drift apart.
@@ -35,7 +35,7 @@ macro_rules! team_id {
 pub const TEAM_ID: &str = team_id!();
 
 /// What the Team ID record starts with.
-pub const TEAM_ID_RECORD_PREFIX: &str = "agentsweep-team-id=";
+pub const TEAM_ID_RECORD_PREFIX: &str = "agentpatrol-team-id=";
 
 /// What the Team ID record ends with.
 pub const TEAM_ID_RECORD_SUFFIX: &str = ";";
@@ -46,7 +46,7 @@ pub const TEAM_ID_RECORD_SUFFIX: &str = ";";
 /// checker finds it there without running the daemon: a bundle whose daemon
 /// carries no Team ID, or another one than the bundle is signed with, is
 /// refused before a release.
-const TEAM_ID_RECORD: &str = concat!("agentsweep-team-id=", team_id!(), ";");
+const TEAM_ID_RECORD: &str = concat!("agentpatrol-team-id=", team_id!(), ";");
 
 /// The Team ID this binary carries, read out of its record.
 pub fn compiled_team_id() -> &'static str {
@@ -80,7 +80,7 @@ pub fn release_check(team_id: &str) -> Arc<dyn PeerCheck> {
 ///
 /// `anchor apple generic` is what a Developer ID certificate chains to, and
 /// the leaf's organisational unit is the Team ID. It is the shape the
-/// designated requirement of every AgentSweep binary has
+/// designated requirement of every AgentPatrol binary has
 /// (`docs/research/macos-first-run-permissions.md` section 6).
 pub fn requirement_for(team_id: &str) -> String {
     format!("anchor apple generic and certificate leaf[subject.OU] = \"{team_id}\"")
@@ -210,7 +210,7 @@ mod signature {
         let valid = unsafe { SecCodeCheckValidity(guest.0, NO_FLAGS, wanted.0) };
         if valid != SUCCESS {
             return Err(Refusal::UnsignedPeer {
-                detail: format!("the peer's signature is not AgentSweep's ({valid})"),
+                detail: format!("the peer's signature is not AgentPatrol's ({valid})"),
             });
         }
         Ok(())
@@ -253,7 +253,7 @@ mod signature {
 mod tests {
     use super::*;
 
-    use agentsweep_ipc::peer::this_user;
+    use agentpatrol_ipc::peer::this_user;
 
     /// The requirement is the shape a Developer ID designated requirement has:
     /// the Apple anchor, and the Team ID as the leaf's organisational unit.
@@ -304,7 +304,7 @@ mod tests {
             .expect_err("Apple's code is not byte5's");
         assert_eq!(refusal.reason(), "unsigned-peer");
         assert!(
-            refusal.message().contains("not AgentSweep's"),
+            refusal.message().contains("not AgentPatrol's"),
             "{}",
             refusal.message()
         );

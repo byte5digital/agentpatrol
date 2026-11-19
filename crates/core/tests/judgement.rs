@@ -8,16 +8,16 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::finding::{FiredHeuristic, MatchRange, Severity};
-use agentsweep_core::item::{
+use agentpatrol_core::finding::{FiredHeuristic, MatchRange, Severity};
+use agentpatrol_core::item::{
     Activation, InactiveReason, Item, Kind, Provenance, Scope, canonical_entry,
 };
-use agentsweep_core::judgement::{
+use agentpatrol_core::judgement::{
     CATEGORIES, Category, EngineError, JudgementEngine, NO_CATEGORY, NoVerdict, PROMPT_VERSION,
     Prompt, REASON_CHARS, SYSTEM_PROMPT, ScriptedEngine, Verdict, check_flagged, judge,
     judgement_severity, parse_answer, verdict_schema,
 };
-use agentsweep_core::judgement_request::{
+use agentpatrol_core::judgement_request::{
     ByteEstimate, JudgementRequest, Normalisation, RequestBuilder,
 };
 use serde_json::json;

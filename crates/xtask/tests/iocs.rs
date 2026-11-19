@@ -6,9 +6,9 @@
 
 use std::fs;
 
-use agentsweep_core::rules::RulePack;
-use agentsweep_xtask::iocs::{self, GENERATED};
-use agentsweep_xtask::repo_root;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_xtask::iocs::{self, GENERATED};
+use agentpatrol_xtask::repo_root;
 
 #[test]
 fn every_generated_rule_is_what_its_indicator_list_renders_to() {
@@ -23,7 +23,7 @@ fn every_generated_rule_is_what_its_indicator_list_renders_to() {
         assert_eq!(
             committed,
             rendered,
-            "{} is not what iocs/{} renders to; run `cargo run -p agentsweep-xtask -- render-iocs`",
+            "{} is not what iocs/{} renders to; run `cargo run -p agentpatrol-xtask -- render-iocs`",
             generated.directory(),
             generated.list
         );

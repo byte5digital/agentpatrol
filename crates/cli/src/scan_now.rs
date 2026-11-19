@@ -1,4 +1,4 @@
-//! A bare `agentsweep scan`: the daemon's Full Scan, followed from the
+//! A bare `agentpatrol scan`: the daemon's Full Scan, followed from the
 //! terminal.
 //!
 //! The command scans nothing itself. It subscribes to the daemon's state
@@ -11,10 +11,10 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-use agentsweep_core::scan_pass::ScanKind;
-use agentsweep_core::state::{ScanSummary, Trigger};
-use agentsweep_ipc::protocol::{Role, StateEvent};
-use agentsweep_ipc::{Client, ClientError};
+use agentpatrol_core::scan_pass::ScanKind;
+use agentpatrol_core::state::{ScanSummary, Trigger};
+use agentpatrol_ipc::protocol::{Role, StateEvent};
+use agentpatrol_ipc::{Client, ClientError};
 
 use crate::actions::{DONE, NOT_DONE, UNREACHABLE};
 use crate::status::{count, scan_line};
@@ -171,8 +171,10 @@ pub fn progress_line(done: usize, total: usize) -> String {
 fn open_line(open: usize) -> String {
     match open {
         0 => "Nothing is open.".to_string(),
-        1 => "1 Finding is open. `agentsweep status` shows it and what can be done.".to_string(),
-        n => format!("{n} Findings are open. `agentsweep status` shows them and what can be done."),
+        1 => "1 Finding is open. `agentpatrol status` shows it and what can be done.".to_string(),
+        n => {
+            format!("{n} Findings are open. `agentpatrol status` shows them and what can be done.")
+        }
     }
 }
 
@@ -188,7 +190,7 @@ fn unanswered(error: &ClientError, out: &mut dyn Write) -> u8 {
             UNREACHABLE
         }
         other => {
-            let _ = writeln!(out, "AgentSweep could not be asked: {other}");
+            let _ = writeln!(out, "AgentPatrol could not be asked: {other}");
             NOT_DONE
         }
     }
@@ -198,7 +200,7 @@ fn unanswered(error: &ClientError, out: &mut dyn Write) -> u8 {
 mod tests {
     use super::*;
 
-    use agentsweep_core::envelope::Timestamp;
+    use agentpatrol_core::envelope::Timestamp;
 
     fn words(line: &[&str]) -> Vec<String> {
         line.iter().map(|word| word.to_string()).collect()
@@ -225,7 +227,7 @@ mod tests {
         StateEvent::ScanProgress {
             done,
             total,
-            phase: agentsweep_ipc::protocol::ScanPhase::of_total(total),
+            phase: agentpatrol_ipc::protocol::ScanPhase::of_total(total),
             in_hand: None,
         }
     }
@@ -371,7 +373,7 @@ mod tests {
     #[test]
     fn no_daemon_is_protection_off_and_no_scan() {
         let nowhere = std::env::temp_dir().join(format!(
-            "agentsweep-scan-now-nobody-{}.sock",
+            "agentpatrol-scan-now-nobody-{}.sock",
             std::process::id()
         ));
         let _ = std::fs::remove_file(&nowhere);

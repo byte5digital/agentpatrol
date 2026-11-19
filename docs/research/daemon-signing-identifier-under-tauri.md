@@ -17,13 +17,13 @@ The Tauri CLI binary's strings name the arguments its signer passes to `/usr/bin
 
 ## E2: the bundle as Tauri builds it today
 
-Sidecars as cargo leaves them carry the linker's ad hoc signature (`flags=0x20002(adhoc,linker-signed)`, identifier `agentsweepd-<hash>`, `Info.plist=not bound`). After `tauri build`:
+Sidecars as cargo leaves them carry the linker's ad hoc signature (`flags=0x20002(adhoc,linker-signed)`, identifier `agentpatrold-<hash>`, `Info.plist=not bound`). After `tauri build`:
 
 | Code | Identifier | Flags | Info.plist | Entitlements |
 |---|---|---|---|---|
-| AgentSweep.app (and its executable) | `de.byte5.agentsweep` | `0x10002(adhoc,runtime)` | 16 entries | none |
-| `Contents/MacOS/agentsweepd` | `agentsweepd-55554944ec6d…` | `0x10002(adhoc,runtime)` | not bound | none |
-| `Contents/MacOS/agentsweep` | `agentsweep-55554944fdf0…` | `0x10002(adhoc,runtime)` | not bound | none |
+| AgentPatrol.app (and its executable) | `de.byte5.agentpatrol` | `0x10002(adhoc,runtime)` | 16 entries | none |
+| `Contents/MacOS/agentpatrold` | `agentpatrold-55554944ec6d…` | `0x10002(adhoc,runtime)` | not bound | none |
+| `Contents/MacOS/agentpatrol` | `agentpatrol-55554944fdf0…` | `0x10002(adhoc,runtime)` | not bound | none |
 
 - `codesign -d -r-` shows a designated requirement of the form `cdhash H"…"` on every one, the form codesign gives ad hoc code; a requirement naming an identifier and a Team ID needs a real identity and is not shown here.
 - The hardened runtime flag is set on every binary even with the ad hoc identity. No `Timestamp=` line appears, as expected for ad hoc signatures.
@@ -34,13 +34,13 @@ Sidecars as cargo leaves them carry the linker's ad hoc signature (`flags=0x2000
 
 A minimal C program linked with `-Wl,-sectcreate,__TEXT,__info_plist,<plist>`, then signed with `codesign --force -s - --options runtime` and no identifier, took the plist's `CFBundleIdentifier` as its identifier (`Info.plist entries=2`); the same program without the section took its file name. The linker's own ad hoc signature ignores the section in both cases.
 
-The daemon was then built with its Info.plist (`CFBundleIdentifier` `de.byte5.agentsweep.daemon`, `CFBundleInfoDictionaryVersion`, `CFBundleName`) linked into the `__TEXT,__info_plist` section of `agentsweepd` only. `otool -l` shows the section, and the `.dep-v0` section of cargo auditable is still there. The bundle was built again exactly as in E2:
+The daemon was then built with its Info.plist (`CFBundleIdentifier` `de.byte5.agentpatrol.daemon`, `CFBundleInfoDictionaryVersion`, `CFBundleName`) linked into the `__TEXT,__info_plist` section of `agentpatrold` only. `otool -l` shows the section, and the `.dep-v0` section of cargo auditable is still there. The bundle was built again exactly as in E2:
 
-- `agentsweepd`: identifier `de.byte5.agentsweep.daemon`, flags `0x10002(adhoc,runtime)`, `Info.plist entries=3`, no entitlements.
-- The app and the CLI sidecar: unchanged from E2 (the CLI keeps `agentsweep-<hash>`).
+- `agentpatrold`: identifier `de.byte5.agentpatrol.daemon`, flags `0x10002(adhoc,runtime)`, `Info.plist entries=3`, no entitlements.
+- The app and the CLI sidecar: unchanged from E2 (the CLI keeps `agentpatrol-<hash>`).
 - `codesign --verify --deep --strict` accepts the app.
-- The app inside the DMG Tauri built and the app inside the updater archive both carry the daemon with identifier `de.byte5.agentsweep.daemon`, and both verify.
-- `agentsweepd --version` still runs and prints the label and version.
+- The app inside the DMG Tauri built and the app inside the updater archive both carry the daemon with identifier `de.byte5.agentpatrol.daemon`, and both verify.
+- `agentpatrold --version` still runs and prints the label and version.
 
 The identifier therefore survives `tauri build`'s own signing pass: that pass is the one that produces it.
 
@@ -50,12 +50,12 @@ The configuration schema of the locked `tauri-utils` 2.9.3, read from the local 
 
 ## E5: what a re-sign after Tauri leaves stale
 
-On a copy of the E2 outputs, the daemon was re-signed with `codesign --force -s - --options runtime -i de.byte5.agentsweep.daemon`, and then the bundle with `codesign --force -s - --options runtime`, which is checklist item 15 as written.
+On a copy of the E2 outputs, the daemon was re-signed with `codesign --force -s - --options runtime -i de.byte5.agentpatrol.daemon`, and then the bundle with `codesign --force -s - --options runtime`, which is checklist item 15 as written.
 
 - App: after the daemon's re-sign and before the bundle's, `codesign --verify --deep --strict` fails with "nested code is modified or invalid" naming the daemon. After the bundle's re-sign it verifies, and the app's CDHash has changed (`ff5ab6cd…` to `539a38ed…`). Any notarization ticket issued for the bundle Tauri signed was issued for the earlier CDHash; notarization itself was not run.
-- DMG: mounted read-only, the app inside still has CDHash `ff5ab6cd…` and the daemon still has identifier `agentsweepd-55554944ec6d…`. It verifies, as the old bundle.
-- Updater archive (`AgentSweep.app.tar.gz`): extracted, it holds the same old app and daemon. A tar of the re-signed app has a different SHA-256 from the archive Tauri built.
-- Updater signature (`.app.tar.gz.sig`): its trusted comment names `AgentSweep.app.tar.gz` with the build's timestamp; it was made over the archive Tauri built, which holds the old bundle.
+- DMG: mounted read-only, the app inside still has CDHash `ff5ab6cd…` and the daemon still has identifier `agentpatrold-55554944ec6d…`. It verifies, as the old bundle.
+- Updater archive (`AgentPatrol.app.tar.gz`): extracted, it holds the same old app and daemon. A tar of the re-signed app has a different SHA-256 from the archive Tauri built.
+- Updater signature (`.app.tar.gz.sig`): its trusted comment names `AgentPatrol.app.tar.gz` with the build's timestamp; it was made over the archive Tauri built, which holds the old bundle.
 - `latest.json`: the Tauri CLI produced none (`find` over the outputs is empty). It is written by `tauri-action` from the `.sig`, so it could not be exercised locally; it carries the signature of the stale archive.
 
 ## Not established here

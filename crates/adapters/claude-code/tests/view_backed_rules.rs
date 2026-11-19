@@ -19,15 +19,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_adapter_workspace::testing::TemporaryRepository;
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter};
-use agentsweep_core::finding::Source;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Item, Provenance};
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_adapter_workspace::testing::TemporaryRepository;
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter};
+use agentpatrol_core::finding::Source;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Item, Provenance};
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -52,7 +52,7 @@ struct Machine {
 impl Machine {
     fn new(name: &str) -> Machine {
         let home = std::env::temp_dir().join(format!(
-            "agentsweep-view-rules-{name}-{}-{}",
+            "agentpatrol-view-rules-{name}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

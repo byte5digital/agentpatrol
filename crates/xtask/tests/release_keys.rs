@@ -5,8 +5,8 @@
 
 use std::fs;
 
-use agentsweep_core::pack_signature::{RELEASE_KEYS, development};
-use agentsweep_xtask::repo_root;
+use agentpatrol_core::pack_signature::{RELEASE_KEYS, development};
+use agentpatrol_xtask::repo_root;
 
 fn read(path: &str) -> String {
     fs::read_to_string(repo_root().join(path)).unwrap_or_else(|error| panic!("{path}: {error}"))

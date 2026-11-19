@@ -5,7 +5,7 @@
 //! belongs to, which is what makes "a third adapter without touching the core"
 //! an acceptance test rather than a hope.
 
-use agentsweep_adapter_conformance::{adapters, check, check_all};
+use agentpatrol_adapter_conformance::{adapters, check, check_all};
 
 #[test]
 fn every_adapter_conforms() {
@@ -42,9 +42,9 @@ fn the_reference_adapter_conforms_on_every_case_it_has() {
 /// The suite is worth something only if it fails when an adapter is wrong.
 #[test]
 fn a_snapshot_that_does_not_match_is_a_violation() {
-    use agentsweep_adapter_conformance::fixtures;
-    use agentsweep_adapter_workspace::Workspace;
-    use agentsweep_core::adapter::SurfaceAdapter;
+    use agentpatrol_adapter_conformance::fixtures;
+    use agentpatrol_adapter_workspace::Workspace;
+    use agentpatrol_core::adapter::SurfaceAdapter;
 
     let copy = fixtures::Copy::of("workspace", "planted-git-metadata");
     let host = copy.host();
@@ -54,7 +54,7 @@ fn a_snapshot_that_does_not_match_is_a_violation() {
     let recorded =
         std::fs::read_to_string(fixtures::snapshot_path("workspace", "planted-git-metadata"))
             .expect("the case has a snapshot");
-    let rendered = agentsweep_adapter_conformance::snapshot(&adapter, &enumeration, copy.root());
+    let rendered = agentpatrol_adapter_conformance::snapshot(&adapter, &enumeration, copy.root());
 
     assert_eq!(recorded, rendered);
     assert_ne!(recorded, format!("{rendered}item one more\n"));
@@ -65,7 +65,7 @@ fn a_snapshot_that_does_not_match_is_a_violation() {
 /// workspace adapter reads no Agent settings and states none.
 #[test]
 fn every_agent_adapter_states_the_hook_switch_of_every_root_and_the_workspace_none() {
-    use agentsweep_adapter_conformance::fixtures;
+    use agentpatrol_adapter_conformance::fixtures;
 
     for adapter in adapters() {
         let agent = adapter.descriptor().agent;

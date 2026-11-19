@@ -14,9 +14,9 @@ use std::io::Read;
 use std::path::Path;
 use std::process::Command;
 
-use agentsweep_core::pack::BUNDLED_STATEMENT;
-use agentsweep_core::rules::BUNDLED_RULES;
-use agentsweep_xtask::repo_root;
+use agentpatrol_core::pack::BUNDLED_STATEMENT;
+use agentpatrol_core::rules::BUNDLED_RULES;
+use agentpatrol_xtask::repo_root;
 
 /// Every file of the packaged core, by its path inside the package.
 fn packaged_core() -> BTreeMap<String, Vec<u8>> {
@@ -25,7 +25,7 @@ fn packaged_core() -> BTreeMap<String, Vec<u8>> {
         .args([
             "package",
             "-p",
-            "agentsweep-core",
+            "agentpatrol-core",
             "--no-verify",
             "--allow-dirty",
             "--locked",
@@ -44,11 +44,11 @@ fn packaged_core() -> BTreeMap<String, Vec<u8>> {
     );
 
     let version = env!("CARGO_PKG_VERSION");
-    let prefix = format!("agentsweep-core-{version}/");
+    let prefix = format!("agentpatrol-core-{version}/");
     let tarball = target
         .path()
         .join("package")
-        .join(format!("agentsweep-core-{version}.crate"));
+        .join(format!("agentpatrol-core-{version}.crate"));
     let bytes = fs::read(&tarball).expect("the packaged core");
     let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(bytes.as_slice()));
     let mut files = BTreeMap::new();

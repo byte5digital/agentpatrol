@@ -45,23 +45,23 @@ use std::path::PathBuf;
 use std::sync::{Arc, Condvar, Mutex, Weak};
 use std::time::Instant;
 
-use agentsweep_core::apple_engine::{AppleEngine, AppleHelper};
-use agentsweep_core::claude_engine::ClaudeEngine;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::finding::{FindingId, FindingState, FiredHeuristic, Standing, Tier};
-use agentsweep_core::finding_facts::FindingFacts;
-use agentsweep_core::gate_facts::GateFacts;
-use agentsweep_core::item::{Item, ItemId};
-use agentsweep_core::judged::{Judge, judgement_finding};
-use agentsweep_core::judgement::{self, EngineError, JudgementEngine, NoVerdict, Usage, Verdict};
-use agentsweep_core::judgement_request::{JudgementRequest, Normalisation};
-use agentsweep_core::keychain::ClaudeKeyStore;
-use agentsweep_core::ollama::{OllamaClient, OllamaEngine};
-use agentsweep_core::settings::{self, JudgementSettings};
-use agentsweep_core::spend::{CapNotice, JudgementCap};
-use agentsweep_core::state::{RecordedFinding, Trigger};
-use agentsweep_core::verdicts::{CachedVerdict, VerdictCache, VerdictCacheWriter};
-use agentsweep_ipc::protocol::StateEvent;
+use agentpatrol_core::apple_engine::{AppleEngine, AppleHelper};
+use agentpatrol_core::claude_engine::ClaudeEngine;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::finding::{FindingId, FindingState, FiredHeuristic, Standing, Tier};
+use agentpatrol_core::finding_facts::FindingFacts;
+use agentpatrol_core::gate_facts::GateFacts;
+use agentpatrol_core::item::{Item, ItemId};
+use agentpatrol_core::judged::{Judge, judgement_finding};
+use agentpatrol_core::judgement::{self, EngineError, JudgementEngine, NoVerdict, Usage, Verdict};
+use agentpatrol_core::judgement_request::{JudgementRequest, Normalisation};
+use agentpatrol_core::keychain::ClaudeKeyStore;
+use agentpatrol_core::ollama::{OllamaClient, OllamaEngine};
+use agentpatrol_core::settings::{self, JudgementSettings};
+use agentpatrol_core::spend::{CapNotice, JudgementCap};
+use agentpatrol_core::state::{RecordedFinding, Trigger};
+use agentpatrol_core::verdicts::{CachedVerdict, VerdictCache, VerdictCacheWriter};
+use agentpatrol_ipc::protocol::StateEvent;
 
 use crate::full_scan::read_the_verdicts;
 use crate::service::Daemon;
@@ -643,7 +643,7 @@ impl JudgementQueue {
     fn start_a_worker(self: &Arc<Self>, generation: u64, landing: Arc<dyn Landing>) {
         let queue = Arc::clone(self);
         let started = std::thread::Builder::new()
-            .name("agentsweep-judgement".to_string())
+            .name("agentpatrol-judgement".to_string())
             .spawn(move || queue.drain(landing));
         if started.is_err() {
             let mut inner = self.lock();
@@ -1316,9 +1316,9 @@ mod tests {
     use std::sync::{Condvar, mpsc};
     use std::time::Duration;
 
-    use agentsweep_core::finding::Severity;
-    use agentsweep_core::item::{Activation, Kind, Provenance, Scope};
-    use agentsweep_core::judgement::Prompt;
+    use agentpatrol_core::finding::Severity;
+    use agentpatrol_core::item::{Activation, Kind, Provenance, Scope};
+    use agentpatrol_core::judgement::Prompt;
 
     use super::*;
 
@@ -1627,7 +1627,7 @@ mod tests {
     #[test]
     fn the_installed_engines_ask_apple_only_through_a_helper_that_answers() {
         let claude_key: Arc<dyn ClaudeKeyStore + Send + Sync> =
-            Arc::new(agentsweep_core::keychain::MemoryClaudeKeyStore::default());
+            Arc::new(agentpatrol_core::keychain::MemoryClaudeKeyStore::default());
         let judgement = JudgementSettings {
             engine: settings::JudgementEngine::Apple,
             ..JudgementSettings::default()
@@ -1636,7 +1636,7 @@ mod tests {
         assert!(matches!(no_helper, Err(EngineError::Unavailable(_))));
         let gone = tempfile::tempdir().expect("a temporary directory");
         let missing = SystemEngines {
-            apple_helper: Some(gone.path().join("agentsweep-apple-judge")),
+            apple_helper: Some(gone.path().join("agentpatrol-apple-judge")),
         }
         .open(&judgement, &claude_key);
         assert!(missing.is_err());

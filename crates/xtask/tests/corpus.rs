@@ -10,10 +10,10 @@
 
 use std::fs;
 
-use agentsweep_core::rules::RulePack;
-use agentsweep_xtask::corpus;
-use agentsweep_xtask::fixture::Fixture;
-use agentsweep_xtask::repo_root;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_xtask::corpus;
+use agentpatrol_xtask::fixture::Fixture;
+use agentpatrol_xtask::repo_root;
 
 /// The corpus, loaded once per test.
 fn corpus_fixtures() -> Vec<Fixture> {

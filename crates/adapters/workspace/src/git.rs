@@ -8,7 +8,7 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use agentsweep_core::views::RepoExecKey;
+use agentpatrol_core::views::RepoExecKey;
 
 /// The name of a section header, its key and how the pair is spelled in a
 /// Finding and in `repo.exec_keys`.

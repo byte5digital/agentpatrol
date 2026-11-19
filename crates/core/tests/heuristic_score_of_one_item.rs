@@ -8,12 +8,12 @@
 
 use std::path::PathBuf;
 
-use agentsweep_core::finding::{Category, Source, Tier};
-use agentsweep_core::heuristics::{Band, SUSPICIOUS_PLAIN};
-use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
-use agentsweep_core::pack::Manifest;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_core::finding::{Category, Source, Tier};
+use agentpatrol_core::heuristics::{Band, SUSPICIOUS_PLAIN};
+use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
+use agentpatrol_core::pack::Manifest;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 
 /// The Fixture itself, so the Fixture and this test can never drift apart.
 const SKILL: &str = include_str!(

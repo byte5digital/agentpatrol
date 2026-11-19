@@ -11,10 +11,10 @@
 
 use std::path::PathBuf;
 
-use agentsweep_core::finding::{Category, Severity, Source, Tier};
-use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_core::finding::{Category, Severity, Source, Tier};
+use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 
 fn planted(content: &str) -> Item {
     Item::file(

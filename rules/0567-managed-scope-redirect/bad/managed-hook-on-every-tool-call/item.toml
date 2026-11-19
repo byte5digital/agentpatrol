@@ -1,5 +1,5 @@
 # Fixture for as_0567. A hook from the managed directory, which both agents
-# trust without asking and AgentSweep may only read.
+# trust without asking and AgentPatrol may only read.
 [item]
 agent = "claude-code"
 kind = "Hook"

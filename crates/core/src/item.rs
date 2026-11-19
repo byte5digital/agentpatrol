@@ -144,7 +144,7 @@ impl Shape {
 /// Where an Item sits in the Agent's precedence.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Scope {
-    /// Read-only for AgentSweep: MDM, system and cloud layers folded in.
+    /// Read-only for AgentPatrol: MDM, system and cloud layers folded in.
     Managed,
     /// The user's own profile layers.
     User,
@@ -334,7 +334,7 @@ impl FileType {
     }
 }
 
-/// How the Item compares with the hash AgentSweep last accepted for it.
+/// How the Item compares with the hash AgentPatrol last accepted for it.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum BaselineState {
     /// Equal to the accepted hash.
@@ -507,7 +507,7 @@ pub struct ScanUnit<'a> {
     pub bytes: &'a [u8],
 }
 
-/// One thing an Agent would load from a Surface, as scanned by AgentSweep.
+/// One thing an Agent would load from a Surface, as scanned by AgentPatrol.
 #[derive(Clone, Debug)]
 pub struct Item {
     /// The stable identity.
@@ -1466,7 +1466,7 @@ mod tests {
             use std::sync::atomic::{AtomicU32, Ordering};
             static NEXT: AtomicU32 = AtomicU32::new(0);
             let root = std::env::temp_dir().join(format!(
-                "agentsweep-tree-{name}-{}-{}",
+                "agentpatrol-tree-{name}-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));

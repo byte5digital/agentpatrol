@@ -9,22 +9,22 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_ipc::default_socket_path;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_ipc::default_socket_path;
 
 pub use crate::log::LogChoice;
 
 /// The usage text, which says which flags are the developer's.
 pub const USAGE: &str = "\
-agentsweepd is the AgentSweep daemon. It watches the Surfaces of every Agent it
+agentpatrold is the AgentPatrol daemon. It watches the Surfaces of every Agent it
 finds, runs the Scans and is the only writer of the Event Log, the Baseline, the
 verdict cache and the state file.
 
 Usage:
-  agentsweepd              Run, with the data directory and socket of the
-                           installed AgentSweep.
-  agentsweepd --version    Print the version.
-  agentsweepd --help       Print this message.
+  agentpatrold              Run, with the data directory and socket of the
+                           installed AgentPatrol.
+  agentpatrold --version    Print the version.
+  agentpatrold --help       Print this message.
 
 Developer only, off unless asked for by name:
   --data-dir <path>        Keep the stores here instead of in the real data
@@ -38,7 +38,7 @@ Developer only, off unless asked for by name:
   --key-source <memory>    Hold the chain key in this process instead of in the
                            login Keychain. Nothing survives the run.
   --log <stderr|file>      Write the log to the terminal, or to the rotated file
-                           in ~/Library/Logs/AgentSweep. The installed daemon
+                           in ~/Library/Logs/AgentPatrol. The installed daemon
                            writes the file and a developer run the terminal.
   --developer-budgets      Measure the Scan budgets of the specification
                            against this home, print them and stop. Binds no
@@ -123,7 +123,7 @@ impl Options {
         self.log.writes_the_file(self.is_developer_run())
     }
 
-    /// True when nothing about this run is the installed AgentSweep, which is
+    /// True when nothing about this run is the installed AgentPatrol, which is
     /// what the daemon says in its first log line so that a hand run is never
     /// mistaken for the real one.
     pub fn is_developer_run(&self) -> bool {
@@ -261,22 +261,22 @@ mod tests {
     fn every_path_the_daemon_touches_can_be_named() {
         let options = run(&[
             "--data-dir",
-            "/tmp/agentsweep-test/data",
+            "/tmp/agentpatrol-test/data",
             "--socket",
-            "/tmp/agentsweep-test/sock",
+            "/tmp/agentpatrol-test/sock",
             "--home",
-            "/tmp/agentsweep-test/home",
+            "/tmp/agentpatrol-test/home",
             "--key-source",
             "memory",
         ]);
         assert_eq!(
             options.data_dir,
-            DataDirectory::at("/tmp/agentsweep-test/data")
+            DataDirectory::at("/tmp/agentpatrol-test/data")
         );
-        assert_eq!(options.socket, PathBuf::from("/tmp/agentsweep-test/sock"));
+        assert_eq!(options.socket, PathBuf::from("/tmp/agentpatrol-test/sock"));
         assert_eq!(
             options.home_directory().expect("the named home"),
-            PathBuf::from("/tmp/agentsweep-test/home")
+            PathBuf::from("/tmp/agentpatrol-test/home")
         );
         assert_eq!(options.key_source, KeySourceChoice::Memory);
         assert!(options.is_developer_run());
@@ -289,7 +289,7 @@ mod tests {
     fn the_log_goes_where_it_is_asked_to() {
         assert!(!run(&["--log", "stderr"]).writes_the_log_file());
         assert!(
-            run(&["--home", "/tmp/agentsweep-test/home", "--log", "file"]).writes_the_log_file()
+            run(&["--home", "/tmp/agentpatrol-test/home", "--log", "file"]).writes_the_log_file()
         );
         assert_eq!(
             parse(&arguments(&["--log", "syslog"])),

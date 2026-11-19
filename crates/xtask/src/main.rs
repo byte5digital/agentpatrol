@@ -8,20 +8,20 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use agentsweep_core::apple_engine::{AppleEngine, AppleHelper};
-use agentsweep_core::claude_engine::ClaudeEngine;
-use agentsweep_core::judged::{APPLE_BUDGET, CLAUDE_BUDGET, OLLAMA_BUDGET};
-use agentsweep_core::judgement::JudgementEngine;
-use agentsweep_core::keychain::{ClaudeKey, ClaudeKeyStore, MemoryClaudeKeyStore};
-use agentsweep_core::ollama::{OllamaClient, OllamaEngine};
-use agentsweep_core::pack::{Manifest, STATEMENT_FILE};
-use agentsweep_core::pack_signature::PINNED_KEYS;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::settings::{self, OllamaAddress};
-use agentsweep_xtask::{bad, benign, corpus, eval, iocs, pack_release, repo_root};
+use agentpatrol_core::apple_engine::{AppleEngine, AppleHelper};
+use agentpatrol_core::claude_engine::ClaudeEngine;
+use agentpatrol_core::judged::{APPLE_BUDGET, CLAUDE_BUDGET, OLLAMA_BUDGET};
+use agentpatrol_core::judgement::JudgementEngine;
+use agentpatrol_core::keychain::{ClaudeKey, ClaudeKeyStore, MemoryClaudeKeyStore};
+use agentpatrol_core::ollama::{OllamaClient, OllamaEngine};
+use agentpatrol_core::pack::{Manifest, STATEMENT_FILE};
+use agentpatrol_core::pack_signature::PINNED_KEYS;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::settings::{self, OllamaAddress};
+use agentpatrol_xtask::{bad, benign, corpus, eval, iocs, pack_release, repo_root};
 
 const USAGE: &str = "\
-agentsweep-xtask: build work for the Rule corpus and the Rule Pack.
+agentpatrol-xtask: build work for the Rule corpus and the Rule Pack.
 
     corpus                      run every Fixture of every Rule
     benign-corpus [--record]    fetch the public sources of corpus/benign/manifest.toml,
@@ -54,7 +54,7 @@ agentsweep-xtask: build work for the Rule corpus and the Rule Pack.
         --minimum-engine <v>    the lowest engine version that may load it
         --released-at <t>       the release moment, RFC 3339 (default now, UTC)
         --out <dir>             where the release lands
-                                (default target/agentsweep-pack)
+                                (default target/agentpatrol-pack)
         --statement             instead, write the bundled pack's own statement,
                                 pack.json at the repository root, with the options
                                 above and no file hashes
@@ -350,8 +350,8 @@ struct Shared<E>(std::rc::Rc<E>);
 impl<E: JudgementEngine> JudgementEngine for Shared<E> {
     fn judge(
         &self,
-        prompt: &agentsweep_core::judgement::Prompt,
-    ) -> Result<String, agentsweep_core::judgement::EngineError> {
+        prompt: &agentpatrol_core::judgement::Prompt,
+    ) -> Result<String, agentpatrol_core::judgement::EngineError> {
         self.0.judge(prompt)
     }
 }
@@ -384,7 +384,7 @@ fn render_iocs(check: bool) -> Result<String, String> {
 
     if !stale.is_empty() {
         return Err(format!(
-            "no longer what the indicator list renders to: {}\nrun `cargo run -p agentsweep-xtask -- render-iocs`\n",
+            "no longer what the indicator list renders to: {}\nrun `cargo run -p agentpatrol-xtask -- render-iocs`\n",
             stale.join(", ")
         ));
     }
@@ -409,7 +409,7 @@ fn build_pack(arguments: &[String]) -> Result<String, String> {
     let mut pack_version = stated.pack_version;
     let mut minimum_engine = stated.minimum_engine_version.clone();
     let mut released_at: Option<String> = None;
-    let mut out = root.join("target").join("agentsweep-pack");
+    let mut out = root.join("target").join("agentpatrol-pack");
     let mut statement = false;
 
     let mut rest = arguments.iter();
@@ -582,6 +582,6 @@ fn write_pack_index(arguments: &[String]) -> Result<String, String> {
 
 /// The moment this runs, in RFC 3339 to the second, UTC.
 fn now_rfc3339() -> String {
-    let moment = agentsweep_core::envelope::Timestamp::now().to_string();
+    let moment = agentpatrol_core::envelope::Timestamp::now().to_string();
     format!("{}Z", &moment[..19])
 }

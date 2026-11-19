@@ -27,15 +27,15 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
-use agentsweep_core::baseline::{Baseline, BaselineRecord, Origin};
-use agentsweep_core::chain::ChainState;
-use agentsweep_core::keychain::KeySource;
-use agentsweep_core::overview::{Overview, ProjectCheck};
-use agentsweep_core::paths::DataDirectory;
+use agentpatrol_core::baseline::{Baseline, BaselineRecord, Origin};
+use agentpatrol_core::chain::ChainState;
+use agentpatrol_core::keychain::KeySource;
+use agentpatrol_core::overview::{Overview, ProjectCheck};
+use agentpatrol_core::paths::DataDirectory;
 
 use crate::service::Daemon;
 
-pub use agentsweep_core::location::{LocationClass, classify};
+pub use agentpatrol_core::location::{LocationClass, classify};
 
 /// The one read into a project root the daemon makes before an adapter may.
 ///
@@ -141,7 +141,7 @@ pub fn remembered<'a>(names: impl IntoIterator<Item = &'a String>) -> BTreeSet<L
         .collect()
 }
 
-/// The protected classes the Baseline proves AgentSweep read before: a
+/// The protected classes the Baseline proves AgentPatrol read before: a
 /// record the key in hand verifies, of an Item read from a path in that
 /// class. What a rebuilt state file starts from, so a lost state file does
 /// not turn every granted project back to Needs Permission.
@@ -199,7 +199,7 @@ pub fn proven_readable_classes(
 
 /// The name of the thread "Check now" makes its reads on, which is never a
 /// thread that answers a connection.
-pub const FIRST_READ_THREAD: &str = "agentsweep-first-read";
+pub const FIRST_READ_THREAD: &str = "agentpatrol-first-read";
 
 impl Daemon {
     /// The protected classes the state file remembers as read before.

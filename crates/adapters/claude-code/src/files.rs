@@ -11,10 +11,10 @@
 
 use std::path::Path;
 
-use agentsweep_core::adapter::Enumeration;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::Kind;
-use agentsweep_core::views::{ParsedView, SubagentView};
+use agentpatrol_core::adapter::Enumeration;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::Kind;
+use agentpatrol_core::views::{ParsedView, SubagentView};
 
 use crate::tree::{self, Placement};
 

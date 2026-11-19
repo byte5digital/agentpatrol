@@ -10,8 +10,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use agentsweep_xtask::repo_root;
-use agentsweep_xtask::workflows::{self, HardeningRule, Violation};
+use agentpatrol_xtask::repo_root;
+use agentpatrol_xtask::workflows::{self, HardeningRule, Violation};
 use tempfile::TempDir;
 
 fn fixtures() -> PathBuf {

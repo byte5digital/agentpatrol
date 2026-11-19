@@ -10,10 +10,10 @@ use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::envelope::ChainId;
-use agentsweep_core::keychain::ClaudeKey;
-use agentsweep_core::quarantine::Conflict;
-use agentsweep_core::settings::JudgementEngine;
+use agentpatrol_core::envelope::ChainId;
+use agentpatrol_core::keychain::ClaudeKey;
+use agentpatrol_core::quarantine::Conflict;
+use agentpatrol_core::settings::JudgementEngine;
 
 use crate::engine::{EngineChange, EngineState};
 use crate::gate::{GateRequest, GateVerdict};
@@ -216,7 +216,7 @@ impl Client {
 
     /// Uninstall: the Gate's entries go from every Agent, then the choice
     /// about what is in Quarantine is applied (spec section 9.6). What both
-    /// the Settings flow and `agentsweep uninstall` send.
+    /// the Settings flow and `agentpatrol uninstall` send.
     pub fn uninstall(&mut self, choice: UninstallChoice) -> Result<UninstallReport, ClientError> {
         let answer = self.ask(Request::Uninstall { choice })?;
         UninstallReport::from_value(&answer).ok_or_else(|| {
@@ -504,8 +504,10 @@ mod tests {
 
     #[test]
     fn a_socket_nothing_is_listening_on_reads_as_protection_off() {
-        let nowhere =
-            std::env::temp_dir().join(format!("agentsweep-ipc-nobody-{}.sock", std::process::id()));
+        let nowhere = std::env::temp_dir().join(format!(
+            "agentpatrol-ipc-nobody-{}.sock",
+            std::process::id()
+        ));
         let _ = std::fs::remove_file(&nowhere);
         let error = Client::connect_at(&nowhere, Role::Cli).expect_err("nobody is listening");
         assert!(error.is_unreachable(), "{error}");

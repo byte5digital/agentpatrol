@@ -1,6 +1,6 @@
 #!/bin/sh
 # Packages the crates that go to crates.io and builds and tests the command
-# line interface from those packages, the way `cargo install agentsweep` will
+# line interface from those packages, the way `cargo install agentpatrol` will
 # see it. Nothing is uploaded: this is `cargo package`, never `cargo publish`.
 #
 # Usage: package-check.sh [extra cargo package arguments, such as --allow-dirty]
@@ -27,20 +27,20 @@ root="$(cd "$here/../.." && pwd)"
 target_dir="${CARGO_TARGET_DIR:-$root/target}"
 version="$(sed -n 's/^version = "\(.*\)"$/\1/p' "$root/Cargo.toml" | head -n 1)"
 
-crates="agentsweep-core agentsweep-adapter-workspace agentsweep-adapter-claude-code agentsweep-adapter-codex agentsweep-ipc agentsweep"
+crates="agentpatrol-core agentpatrol-adapter-workspace agentpatrol-adapter-claude-code agentpatrol-adapter-codex agentpatrol-ipc agentpatrol"
 
 for crate in $crates; do
   set -- "$@" -p "$crate"
 done
 cargo package --locked --manifest-path "$root/Cargo.toml" "$@"
 
-unpacked="$(mktemp -d "${TMPDIR:-/tmp}/agentsweep-package-check.XXXXXX")"
+unpacked="$(mktemp -d "${TMPDIR:-/tmp}/agentpatrol-package-check.XXXXXX")"
 trap 'rm -rf "$unpacked"' EXIT
 mkdir -p "$unpacked/.cargo"
 echo "[patch.crates-io]" > "$unpacked/.cargo/config.toml"
 for crate in $crates; do
   tar -xzf "$target_dir/package/$crate-$version.crate" -C "$unpacked"
-  if [ "$crate" != agentsweep ]; then
+  if [ "$crate" != agentpatrol ]; then
     echo "$crate = { path = \"$unpacked/$crate-$version\" }" >> "$unpacked/.cargo/config.toml"
   fi
 done
@@ -50,7 +50,7 @@ done
 # The lock file it carries names its local dependencies as crates.io packages;
 # the first build records them as the unpacked neighbours, offline, and
 # changes nothing else.
-cd "$unpacked/agentsweep-$version"
+cd "$unpacked/agentpatrol-$version"
 export CARGO_TARGET_DIR="$target_dir/package-check"
 cargo build --offline
 cargo test --locked --offline

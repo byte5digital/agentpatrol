@@ -10,10 +10,10 @@
 use std::fs;
 use std::path::Path;
 
-use agentsweep_core::heuristics::Band;
-use agentsweep_core::rules::RulePack;
-use agentsweep_xtask::bad::{self, lint};
-use agentsweep_xtask::repo_root;
+use agentpatrol_core::heuristics::Band;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_xtask::bad::{self, lint};
+use agentpatrol_xtask::repo_root;
 
 const PROVENANCE: &str = "\
 # Greetings
@@ -183,7 +183,7 @@ fn the_runner_lists_every_sample_with_its_fired_ids_and_band() {
     assert!(rendered.contains("rules -"), "{rendered}");
     assert!(rendered.contains(&Band::Clear.to_string()), "{rendered}");
     assert!(
-        !rendered.contains("agentsweep-bad-corpus-"),
+        !rendered.contains("agentpatrol-bad-corpus-"),
         "the temporary directory leaks into the report:\n{rendered}"
     );
     assert!(

@@ -10,7 +10,7 @@
 
 use std::path::Path;
 
-use agentsweep_core::provenance::RepositoryProvenance;
+use agentpatrol_core::provenance::RepositoryProvenance;
 
 use crate::git::Layout;
 

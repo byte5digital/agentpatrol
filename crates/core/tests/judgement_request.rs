@@ -7,16 +7,16 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::finding::{FiredHeuristic, MatchRange, Severity};
-use agentsweep_core::item::{
+use agentpatrol_core::finding::{FiredHeuristic, MatchRange, Severity};
+use agentpatrol_core::item::{
     Activation, FileFacts, InactiveReason, Item, Kind, Provenance, Scope, Tree, TreeFile,
     canonical_entry, sha256_hex,
 };
-use agentsweep_core::judgement_request::{
+use agentpatrol_core::judgement_request::{
     ByteEstimate, JudgementRequest, NoRequest, Normalisation, RequestBuilder, TokenCounter,
 };
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 use serde_json::{Value, json};
 
 /// The byte-counting fake: one byte is one token.
@@ -140,7 +140,7 @@ fn files_of(request: &JudgementRequest) -> Vec<&str> {
         .collect()
 }
 
-const MARKER_TAIL: &str = " bytes elided by AgentSweep ...]\n";
+const MARKER_TAIL: &str = " bytes elided by AgentPatrol ...]\n";
 
 #[test]
 fn an_entry_carries_its_canonical_bytes_and_its_facts() {

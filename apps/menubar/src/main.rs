@@ -1,10 +1,10 @@
-//! The AgentSweep menu bar app. Everything is in the library beside this file.
+//! The AgentPatrol menu bar app. Everything is in the library beside this file.
 //!
 //! The app takes one argument, `--windowless`, with which the daemon starts
 //! it into the menu bar with no window when it has something to tell (spec
-//! section 6.7), and `--finish-uninstall`, which `agentsweep uninstall` runs
+//! section 6.7), and `--finish-uninstall`, which `agentpatrol uninstall` runs
 //! once the daemon has applied the user's choice: it quits a running
-//! AgentSweep and unregisters the daemon and the login item, says on stderr
+//! AgentPatrol and unregisters the daemon and the login item, says on stderr
 //! what it could not do, and exits (spec section 9.6). Beside them are two
 //! developer flags:
 //! `--developer-status` prints where the daemon's and the login item's
@@ -15,9 +15,9 @@
 
 use std::process::ExitCode;
 
-use agentsweep_menubar::supervision::{self, SystemServices};
-use agentsweep_menubar::uninstall::{self, SystemRunning};
-use agentsweep_menubar::window::Start;
+use agentpatrol_menubar::supervision::{self, SystemServices};
+use agentpatrol_menubar::uninstall::{self, SystemRunning};
+use agentpatrol_menubar::window::Start;
 
 fn main() -> ExitCode {
     if std::env::args()
@@ -37,7 +37,7 @@ fn main() -> ExitCode {
         .skip(1)
         .any(|argument| argument == "--developer-status")
     {
-        use agentsweep_menubar::supervision::Services;
+        use agentpatrol_menubar::supervision::Services;
         println!("daemon: {}", SystemServices.agent());
         println!("login item: {}", SystemServices.login_item());
         return ExitCode::SUCCESS;
@@ -48,16 +48,16 @@ fn main() -> ExitCode {
     {
         let failures = supervision::unregister_everything(&SystemServices);
         for failure in &failures {
-            eprintln!("agentsweep-menubar: {failure}");
+            eprintln!("agentpatrol-menubar: {failure}");
         }
         return match failures.is_empty() {
             true => {
-                println!("agentsweep-menubar: the daemon and the login item are unregistered");
+                println!("agentpatrol-menubar: the daemon and the login item are unregistered");
                 ExitCode::SUCCESS
             }
             false => ExitCode::FAILURE,
         };
     }
-    agentsweep_menubar::app::run(Start::of(std::env::args().skip(1)));
+    agentpatrol_menubar::app::run(Start::of(std::env::args().skip(1)));
     ExitCode::SUCCESS
 }

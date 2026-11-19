@@ -12,4 +12,4 @@ jobs:
     environment: release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: gh api -X POST repos/example/agentsweep/releases -f tag_name="$GITHUB_REF_NAME"
+      - run: gh api -X POST repos/example/agentpatrol/releases -f tag_name="$GITHUB_REF_NAME"

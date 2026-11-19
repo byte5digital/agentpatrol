@@ -237,7 +237,7 @@ pub enum EnvelopeError {
     /// The line is not a record at all: not JSON, a field missing, a field of
     /// the wrong type.
     Malformed(String),
-    /// The line is a record but not in the one form AgentSweep writes, so a
+    /// The line is a record but not in the one form AgentPatrol writes, so a
     /// byte of it was changed.
     NotCanonical,
 }
@@ -247,7 +247,7 @@ impl fmt::Display for EnvelopeError {
         match self {
             EnvelopeError::Malformed(detail) => write!(f, "the record is malformed: {detail}"),
             EnvelopeError::NotCanonical => {
-                f.write_str("the record is not in the form AgentSweep writes")
+                f.write_str("the record is not in the form AgentPatrol writes")
             }
         }
     }
@@ -344,7 +344,7 @@ impl Envelope {
         hmac_sha256_verify(key, &canonical(&self.body()), &expected)
     }
 
-    /// Reads a line back, insisting on the one form AgentSweep writes.
+    /// Reads a line back, insisting on the one form AgentPatrol writes.
     pub fn parse(line: &[u8]) -> Result<Envelope, EnvelopeError> {
         let value: Value = serde_json::from_slice(line)
             .map_err(|error| EnvelopeError::Malformed(error.to_string()))?;

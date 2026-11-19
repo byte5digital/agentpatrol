@@ -25,7 +25,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::host::Host;
+use agentpatrol_core::host::Host;
 use serde_json::Value;
 
 use crate::document::Document;
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn a_trusted_checkout_carries_a_directory_inside_it() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-codex-registry-")
+            .prefix("agentpatrol-codex-registry-")
             .tempdir()
             .expect("a temporary folder");
         let root = temporary.path().to_path_buf();
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn a_session_log_names_a_root_codex_knows_without_a_trust_entry() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-codex-sessions-")
+            .prefix("agentpatrol-codex-sessions-")
             .tempdir()
             .expect("a temporary folder");
         let root = temporary.path().to_path_buf();

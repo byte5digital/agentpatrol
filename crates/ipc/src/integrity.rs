@@ -13,8 +13,8 @@
 
 use serde_json::{Map, Value};
 
-use agentsweep_core::chain::ChainState;
-use agentsweep_core::envelope::{ChainId, Timestamp};
+use agentpatrol_core::chain::ChainState;
+use agentpatrol_core::envelope::{ChainId, Timestamp};
 
 use crate::protocol::{chain_state_from_value, chain_state_to_value};
 

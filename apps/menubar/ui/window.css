@@ -836,7 +836,7 @@ dialog {
   margin-left: 12px;
 }
 
-/* The AI block: the engine's own words, set apart from AgentSweep's. */
+/* The AI block: the engine's own words, set apart from AgentPatrol's. */
 .card p.ai {
   border-left: 3px solid var(--rule);
   padding-left: 8px;

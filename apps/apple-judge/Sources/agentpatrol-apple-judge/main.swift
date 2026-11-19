@@ -1,4 +1,4 @@
-// agentsweep-apple-judge: AgentSweep's only way to reach Apple's on-device
+// agentpatrol-apple-judge: AgentPatrol's only way to reach Apple's on-device
 // model. The daemon spawns it once per call, writes one JSON request to its
 // stdin, closes it, and reads one JSON answer from its stdout; `Helper` in
 // the AppleJudge module holds the protocol. The helper reads no file, writes

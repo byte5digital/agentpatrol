@@ -1,4 +1,4 @@
-//! Health: every state AgentSweep can be in, in one struct.
+//! Health: every state AgentPatrol can be in, in one struct.
 //!
 //! Spec section 6.6 asks for one `Health` struct with every state as a field
 //! and one precedence that decides which of them a person is shown. The
@@ -31,7 +31,7 @@ use crate::state::{IgnoredPack, State};
 /// The note a reset nobody answered leaves while an open Threat holds the
 /// headline: the rung stays until "Start a fresh record" is pressed, ranked
 /// below every Threat rung (the owner's decision of 2026-10-14).
-pub const STATE_RESET_NOTE: &str = "Protection state was reset. AgentSweep started a fresh record \
+pub const STATE_RESET_NOTE: &str = "Protection state was reset. AgentPatrol started a fresh record \
      because the key it keeps in your Keychain was missing.";
 
 /// How long the Rule Feed may go unanswered before Health says so: thirty
@@ -41,9 +41,9 @@ pub const FEED_UNREACHABLE_AFTER_MS: i64 = 30 * 24 * 3_600_000;
 /// The notice an unreadable settings file raises. The file is left as it is,
 /// so the choice in it comes back once it reads again.
 pub const SETTINGS_UNREADABLE: &str = "The settings file could not be read, so every setting \
-     is at its default until it is fixed. AgentSweep leaves the file as it is.";
+     is at its default until it is fixed. AgentPatrol leaves the file as it is.";
 
-/// Whether AgentSweep is working in the background at all.
+/// Whether AgentPatrol is working in the background at all.
 ///
 /// The app and the command line interface answer this by whether the daemon
 /// replies; the daemon itself is running, so it answers [`Protection::On`].
@@ -136,7 +136,7 @@ pub enum GateTrouble {
     /// Managed policy drops the user's hooks, so nothing is written.
     ManagedPolicy,
     /// The user switched the Agent's hooks off in their own settings, which
-    /// AgentSweep never writes back (spec section 7.6 as amended on
+    /// AgentPatrol never writes back (spec section 7.6 as amended on
     /// 2026-10-14).
     SwitchedOffByUser,
 }
@@ -210,7 +210,7 @@ pub enum Rung {
     RecordsTampered,
     /// A chain is well formed but no key can vouch for it.
     StateReset,
-    /// Registered projects the operating system will not let AgentSweep read.
+    /// Registered projects the operating system will not let AgentPatrol read.
     NeedsPermission,
     /// The Gate cannot stand in a detected Agent: its registration failed,
     /// managed policy blocks it, or the user switched hooks off there; or a
@@ -220,7 +220,7 @@ pub enum Rung {
     CheckingNow,
     /// Open Threat or Exposure Findings wait for the user's decision.
     NeedsDecision,
-    /// A newer Rule Pack was ignored because it needs a newer AgentSweep.
+    /// A newer Rule Pack was ignored because it needs a newer AgentPatrol.
     IgnoredPack,
     /// The Rule Feed has not answered for over thirty days.
     FeedUnreachable,
@@ -228,7 +228,7 @@ pub enum Rung {
     AllClear,
 }
 
-/// Every state AgentSweep can be in, at one moment.
+/// Every state AgentPatrol can be in, at one moment.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Health {
     /// Whether anything is protecting the machine at all.
@@ -238,7 +238,7 @@ pub struct Health {
     /// What verifying the Baseline found.
     pub baseline: ChainState,
     /// How many registered projects the operating system will not let
-    /// AgentSweep read.
+    /// AgentPatrol read.
     pub projects_need_permission: usize,
     /// The Gate lines the last Full Scan's registration check left, one per
     /// detected Agent where the Gate cannot stand, worst first. Empty when
@@ -277,7 +277,7 @@ pub struct Health {
     /// Whether the Rule Feed toggle is on.
     pub rule_feed: bool,
     /// A newer Rule Pack that was ignored because it needs a newer
-    /// AgentSweep.
+    /// AgentPatrol.
     pub ignored_pack: Option<IgnoredPack>,
     /// Set once the Rule Feed has not answered for over thirty days: the
     /// moment it first failed to.
@@ -380,7 +380,7 @@ impl Health {
     /// rung and is a note meanwhile), projects that need permission, then the
     /// Gate lines, then a Scan in flight, then the open Findings that need the user's
     /// decision, then the Rule Pack notices (a newer pack ignored because it
-    /// needs a newer AgentSweep, the Rule Feed unreachable for over thirty
+    /// needs a newer AgentPatrol, the Rule Feed unreachable for over thirty
     /// days), then all clear with the last-checked time.
     pub fn rung(&self) -> Rung {
         if self.protection.is_off() {
@@ -432,7 +432,7 @@ impl Health {
             },
             Rung::CheckingNow => "Checking now.".to_string(),
             Rung::NeedsDecision => self.needs_decision(),
-            Rung::IgnoredPack => "Newer rules need a newer AgentSweep.".to_string(),
+            Rung::IgnoredPack => "Newer rules need a newer AgentPatrol.".to_string(),
             Rung::FeedUnreachable => {
                 "The rule feed has not been reachable for over 30 days.".to_string()
             }
@@ -521,8 +521,8 @@ impl Health {
         }
         if let Some(ignored) = &self.ignored_pack {
             notes.push(format!(
-                "Rule Pack {} needs AgentSweep {} or later. The rules in use stay in force \
-                 until AgentSweep is updated.",
+                "Rule Pack {} needs AgentPatrol {} or later. The rules in use stay in force \
+                 until AgentPatrol is updated.",
                 ignored.pack_version, ignored.minimum_engine_version
             ));
         }
@@ -546,7 +546,7 @@ impl Health {
             ));
             if !self.rule_feed {
                 notes.push(
-                    "The rule feed is off, so the rules bundled with AgentSweep are in force."
+                    "The rule feed is off, so the rules bundled with AgentPatrol are in force."
                         .to_string(),
                 );
             }
@@ -950,7 +950,7 @@ mod tests {
         assert_eq!(health.headline(), "Checking now.");
 
         health.scanning = false;
-        assert_eq!(health.headline(), "Newer rules need a newer AgentSweep.");
+        assert_eq!(health.headline(), "Newer rules need a newer AgentPatrol.");
         assert!(
             health.notes().iter().any(|note| note.contains("0.3.0")),
             "{:?}",

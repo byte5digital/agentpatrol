@@ -2,7 +2,7 @@
 //!
 //! **Report false positive** in a Finding's detail header, and the one-time
 //! card after a Restore or a Trust, both lead to the same dialog: the GitHub
-//! issue AgentSweep prepared, shown in full before anything leaves the app.
+//! issue AgentPatrol prepared, shown in full before anything leaves the app.
 //! The report carries what flagged the Item (Rule or Heuristic ids with their
 //! status or Weight), the Tier, the Rule Pack version, the Verdict engine and
 //! model if any, the Item kind, its Scope and Provenance class, and the app
@@ -22,13 +22,13 @@ use std::sync::Mutex;
 
 use serde_json::{Value, json};
 
-use agentsweep_core::finding::Tier;
-use agentsweep_core::state::RecordedFinding;
+use agentpatrol_core::finding::Tier;
+use agentpatrol_core::state::RecordedFinding;
 
 use crate::asking::ActionRequest;
 
 /// The project's new-issue page, the only address a report opens.
-pub const NEW_ISSUE: &str = "https://github.com/byte5digital/agentsweep/issues/new";
+pub const NEW_ISSUE: &str = "https://github.com/byte5digital/agentpatrol/issues/new";
 
 /// What the button in a Finding's detail header says.
 pub const REPORT_BUTTON: &str = "Report false positive";
@@ -46,7 +46,7 @@ pub const NO_THANKS: &str = "No thanks";
 pub const DIALOG_HEADING: &str = "Report a false alarm";
 
 /// The line above the issue in the dialog.
-pub const DIALOG_LEAD: &str = "This is the issue AgentSweep prepared. It holds no file \
+pub const DIALOG_LEAD: &str = "This is the issue AgentPatrol prepared. It holds no file \
      contents, names or paths. Nothing is sent until you press Submit on GitHub.";
 
 /// The dialog's button that opens the issue in the browser.
@@ -180,7 +180,7 @@ pub fn report(finding: &RecordedFinding, context: &Context) -> Option<Report> {
     }
     body.push_str(&format!(
         "\nTier: {}\nRule Pack: {}\nVerdict engine: {verdict}\nItem kind: {}\nScope: {}\n\
-         Provenance class: {}\nAgentSweep: {}\nmacOS: {}\n\n\
+         Provenance class: {}\nAgentPatrol: {}\nmacOS: {}\n\n\
          Why this is a false alarm (please add no file contents, names or paths):\n\n",
         finding.tier.as_str(),
         context.rule_pack,
@@ -343,9 +343,9 @@ impl Reports {
 mod tests {
     use std::cell::RefCell;
 
-    use agentsweep_core::finding::{Category, FindingState, RuleStatus};
-    use agentsweep_core::finding_facts::HeuristicLine;
-    use agentsweep_core::item::Kind;
+    use agentpatrol_core::finding::{Category, FindingState, RuleStatus};
+    use agentpatrol_core::finding_facts::HeuristicLine;
+    use agentpatrol_core::item::Kind;
 
     use super::*;
     use crate::findings::tests::recorded;
@@ -455,7 +455,7 @@ mod tests {
             assert!(body.contains(&format!("Item kind: {}", finding.kind.as_str())));
             assert!(body.contains("Scope: project"), "{body}");
             assert!(body.contains("Provenance class: plugin"), "{body}");
-            assert!(body.contains("AgentSweep: 0.4.1"), "{body}");
+            assert!(body.contains("AgentPatrol: 0.4.1"), "{body}");
             assert!(body.contains("macOS: 15.6.1"), "{body}");
             match finding.tier {
                 Tier::AiJudgement => assert!(
@@ -531,7 +531,7 @@ mod tests {
         assert!(report.body.contains("Scope: unknown"));
         assert!(report.body.contains("Provenance class: unknown"));
         assert!(report.body.contains("Verdict engine: other\n"));
-        assert!(report.body.contains("AgentSweep: unknown"));
+        assert!(report.body.contains("AgentPatrol: unknown"));
     }
 
     #[test]

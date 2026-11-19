@@ -45,7 +45,7 @@ esac
 workspace="$(sed -n '/^\[workspace\.package\]/,/^\[/s/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$root/Cargo.toml")"
 tag="${1:-v$workspace}"
 
-work="$(mktemp -d "${TMPDIR:-/tmp}/agentsweep-release-dry-run.XXXXXX")"
+work="$(mktemp -d "${TMPDIR:-/tmp}/agentpatrol-release-dry-run.XXXXXX")"
 release="$work/release"
 cleanup() {
 	rm -rf "$work/src" "$work/target" "$work/updater-key"
@@ -108,12 +108,12 @@ step "Skipped: notarize and staple the DMG (Apple's)"
 
 step "Check the app, the DMG and the updater archive in ad hoc mode"
 status=0
-for subject in "$bundle/macos/AgentSweep.app" "$release/$dmg" "$release/$archive"; do
+for subject in "$bundle/macos/AgentPatrol.app" "$release/$dmg" "$release/$archive"; do
 	"$here/check-bundle-signature.sh" - "$subject" || status=1
 done
 
 step "Write and check latest.json"
-url="https://github.com/byte5digital/agentsweep/releases/download/$tag/$archive"
+url="https://github.com/byte5digital/agentpatrol/releases/download/$tag/$archive"
 "$here/updater-manifest.sh" write "$version" "$url" "$release/$signature" "$release/latest.json"
 "$here/updater-manifest.sh" check "$release/latest.json" "$version" "$url" "$release/$signature"
 

@@ -22,7 +22,7 @@
 //!   `scan_again_trusting_nothing`: the integrity banners' buttons, each the
 //!   daemon's matching request; the window then opens on Activity at the
 //!   break point or at the restart record ([`crate::integrity`]).
-//! - `reopen`: **Reopen** on "AgentSweep was updated. Reopen it.", which an
+//! - `reopen`: **Reopen** on "AgentPatrol was updated. Reopen it.", which an
 //!   app older than its daemon shows: starts a new copy of the app from its
 //!   bundle, which holds the new version, and quits this one
 //!   ([`updater::reopen`]).
@@ -68,7 +68,7 @@
 //! - `open_full_disk_access`: System Settings at Full Disk Access, best
 //!   effort, or at Privacy & Security without an anchor.
 //! - `show_rules_folder`: the user's own rules folder in Finder.
-//! - `open_not_protected`: the README's list of what AgentSweep does not
+//! - `open_not_protected`: the README's list of what AgentPatrol does not
 //!   protect against, in the browser.
 //! - `reveal_in_finder`: shows a quarantined Item's payload in Finder, in
 //!   the Developer Posture only, at the path the daemon's reveal-receipt
@@ -80,7 +80,7 @@
 //!   ([`crate::folder`]).
 //! - `choose_folder`, `scan_dropped`: the dialog's folder picker and its drop
 //!   zone, each a Folder Scan by the daemon whose answer arrives on
-//!   `agentsweep://folder`; `close_folder`: the dialog was closed.
+//!   `agentpatrol://folder`; `close_folder`: the dialog was closed.
 //! - `onboarding`, `onboarding_back`, `onboarding_choose`, `onboarding_next`,
 //!   `onboarding_engine`, `onboarding_claude`, `onboarding_toggle`: the
 //!   onboarding wizard's view and its moves
@@ -98,26 +98,26 @@
 //! per press however often the webview delivers it ([`crate::presses`]).
 //!
 //! Events the frontend may listen to:
-//! - `agentsweep://view`: the popover's view, whenever it changes.
-//! - `agentsweep://state-event`: every state event on the daemon's subscribe
+//! - `agentpatrol://view`: the popover's view, whenever it changes.
+//! - `agentpatrol://state-event`: every state event on the daemon's subscribe
 //!   stream, as the wire carries it.
-//! - `agentsweep://findings`: the Findings window's view, whenever the list,
+//! - `agentpatrol://findings`: the Findings window's view, whenever the list,
 //!   a count, the Overview or the Posture changes.
-//! - `agentsweep://folder`: the Scan a folder dialog: open with no folder
+//! - `agentpatrol://folder`: the Scan a folder dialog: open with no folder
 //!   chosen, a drop refused, or the Folder Scan running, done or failed; null
 //!   when it is closed.
-//! - `agentsweep://pane`: the pane the Findings window turns to, by its id,
+//! - `agentpatrol://pane`: the pane the Findings window turns to, by its id,
 //!   when a click on a notification brought the app to the front.
-//! - `agentsweep://activity-at`: the Event Log sequence the Activity pane
+//! - `agentpatrol://activity-at`: the Event Log sequence the Activity pane
 //!   opens at after an integrity button, or null for the pane alone.
-//! - `agentsweep://onboarding`: the onboarding wizard's view, when the engine
+//! - `agentpatrol://onboarding`: the onboarding wizard's view, when the engine
 //!   look arrived.
-//! - `agentsweep://first-check`: the first check's result, once the first
+//! - `agentpatrol://first-check`: the first check's result, once the first
 //!   Scan after onboarding finished.
 //!
 //! The update check (spec section 9.4) runs on a thread of its own from
 //! launch ([`crate::updater`]); the popover's view carries "Update ready,
-//! restart AgentSweep" once an update is downloaded and verified, and the
+//! restart AgentPatrol" once an update is downloaded and verified, and the
 //! quit installs it.
 //!
 //! Notifications (spec sections 6.7 and 8.7) are raised here through the
@@ -141,11 +141,11 @@ use tauri::{
 };
 use tauri_plugin_notification::{NotificationExt, PermissionState};
 
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::keychain::ClaudeKey;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::{JudgementEngine, Posture};
-use agentsweep_ipc::protocol::{Message, StateEvent};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::keychain::ClaudeKey;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::{JudgementEngine, Posture};
+use agentpatrol_ipc::protocol::{Message, StateEvent};
 
 use crate::ai_check;
 use crate::asking::{ActionRequest, Asking, refusal, scan_now_line};
@@ -182,7 +182,7 @@ use crate::window::{self, Presence, Reopened, Start, presence};
 use crate::wording;
 
 /// The tray icon's id.
-const TRAY: &str = "agentsweep";
+const TRAY: &str = "agentpatrol";
 
 /// The popover window's label, as `tauri.conf.json` declares it.
 const POPOVER: &str = "popover";
@@ -195,28 +195,28 @@ const ONBOARDING: &str = "onboarding";
 
 /// The event the onboarding wizard's view arrives on when it changed
 /// outside its own commands: the engine look.
-pub const ONBOARDING_EVENT: &str = "agentsweep://onboarding";
+pub const ONBOARDING_EVENT: &str = "agentpatrol://onboarding";
 
 /// The event the first check's result arrives on in the Findings window.
-pub const FIRST_CHECK_EVENT: &str = "agentsweep://first-check";
+pub const FIRST_CHECK_EVENT: &str = "agentpatrol://first-check";
 
 /// The event the popover's view arrives on.
-pub const VIEW_EVENT: &str = "agentsweep://view";
+pub const VIEW_EVENT: &str = "agentpatrol://view";
 
 /// The event every daemon state event arrives on.
-pub const STATE_EVENT: &str = "agentsweep://state-event";
+pub const STATE_EVENT: &str = "agentpatrol://state-event";
 
 /// The event the Findings window's list arrives on.
-pub const FINDINGS_EVENT: &str = "agentsweep://findings";
+pub const FINDINGS_EVENT: &str = "agentpatrol://findings";
 
 /// The event the Folder Scan in hand arrives on.
-pub const FOLDER_EVENT: &str = "agentsweep://folder";
+pub const FOLDER_EVENT: &str = "agentpatrol://folder";
 
 /// The event that turns the Findings window to a pane.
-pub const PANE_EVENT: &str = "agentsweep://pane";
+pub const PANE_EVENT: &str = "agentpatrol://pane";
 
 /// The event that opens the Activity pane at one record.
-pub const ACTIVITY_AT_EVENT: &str = "agentsweep://activity-at";
+pub const ACTIVITY_AT_EVENT: &str = "agentpatrol://activity-at";
 
 /// The notification plugin, which posts through the operating system.
 struct PluginNotifier(AppHandle);
@@ -393,7 +393,7 @@ async fn start_daemon(app: AppHandle, press: String) -> Result<String, String> {
             let answers = || asking.status().is_ok();
             supervision::start_and_wait(&*services, answers, crate::link::REGISTERED_AGAIN)
                 .map(|answered| supervision::started_line(answered).to_string())
-                .map_err(|why| format!("AgentSweep could not be started: {why}"))
+                .map_err(|why| format!("AgentPatrol could not be started: {why}"))
         })
     })
     .await
@@ -561,12 +561,12 @@ fn folder(shell: tauri::State<'_, Shell>) -> Value {
 
 /// Runs a blocking request off the main thread, its failure as a sentence.
 async fn blocking<T: Send + 'static>(
-    ask: impl FnOnce() -> Result<T, agentsweep_ipc::ClientError> + Send + 'static,
+    ask: impl FnOnce() -> Result<T, agentpatrol_ipc::ClientError> + Send + 'static,
 ) -> Result<T, String> {
     match tauri::async_runtime::spawn_blocking(ask).await {
         Ok(Ok(answer)) => Ok(answer),
         Ok(Err(error)) => Err(refusal(&error)),
-        Err(error) => Err(format!("AgentSweep could not be asked: {error}")),
+        Err(error) => Err(format!("AgentPatrol could not be asked: {error}")),
     }
 }
 
@@ -585,7 +585,7 @@ async fn act(
 /// after a Restore or a Trust. The report is prepared before the action,
 /// while the Finding is still listed as it was.
 fn carry_out(app: &AppHandle, request: Option<ActionRequest>) -> Result<Value, String> {
-    let request = request.ok_or_else(|| "That is not an action AgentSweep knows.".to_string())?;
+    let request = request.ok_or_else(|| "That is not an action AgentPatrol knows.".to_string())?;
     let report = match request {
         ActionRequest::Restore(..) | ActionRequest::Trust(..) => {
             prepare_report(app, request.target())
@@ -760,7 +760,7 @@ async fn reveal_in_finder(app: AppHandle, target: String) -> Result<String, Stri
     let asking = Arc::clone(&app.state::<Shell>().asking);
     let receipts = tauri::async_runtime::spawn_blocking(move || asking.receipts())
         .await
-        .map_err(|error| format!("AgentSweep could not be asked: {error}"))?;
+        .map_err(|error| format!("AgentPatrol could not be asked: {error}"))?;
     let (sender, receiver) = std::sync::mpsc::channel();
     app.run_on_main_thread(move || {
         let _ = sender.send(reveal::reveal_in_finder(
@@ -842,7 +842,7 @@ async fn switch_gate(app: AppHandle, on: bool) -> Result<String, String> {
 
 /// Takes the daemon's engine answer into the frame, sends the window again
 /// and answers the line saying whether the change was recorded.
-fn take_engine(app: &AppHandle, state: &agentsweep_ipc::engine::EngineState) -> String {
+fn take_engine(app: &AppHandle, state: &agentpatrol_ipc::engine::EngineState) -> String {
     let posture = {
         let shell = app.state::<Shell>();
         let mut frame = shell.frame.lock().expect("the frame is not poisoned");
@@ -859,7 +859,7 @@ async fn off_main<T: Send + 'static>(
 ) -> Result<T, String> {
     tauri::async_runtime::spawn_blocking(step)
         .await
-        .map_err(|error| format!("AgentSweep could not be asked: {error}"))?
+        .map_err(|error| format!("AgentPatrol could not be asked: {error}"))?
 }
 
 /// Asks the daemon where the AI check stands, with whether Ollama runs and
@@ -957,11 +957,11 @@ async fn uninstall_offer(app: AppHandle) -> Result<Value, String> {
     Ok(uninstall::view(receipts.len()))
 }
 
-/// **Uninstall AgentSweep…** with the choice the dialog sent: the daemon
+/// **Uninstall AgentPatrol…** with the choice the dialog sent: the daemon
 /// applies it, the registrations go, the app goes to the Trash and quits a
 /// moment later, so the pane can say what was done (spec section 9.6).
 #[tauri::command]
-async fn uninstall_agentsweep(app: AppHandle, asked: Value) -> Result<Vec<String>, String> {
+async fn uninstall_agentpatrol(app: AppHandle, asked: Value) -> Result<Vec<String>, String> {
     let choice = uninstall::choice_of(&asked)?;
     let asking = Arc::clone(&app.state::<Shell>().asking);
     let services = Arc::clone(&app.state::<Shell>().services);
@@ -978,7 +978,7 @@ async fn uninstall_agentsweep(app: AppHandle, asked: Value) -> Result<Vec<String
         )
     })
     .await
-    .map_err(|error| format!("AgentSweep could not be asked: {error}"))??;
+    .map_err(|error| format!("AgentPatrol could not be asked: {error}"))??;
     // The bundle is going: no update may be put in its place at the quit.
     app.state::<Shell>().updates.forget();
     if done.trashed.is_ok() {
@@ -986,7 +986,7 @@ async fn uninstall_agentsweep(app: AppHandle, asked: Value) -> Result<Vec<String
         // every choice since it is a cache, but the web view may write to it
         // until the app is gone, so the app removes it once more on its way
         // out.
-        let temporary = std::env::temp_dir().join(agentsweep_core::BUNDLE_ID);
+        let temporary = std::env::temp_dir().join(agentpatrol_core::BUNDLE_ID);
         let handle = app.clone();
         std::thread::spawn(move || {
             std::thread::sleep(std::time::Duration::from_secs(4));
@@ -1022,7 +1022,7 @@ fn onboarding_back(shell: tauri::State<'_, Shell>) -> Value {
 #[tauri::command]
 fn onboarding_choose(shell: tauri::State<'_, Shell>, posture: String) -> Result<Value, String> {
     let posture = Posture::parse(&posture)
-        .ok_or_else(|| "That is not a choice AgentSweep knows.".to_string())?;
+        .ok_or_else(|| "That is not a choice AgentPatrol knows.".to_string())?;
     let mut held = shell.onboarding.lock().expect("the wizard is not poisoned");
     Ok(held.as_mut().map_or(Value::Null, |wizard| {
         wizard.choose(posture);
@@ -1090,7 +1090,7 @@ async fn onboarding_next(app: AppHandle, ollama_confirmed: Option<bool>) -> Resu
     let handle = app.clone();
     tauri::async_runtime::spawn_blocking(move || leave_onboarding(&handle))
         .await
-        .map_err(|error| format!("AgentSweep could not register its background item: {error}"))?;
+        .map_err(|error| format!("AgentPatrol could not register its background item: {error}"))?;
     Ok(Value::Null)
 }
 
@@ -1141,7 +1141,7 @@ fn leave_onboarding(app: &AppHandle) {
     show_window(app);
     let _ = app.emit(PANE_EVENT, Pane::Overview.id());
     for failure in left.launched.iter().flat_map(|launched| &launched.failures) {
-        eprintln!("agentsweep-menubar: {failure}");
+        eprintln!("agentpatrol-menubar: {failure}");
     }
     if let Some(notifications) = app.try_state::<Notifications>() {
         notifications.ask_permission_now();
@@ -1159,7 +1159,7 @@ fn onboarding_engine(
     confirmed: Option<bool>,
 ) -> Result<Value, String> {
     let engine = JudgementEngine::parse(&engine)
-        .ok_or_else(|| "That is not a choice AgentSweep knows.".to_string())?;
+        .ok_or_else(|| "That is not a choice AgentPatrol knows.".to_string())?;
     let mut held = shell.onboarding.lock().expect("the wizard is not poisoned");
     let Some(wizard) = held.as_mut() else {
         return Ok(Value::Null);
@@ -1326,7 +1326,7 @@ fn show_onboarding(app: &AppHandle) {
     }
 }
 
-/// **Install command line tool**: the link to the bundle's `agentsweep` in
+/// **Install command line tool**: the link to the bundle's `agentpatrol` in
 /// `~/.local/bin`, answered with the lines the pane shows.
 #[tauri::command]
 fn install_cli() -> Result<Vec<String>, String> {
@@ -1337,7 +1337,7 @@ fn install_cli() -> Result<Vec<String>, String> {
         .ok()
         .and_then(|exe| cli_link::bundled_cli(&exe))
         .ok_or_else(|| {
-            "This copy of AgentSweep carries no command line tool, so nothing was installed."
+            "This copy of AgentPatrol carries no command line tool, so nothing was installed."
                 .to_string()
         })?;
     let path = std::env::var_os("PATH");
@@ -1398,10 +1398,10 @@ fn show_rules_folder() -> Result<String, String> {
             "There is no rules.d folder yet. Make one here and put your rules in it.".to_string(),
         );
     }
-    Err("AgentSweep has not made its folder yet. It does once it has started.".to_string())
+    Err("AgentPatrol has not made its folder yet. It does once it has started.".to_string())
 }
 
-/// The README's full list of what AgentSweep does not protect against, in
+/// The README's full list of what AgentPatrol does not protect against, in
 /// the browser. The address is fixed; the window cannot name another.
 #[tauri::command]
 fn open_not_protected() -> Result<(), String> {
@@ -1463,7 +1463,7 @@ fn scan_folder(app: AppHandle) {
 }
 
 /// The dialog's **Choose a folder** button: the native folder picker, then a
-/// Folder Scan by the daemon, whose answer arrives on `agentsweep://folder`.
+/// Folder Scan by the daemon, whose answer arrives on `agentpatrol://folder`.
 #[tauri::command]
 async fn choose_folder(app: AppHandle) -> Result<(), String> {
     let Some(picked) = pick_folder(&app).await? else {
@@ -1507,7 +1507,7 @@ async fn run_folder_scan(app: &AppHandle, root: String) {
         .unwrap_or_else(|error| {
             folder::failed_view(
                 &root,
-                &format!("AgentSweep could not be asked: {error}"),
+                &format!("AgentPatrol could not be asked: {error}"),
                 posture,
             )
         });
@@ -1658,7 +1658,7 @@ fn take(app: &AppHandle, update: Update) {
                 let _ = tray.set_icon_as_template(true);
             }
             if let Some(tray) = app.tray_by_id(TRAY) {
-                let _ = tray.set_tooltip(Some(format!("AgentSweep: {}", view.sentence)));
+                let _ = tray.set_tooltip(Some(format!("AgentPatrol: {}", view.sentence)));
             }
             send_view(app);
         }
@@ -1725,7 +1725,7 @@ fn toggle(app: &AppHandle, anchor: Rect) {
     let _ = window.set_focus();
 }
 
-/// Makes AgentSweep the active app. A click on the menu bar icon does not,
+/// Makes AgentPatrol the active app. A click on the menu bar icon does not,
 /// and a window of an app that is not active never loses the focus, so the
 /// popover would not hide on a click outside it.
 #[cfg(target_os = "macos")]
@@ -1817,7 +1817,7 @@ fn rules_folder_named(mut frame: Frame) -> Frame {
 fn check_for_updates(app: &AppHandle) {
     let handle = app.clone();
     let spawned = std::thread::Builder::new()
-        .name("agentsweep-updates".to_string())
+        .name("agentpatrol-updates".to_string())
         .spawn(move || {
             let source = PluginSource(handle.clone());
             let updates = Arc::clone(&handle.state::<Shell>().updates);
@@ -1846,7 +1846,7 @@ fn check_for_updates(app: &AppHandle) {
                 match updates.look(std::time::SystemTime::now(), on, &source) {
                     Look::Ready => send_view(&handle),
                     Look::Failed(why) => {
-                        eprintln!("agentsweep-menubar: the update check failed: {why}");
+                        eprintln!("agentpatrol-menubar: the update check failed: {why}");
                     }
                     Look::NotDue | Look::Off | Look::Current => {}
                 }
@@ -1854,7 +1854,7 @@ fn check_for_updates(app: &AppHandle) {
             }
         });
     if let Err(error) = spawned {
-        eprintln!("agentsweep-menubar: the update check could not start: {error}");
+        eprintln!("agentpatrol-menubar: the update check could not start: {error}");
     }
 }
 
@@ -1940,7 +1940,7 @@ pub fn run(start: Start) {
             onboarding_choose,
             onboarding_next,
             uninstall_offer,
-            uninstall_agentsweep,
+            uninstall_agentpatrol,
             onboarding_engine,
             onboarding_claude,
             onboarding_toggle,
@@ -1963,7 +1963,7 @@ pub fn run(start: Start) {
             TrayIconBuilder::with_id(TRAY)
                 .icon(icon(&View::unknown()))
                 .icon_as_template(true)
-                .tooltip("AgentSweep")
+                .tooltip("AgentPatrol")
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| {
                     if let TrayIconEvent::Click {
@@ -1988,7 +1988,7 @@ pub fn run(start: Start) {
                 // A debug build can open the popover at start, so a developer
                 // (or a screenshot) sees it without clicking the menu bar.
                 if cfg!(debug_assertions)
-                    && std::env::var_os("AGENTSWEEP_DEV_SHOW_POPOVER").is_some()
+                    && std::env::var_os("AGENTPATROL_DEV_SHOW_POPOVER").is_some()
                 {
                     let _ = window.set_position(PhysicalPosition::new(40.0, 80.0));
                     let _ = window.show();
@@ -2041,7 +2041,7 @@ pub fn run(start: Start) {
             // wait on the operating system, and the menu bar must not.
             let handle = app.handle().clone();
             std::thread::Builder::new()
-                .name("agentsweep-link".to_string())
+                .name("agentpatrol-link".to_string())
                 .spawn(move || {
                     // A launch where the daemon is not registered shows the
                     // onboarding wizard and registers nothing; its screen 2
@@ -2067,7 +2067,7 @@ pub fn run(start: Start) {
                         // daemon's, when one already answers, else the same
                         // look taken on this Mac. Without screen 4, while no
                         // engine passed the eval, nothing is looked at.
-                        let look = agentsweep_core::eval_bar::any_passes().then(|| {
+                        let look = agentpatrol_core::eval_bar::any_passes().then(|| {
                             handle
                                 .state::<Shell>()
                                 .asking
@@ -2093,14 +2093,14 @@ pub fn run(start: Start) {
                     }
                     let launched = supervision::on_launch(&*services);
                     for failure in &launched.failures {
-                        eprintln!("agentsweep-menubar: {failure}");
+                        eprintln!("agentpatrol-menubar: {failure}");
                     }
                     Link::new(socket, services).run(|update| take(&handle, update));
                 })?;
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("the AgentSweep app builds");
+        .expect("the AgentPatrol app builds");
     app.run(|app, event| {
         // The quit, from the popover, from Cmd-Q or after Uninstall, installs
         // an update that is ready, once; nothing restarts the app (spec
@@ -2108,7 +2108,7 @@ pub fn run(start: Start) {
         // version (spec section 9.5).
         if let RunEvent::Exit = event {
             if let Some(Err(why)) = app.state::<Shell>().updates.on_quit(&PluginInstaller) {
-                eprintln!("agentsweep-menubar: the update could not be installed: {why}");
+                eprintln!("agentpatrol-menubar: the update could not be installed: {why}");
             }
             return;
         }

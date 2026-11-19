@@ -6,7 +6,7 @@
 //! that has seen it all, which is why one runs whenever the daemon starts.
 //!
 //! The order inside the Scan is not this module's: it is
-//! [`agentsweep_core::scan_pass::ScanPass`], which applies the known actions,
+//! [`agentpatrol_core::scan_pass::ScanPass`], which applies the known actions,
 //! computes `item.baseline`, runs T0, T1 and T2, asks the Drift question where
 //! the specification says to ask it, and answers with the Baseline records to
 //! append. What is here is the machine around that pass: pooling the roots
@@ -18,39 +18,39 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
-use agentsweep_core::adapter::{
+use agentpatrol_core::adapter::{
     Descriptor, Enumeration, ProjectHooks, SWITCH_ONLY, SurfaceAdapter, WatchRoots,
 };
-use agentsweep_core::baseline::{Baseline, BaselineWriter};
-use agentsweep_core::chain::{ChainError, ChainState};
-use agentsweep_core::coverage::CoveragePlan;
-use agentsweep_core::derived::QuarantineEntry;
-use agentsweep_core::derived::{KnownActions, QuarantineManifest, TrustTable};
-use agentsweep_core::drift::{Declarations, Note};
-use agentsweep_core::enforcement::primitives_for;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::evaluation::{Evaluations, NoCache};
-use agentsweep_core::eventlog::{Action, EventLog};
-use agentsweep_core::finding::{Category, Decided, Finding, Standing, standing};
-use agentsweep_core::finding::{FindingId, FindingState, RuleStatus, Severity, Source, Tier};
-use agentsweep_core::finding::{RULE_WITHDRAWN_GONE, RULE_WITHDRAWN_STOPPED};
-use agentsweep_core::finding_facts::FindingFacts;
-use agentsweep_core::gate_facts::{self, GateFacts};
-use agentsweep_core::gate_registration::GateCommand;
-use agentsweep_core::health::GateLine;
-use agentsweep_core::heuristics::Band;
-use agentsweep_core::item::{Item, ItemId, Kind, Scope};
-use agentsweep_core::judged::{AppliedVerdict, CachedVerdicts, Judge, NoVerdicts, Verdicts};
-use agentsweep_core::judgement::Verdict;
-use agentsweep_core::keychain::KeySource;
-use agentsweep_core::overview::Overview;
-use agentsweep_core::pack::Manifest;
-use agentsweep_core::packs::LoadedPack;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan_pass::{BACKGROUND_WORKERS, ScanKind, ScanPass, Watch};
-use agentsweep_core::state::{ScanSummary, Trigger};
-use agentsweep_core::verdicts::{VerdictCache, VerdictCacheView};
+use agentpatrol_core::baseline::{Baseline, BaselineWriter};
+use agentpatrol_core::chain::{ChainError, ChainState};
+use agentpatrol_core::coverage::CoveragePlan;
+use agentpatrol_core::derived::QuarantineEntry;
+use agentpatrol_core::derived::{KnownActions, QuarantineManifest, TrustTable};
+use agentpatrol_core::drift::{Declarations, Note};
+use agentpatrol_core::enforcement::primitives_for;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::evaluation::{Evaluations, NoCache};
+use agentpatrol_core::eventlog::{Action, EventLog};
+use agentpatrol_core::finding::{Category, Decided, Finding, Standing, standing};
+use agentpatrol_core::finding::{FindingId, FindingState, RuleStatus, Severity, Source, Tier};
+use agentpatrol_core::finding::{RULE_WITHDRAWN_GONE, RULE_WITHDRAWN_STOPPED};
+use agentpatrol_core::finding_facts::FindingFacts;
+use agentpatrol_core::gate_facts::{self, GateFacts};
+use agentpatrol_core::gate_registration::GateCommand;
+use agentpatrol_core::health::GateLine;
+use agentpatrol_core::heuristics::Band;
+use agentpatrol_core::item::{Item, ItemId, Kind, Scope};
+use agentpatrol_core::judged::{AppliedVerdict, CachedVerdicts, Judge, NoVerdicts, Verdicts};
+use agentpatrol_core::judgement::Verdict;
+use agentpatrol_core::keychain::KeySource;
+use agentpatrol_core::overview::Overview;
+use agentpatrol_core::pack::Manifest;
+use agentpatrol_core::packs::LoadedPack;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan_pass::{BACKGROUND_WORKERS, ScanKind, ScanPass, Watch};
+use agentpatrol_core::state::{ScanSummary, Trigger};
+use agentpatrol_core::verdicts::{VerdictCache, VerdictCacheView};
 
 use crate::actions::{Acting, ScanActions, act_in_scan};
 use crate::judgement_queue::Awaiting;
@@ -491,7 +491,7 @@ pub fn survey_watched(
     progress: &dyn Progress,
 ) -> Survey {
     let host = machine.host(roots.to_vec());
-    let workspace = agentsweep_adapter_workspace::Workspace::new();
+    let workspace = agentpatrol_adapter_workspace::Workspace::new();
     if let Some(first) = adapters.first() {
         progress.enumerating(Some(first.descriptor()));
     }
@@ -578,9 +578,9 @@ pub struct Judged {
     pub gate_facts: BTreeMap<FindingId, GateFacts>,
     /// The Items it looked at whose Score fell in the Ambiguous Band and that
     /// carry no Finding.
-    pub ambiguous: Vec<agentsweep_core::overview::AmbiguousItem>,
+    pub ambiguous: Vec<agentpatrol_core::overview::AmbiguousItem>,
     /// The Items it looked at that a cached benign Verdict moved to Clear.
-    pub checked: Vec<agentsweep_core::overview::CheckedItem>,
+    pub checked: Vec<agentpatrol_core::overview::CheckedItem>,
     /// The Items it looked at that await judgement, an unsure Verdict from
     /// the cache marked answered.
     pub awaiting: Vec<Awaiting>,
@@ -681,7 +681,7 @@ impl Judgement<'_> {
 
         // The Tiers have decided. What a stable Rule proves bad on a kind
         // that may be taken out by itself is taken out now, in the per-Item
-        // order, and what AgentSweep took out before and came back is taken
+        // order, and what AgentPatrol took out before and came back is taken
         // out again: both before the Baseline advances (spec section 6.4). A
         // chain that was tampered with freezes all of it until the user has
         // looked (ADR 0003).
@@ -867,10 +867,10 @@ impl Judgement<'_> {
 /// leaves an Item Ambiguous and is cached, so an Item it was applied to is
 /// marked answered and is not asked again under the same engine.
 fn awaiting(
-    outcome: &agentsweep_core::scan_pass::ScanOutcome,
+    outcome: &agentpatrol_core::scan_pass::ScanOutcome,
     items: &[Item],
     raised: &[Finding],
-    baseline: &agentsweep_core::baseline::BaselineView,
+    baseline: &agentpatrol_core::baseline::BaselineView,
     at: Timestamp,
 ) -> Vec<Awaiting> {
     let flagged: BTreeSet<&ItemId> = raised.iter().map(|finding| &finding.item_id).collect();
@@ -901,7 +901,7 @@ fn awaiting(
 /// When an Item's content last changed, as the Baseline knows it.
 fn changed_at(
     item: &Item,
-    baseline: &agentsweep_core::baseline::BaselineView,
+    baseline: &agentpatrol_core::baseline::BaselineView,
     at: Timestamp,
 ) -> Timestamp {
     baseline
@@ -915,10 +915,10 @@ fn changed_at(
 /// Finding raised about them is the T3 one. They await judgement again
 /// once that Verdict is no longer in force.
 fn judged_malicious(
-    outcome: &agentsweep_core::scan_pass::ScanOutcome,
+    outcome: &agentpatrol_core::scan_pass::ScanOutcome,
     items: &[Item],
     raised: &[Finding],
-    baseline: &agentsweep_core::baseline::BaselineView,
+    baseline: &agentpatrol_core::baseline::BaselineView,
     at: Timestamp,
 ) -> Vec<Awaiting> {
     outcome
@@ -1005,7 +1005,7 @@ fn facts(
     enumeration: &Enumeration,
     pack: &RulePack,
     judged: &[AppliedVerdict],
-    bands: agentsweep_core::pack::Bands,
+    bands: agentpatrol_core::pack::Bands,
 ) -> BTreeMap<FindingId, FindingFacts> {
     let items: BTreeMap<&ItemId, &Item> = enumeration
         .items
@@ -1067,12 +1067,12 @@ pub(crate) fn setting_plain(item_id: &ItemId) -> String {
     if !item_id.as_str().contains(&segment) {
         return String::new();
     }
-    let Some((agent, key_path)) = agentsweep_core::finding_facts::setting_key_path(item_id) else {
+    let Some((agent, key_path)) = agentpatrol_core::finding_facts::setting_key_path(item_id) else {
         return String::new();
     };
     match agent {
-        "claude-code" => agentsweep_adapter_claude_code::settings::plain_name(&key_path),
-        "codex" => agentsweep_adapter_codex::settings::plain_name(&key_path),
+        "claude-code" => agentpatrol_adapter_claude_code::settings::plain_name(&key_path),
+        "codex" => agentpatrol_adapter_codex::settings::plain_name(&key_path),
         _ => None,
     }
     .unwrap_or_default()
@@ -1113,14 +1113,14 @@ fn stopped_by(entry: &QuarantineEntry, pack: &RulePack) -> Standing {
             .unwrap_or(RuleStatus::Probation),
         title: meta
             .map(|meta| meta.title.clone())
-            .unwrap_or_else(|| "Quarantined by AgentSweep".to_string()),
+            .unwrap_or_else(|| "Quarantined by AgentPatrol".to_string()),
         plain: match (meta, source) {
             (Some(meta), _) => meta.plain.clone(),
             // A Receipt made on a Rule the pack in force no longer carries:
             // the Item stays stopped and says the Rule was withdrawn.
             (None, Source::Rule(id)) if id != 0 => RULE_WITHDRAWN_STOPPED.to_string(),
             (None, _) => {
-                "AgentSweep took this out of its place, so the Agent cannot load it.".to_string()
+                "AgentPatrol took this out of its place, so the Agent cannot load it.".to_string()
             }
         },
         sensitive: meta.is_some_and(|meta| meta.sensitive),
@@ -1213,7 +1213,7 @@ fn fixed_versions(
 }
 
 /// How many Items fell in each Band.
-fn count_bands(outcome: &agentsweep_core::scan_pass::ScanOutcome) -> (usize, usize, usize) {
+fn count_bands(outcome: &agentpatrol_core::scan_pass::ScanOutcome) -> (usize, usize, usize) {
     let mut counted = (0usize, 0usize, 0usize);
     for assessment in &outcome.report.assessments {
         match assessment.band {

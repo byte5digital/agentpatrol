@@ -15,7 +15,7 @@ const givenWay = new WeakMap();
 // Fills the banner elements under `root` (each found by its class) with
 // `banner`, or hides `root` when there is none. A click names the press and
 // calls the button's command; from the click until the answer the button
-// waits and the banner's line says it is working ("Starting AgentSweep…" for
+// waits and the banner's line says it is working ("Starting AgentPatrol…" for
 // Start it), then says what it answered, or why it failed. The buttons keep
 // their nodes while the banner shows the same ones, so a render cannot
 // swallow a click.

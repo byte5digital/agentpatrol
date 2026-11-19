@@ -22,36 +22,36 @@ use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::adapter::{Descriptor, WatchRoots};
-use agentsweep_core::apple_engine::AppleHelper;
-use agentsweep_core::baseline::{self, Retention};
-use agentsweep_core::chain::ChainState;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::evaluation::EvaluationCache;
-use agentsweep_core::eventlog::{Action, Actor, EventLog, PackChange, PackRules, RulePackRecord};
-use agentsweep_core::finding::{Category, Finding, FindingId, FindingState};
-use agentsweep_core::gate_facts::GateRecord;
-use agentsweep_core::gate_registration::GateCommand;
-use agentsweep_core::health::{Health, Protection, StateFileHealth};
-use agentsweep_core::integrity::ResetUnanswered;
-use agentsweep_core::item::{Item, Scope};
-use agentsweep_core::judged::installed_models;
-use agentsweep_core::keychain::{ClaudeKeyStore, KeySource, MemoryKeySource};
-use agentsweep_core::packs::{LoadedPack, PackOrigin, PackStore, Verdict, judge};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::rules::{RuleError, RulePack};
-use agentsweep_core::scan_pass::{BACKGROUND_WORKERS, ScanKind, on_demand_workers};
-use agentsweep_core::settings::{Settings, SettingsError, SettingsFile, SettingsWriter};
-use agentsweep_core::state::{RecordedFinding, State, StateFile, StateWriter, Trigger};
-use agentsweep_core::verdicts;
-use agentsweep_ipc::gate::{GateRequest, GateVerdict};
-use agentsweep_ipc::notifications::changes_to_value;
-use agentsweep_ipc::peer::PeerCheck;
-use agentsweep_ipc::protocol::{
+use agentpatrol_core::adapter::{Descriptor, WatchRoots};
+use agentpatrol_core::apple_engine::AppleHelper;
+use agentpatrol_core::baseline::{self, Retention};
+use agentpatrol_core::chain::ChainState;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::evaluation::EvaluationCache;
+use agentpatrol_core::eventlog::{Action, Actor, EventLog, PackChange, PackRules, RulePackRecord};
+use agentpatrol_core::finding::{Category, Finding, FindingId, FindingState};
+use agentpatrol_core::gate_facts::GateRecord;
+use agentpatrol_core::gate_registration::GateCommand;
+use agentpatrol_core::health::{Health, Protection, StateFileHealth};
+use agentpatrol_core::integrity::ResetUnanswered;
+use agentpatrol_core::item::{Item, Scope};
+use agentpatrol_core::judged::installed_models;
+use agentpatrol_core::keychain::{ClaudeKeyStore, KeySource, MemoryKeySource};
+use agentpatrol_core::packs::{LoadedPack, PackOrigin, PackStore, Verdict, judge};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::rules::{RuleError, RulePack};
+use agentpatrol_core::scan_pass::{BACKGROUND_WORKERS, ScanKind, on_demand_workers};
+use agentpatrol_core::settings::{Settings, SettingsError, SettingsFile, SettingsWriter};
+use agentpatrol_core::state::{RecordedFinding, State, StateFile, StateWriter, Trigger};
+use agentpatrol_core::verdicts;
+use agentpatrol_ipc::gate::{GateRequest, GateVerdict};
+use agentpatrol_ipc::notifications::changes_to_value;
+use agentpatrol_ipc::peer::PeerCheck;
+use agentpatrol_ipc::protocol::{
     ActivityLine, Hello, Message, Refusal, Request, RequestError, Role, ScanPhase, StateEvent,
     Status, check_version, welcome,
 };
-use agentsweep_ipc::socket::{Connection, Liveness, SocketListener};
+use agentpatrol_ipc::socket::{Connection, Liveness, SocketListener};
 
 use crate::bundle_watch::{self, BundleWatch, Change, Own};
 use crate::change_scan::ChangeScan;
@@ -181,12 +181,12 @@ impl std::fmt::Debug for Tuning {
 /// and there is nothing to say; otherwise it was lost or did not verify, and
 /// the status says it was rebuilt.
 fn lost_state_file(
-    error: &agentsweep_core::state::StateError,
+    error: &agentpatrol_core::state::StateError,
     scanned_before: bool,
 ) -> StateFileHealth {
     match error {
-        agentsweep_core::state::StateError::Missing if !scanned_before => StateFileHealth::New,
-        agentsweep_core::state::StateError::Missing => StateFileHealth::Missing,
+        agentpatrol_core::state::StateError::Missing if !scanned_before => StateFileHealth::New,
+        agentpatrol_core::state::StateError::Missing => StateFileHealth::Missing,
         _ => StateFileHealth::Rebuilt,
     }
 }
@@ -388,7 +388,7 @@ pub struct Daemon {
     /// empty at start, thrown away when a Rule Pack is accepted.
     cache: Arc<EvaluationCache>,
     /// The project roots the last Scan pooled, which is what tells a newly
-    /// registered project from one AgentSweep already knows.
+    /// registered project from one AgentPatrol already knows.
     roots: Mutex<Vec<PathBuf>>,
     /// The watcher, started again after every Full Scan on the roots that Scan
     /// declared.
@@ -493,7 +493,7 @@ impl Daemon {
             &EventLog::in_data_directory(&directory)
                 .chain()
                 .verify(&*keys)?,
-            &agentsweep_core::baseline::Baseline::in_data_directory(&directory)
+            &agentpatrol_core::baseline::Baseline::in_data_directory(&directory)
                 .chain()
                 .verify(&*keys)?,
         );
@@ -517,7 +517,7 @@ impl Daemon {
             None => Machine::real(options.home_directory()?),
         };
         // A rebuilt state file remembers the protected classes the Baseline
-        // proves AgentSweep read before, and no other: the grant was given
+        // proves AgentPatrol read before, and no other: the grant was given
         // once, and losing the cache must not ask for it again.
         if state_file != StateFileHealth::Loaded {
             state.readable_classes = proven_readable_classes(&directory, &*keys, machine.home());
@@ -562,7 +562,7 @@ impl Daemon {
         forget_an_ignored_pack_now_loadable(&mut state);
         // The Rules are compiled behind the socket: until they are, the
         // Health names the bundled pack, whose manifest the binary carries.
-        let manifest = agentsweep_core::pack::Manifest::bundled();
+        let manifest = agentpatrol_core::pack::Manifest::bundled();
         let spend = CloudLedger::in_the_event_log(&directory, &*keys);
         let now = (tuning.due.now)();
 
@@ -688,7 +688,7 @@ impl Daemon {
     fn compile_the_rules(self: &Arc<Daemon>) {
         let daemon = Arc::clone(self);
         std::thread::Builder::new()
-            .name("agentsweep-rules".to_string())
+            .name("agentpatrol-rules".to_string())
             .spawn(move || daemon.put_the_rules_in_force())
             .expect("the thread that compiles the Rules starts");
     }
@@ -868,7 +868,7 @@ impl Daemon {
     fn work(self: &Arc<Daemon>) {
         let daemon = Arc::clone(self);
         std::thread::Builder::new()
-            .name("agentsweep-scan".to_string())
+            .name("agentpatrol-scan".to_string())
             .spawn(move || {
                 loop {
                     let work = {
@@ -1313,11 +1313,11 @@ impl Daemon {
         let retention = Retention::of(live)
             .held_by(self.state.lock().expect("the state is not poisoned").open());
 
-        let baseline = agentsweep_core::baseline::Baseline::in_data_directory(&self.directory);
+        let baseline = agentpatrol_core::baseline::Baseline::in_data_directory(&self.directory);
         let Ok(view) = baseline.read(&*self.keys) else {
             return;
         };
-        let plan = agentsweep_core::baseline::CompactionPlan::of(&view, &retention, at);
+        let plan = agentpatrol_core::baseline::CompactionPlan::of(&view, &retention, at);
         if plan.changes_nothing() {
             return;
         }
@@ -1649,7 +1649,7 @@ impl Daemon {
         {
             return Err(RequestError::new(
                 "uninstalled",
-                "AgentSweep is being uninstalled, so nothing else is done",
+                "AgentPatrol is being uninstalled, so nothing else is done",
             ));
         }
         match request {
@@ -1729,11 +1729,11 @@ pub enum FeedOutcome {
         /// The version in use.
         in_use: u64,
     },
-    /// A newer pack that needs a newer AgentSweep, ignored with the notice.
+    /// A newer pack that needs a newer AgentPatrol, ignored with the notice.
     NeedsNewerEngine {
         /// Its version.
         offered: u64,
-        /// The AgentSweep version it asks for.
+        /// The AgentPatrol version it asks for.
         minimum: String,
     },
     /// A newer pack, verified and now in force.
@@ -1854,14 +1854,14 @@ fn rules_of(pack: &RulePack) -> PackRules {
     pack.metas().map(|meta| (meta.id, meta.status)).collect()
 }
 
-/// A pack that was ignored for needing a newer AgentSweep is asked for again
+/// A pack that was ignored for needing a newer AgentPatrol is asked for again
 /// once this binary is new enough: the validators go, so the next fetch is not
 /// answered "unchanged".
 fn forget_an_ignored_pack_now_loadable(state: &mut State) {
     if let Some(ignored) = &state.feed.ignored
-        && agentsweep_core::pack::engine_satisfies(
+        && agentpatrol_core::pack::engine_satisfies(
             &ignored.minimum_engine_version,
-            agentsweep_core::VERSION,
+            agentpatrol_core::VERSION,
         )
     {
         state.feed.ignored = None;
@@ -1891,7 +1891,7 @@ fn stored_pack_at_start(
         Ok(Some(fetched)) => match judge(
             &fetched.manifest,
             bundled.manifest.pack_version,
-            agentsweep_core::VERSION,
+            agentpatrol_core::VERSION,
         ) {
             Verdict::Accept => {
                 say!(
@@ -1999,7 +1999,7 @@ impl Daemon {
                     && judge(
                         &stored.manifest,
                         in_force.manifest.pack_version,
-                        agentsweep_core::VERSION,
+                        agentpatrol_core::VERSION,
                     ) == Verdict::Accept
                 {
                     self.adopt(Arc::new(stored));
@@ -2024,7 +2024,7 @@ impl Daemon {
         let hold = self.tuning.feed.first_hold;
         let weak = Arc::downgrade(self);
         let started = std::thread::Builder::new()
-            .name("agentsweep-rule-feed".to_string())
+            .name("agentpatrol-rule-feed".to_string())
             .spawn(move || {
                 // A first fetch still held waits for the hand-over, then for
                 // the jitter as any fetch does; a hold that runs out was the
@@ -2096,7 +2096,7 @@ impl Daemon {
             &client,
             &store,
             in_use,
-            agentsweep_core::VERSION,
+            agentpatrol_core::VERSION,
             &validators,
         );
         let now = (self.tuning.due.now)();
@@ -2143,7 +2143,7 @@ impl Daemon {
             }
             match &outcome {
                 FeedOutcome::NeedsNewerEngine { offered, minimum } => {
-                    feed.ignored = Some(agentsweep_core::state::IgnoredPack {
+                    feed.ignored = Some(agentpatrol_core::state::IgnoredPack {
                         pack_version: *offered,
                         minimum_engine_version: minimum.clone(),
                     });
@@ -2455,8 +2455,8 @@ impl Progress for Watching {
 
 /// The key source the shipped daemon uses: the item in the login Keychain.
 #[cfg(target_os = "macos")]
-fn keychain() -> agentsweep_core::keychain::LoginKeychain {
-    agentsweep_core::keychain::LoginKeychain::for_the_daemon()
+fn keychain() -> agentpatrol_core::keychain::LoginKeychain {
+    agentpatrol_core::keychain::LoginKeychain::for_the_daemon()
 }
 
 /// The key source a build without a login Keychain uses.
@@ -2559,7 +2559,7 @@ impl Drop for Background {
         // subscriber that is still reading keeps its own thread and ends with
         // the process.
         self.stopping.store(true, Ordering::SeqCst);
-        let _ = agentsweep_ipc::socket::connect(self.listener.path());
+        let _ = agentpatrol_ipc::socket::connect(self.listener.path());
         if let Some(handle) = self.handle.take() {
             let _ = handle.join();
         }
@@ -2577,7 +2577,7 @@ pub fn start_with(options: &Options, daemon: Arc<Daemon>) -> Result<Running, Box
     let listener = SocketListener::bind(&options.socket)?;
     say!(
         "{} listening on {}",
-        agentsweep_core::VERSION,
+        agentpatrol_core::VERSION,
         listener.path().display()
     );
     if options.is_developer_run() {
@@ -2773,10 +2773,10 @@ pub fn run(options: &Options) -> Result<(), Box<dyn Error>> {
     match std::env::current_exe() {
         Ok(executable) => say!(
             "{} starting from {}",
-            agentsweep_core::VERSION,
+            agentpatrol_core::VERSION,
             executable.display()
         ),
-        Err(_) => say!("{} starting", agentsweep_core::VERSION),
+        Err(_) => say!("{} starting", agentpatrol_core::VERSION),
     }
     if let Some(own) = Own::this_process().filter(Own::is_in_a_trash) {
         let keys: Box<dyn KeySource> = match options.key_source {
@@ -2835,7 +2835,7 @@ mod terminate {
     /// the process by that signal.
     pub fn clean_up_when_stopped(blocked: Blocked, daemon: Arc<Daemon>, socket: PathBuf) {
         let spawned = std::thread::Builder::new()
-            .name("agentsweep-stop".to_string())
+            .name("agentpatrol-stop".to_string())
             .spawn(move || {
                 let mut signal = 0;
                 // SAFETY: the set was initialised by `block`, and `signal`
@@ -2910,7 +2910,7 @@ mod tests {
     /// verify was rebuilt.
     #[test]
     fn a_missing_state_file_is_new_only_on_a_first_start() {
-        use agentsweep_core::state::StateError;
+        use agentpatrol_core::state::StateError;
         assert_eq!(
             lost_state_file(&StateError::Missing, false),
             StateFileHealth::New

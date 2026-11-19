@@ -1,4 +1,4 @@
-# yara-x `pulley` vs Cranelift JIT on the AgentSweep rule corpus
+# yara-x `pulley` vs Cranelift JIT on the AgentPatrol rule corpus
 
 Date: 2026-09-21
 Scope: cost of shipping macOS builds with yara-x's `pulley` feature (wasmtime interpreter, no executable memory) instead of the default Cranelift JIT, measured on the real `rules/` corpus and on real agent configuration files.

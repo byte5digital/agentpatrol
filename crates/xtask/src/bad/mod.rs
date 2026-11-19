@@ -41,11 +41,11 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_core::finding::{Source, Tier};
-use agentsweep_core::heuristics::{Assessment, Band};
-use agentsweep_core::item::{BaselineState, Item};
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_core::finding::{Source, Tier};
+use agentpatrol_core::heuristics::{Assessment, Band};
+use agentpatrol_core::item::{BaselineState, Item};
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 
 use crate::benign::plant::Machine;
 use crate::corpus;
@@ -541,7 +541,7 @@ pub struct LaidSample {
 /// can build a Judgement Request from each.
 pub fn sample_items(sample: &Sample, scanners: &mut Scanners<'_>) -> Result<LaidSample, String> {
     let work = std::env::temp_dir().join(format!(
-        "agentsweep-bad-corpus-{}-{}",
+        "agentpatrol-bad-corpus-{}-{}",
         std::process::id(),
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));
@@ -809,12 +809,12 @@ mod tests {
     fn the_baseline_of_an_item_compares_its_hash_with_the_accepted_one() {
         let item = Item::file(
             "claude-code",
-            agentsweep_core::item::Scope::User,
-            agentsweep_core::item::Kind::InstructionFile,
+            agentpatrol_core::item::Scope::User,
+            agentpatrol_core::item::Kind::InstructionFile,
             "~/.claude/CLAUDE.md",
             PathBuf::from("/nowhere/.claude/CLAUDE.md"),
-            agentsweep_core::item::Provenance::Manual,
-            agentsweep_core::item::Activation::Active,
+            agentpatrol_core::item::Provenance::Manual,
+            agentpatrol_core::item::Activation::Active,
             b"# notes\n".to_vec(),
         );
         let mut accepted = BTreeMap::new();

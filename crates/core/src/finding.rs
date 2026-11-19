@@ -190,8 +190,8 @@ pub enum Source {
     /// ever ran over it, which is the whole point: what was not read cannot be
     /// called clear.
     Problem(ProblemReason),
-    /// An Item AgentSweep quarantined by itself came back three times within
-    /// an hour, and AgentSweep stopped taking it out again (spec section
+    /// An Item AgentPatrol quarantined by itself came back three times within
+    /// an hour, and AgentPatrol stopped taking it out again (spec section
     /// 5.3). The Finding is about the Item as it stands, back on the Surface.
     KeepsComingBack,
 }
@@ -322,8 +322,8 @@ impl Finding {
 
     /// The Finding an Item that keeps coming back becomes (spec section 5.3).
     ///
-    /// AgentSweep took the Item out by itself, something put it back three
-    /// times within an hour, and AgentSweep stopped taking it out again: a
+    /// AgentPatrol took the Item out by itself, something put it back three
+    /// times within an hour, and AgentPatrol stopped taking it out again: a
     /// running Agent session that holds its configuration in memory and writes
     /// it back whole is the usual reason. It is the Threat the Quarantine was
     /// about, as bad as that Finding was, and it asks the user to close the
@@ -346,7 +346,7 @@ impl Finding {
             status,
             title: format!("A dangerous {named} keeps coming back"),
             plain: format!(
-                "AgentSweep removed this {named} and it came back, three times in the last hour, \
+                "AgentPatrol removed this {named} and it came back, three times in the last hour, \
                  so it stopped removing it. Close every Agent window, then quarantine it once more."
             ),
             sensitive: false,

@@ -22,15 +22,15 @@ use std::error::Error;
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter};
-use agentsweep_core::hits::HitReport;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::Scope;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter};
+use agentpatrol_core::hits::HitReport;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::Scope;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 
 /// The root every absolute system path is resolved against on a real machine.
 const SYSTEM_ROOT: &str = "/";
@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn the_listing_counts_what_it_found_by_scope_and_kind() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-developer-listing-")
+            .prefix("agentpatrol-developer-listing-")
             .tempdir()
             .expect("a fake home");
         let home = temporary.path().to_path_buf();
@@ -274,7 +274,7 @@ mod tests {
     #[test]
     fn the_listing_names_the_codex_layers_it_did_not_read() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-developer-not-read-")
+            .prefix("agentpatrol-developer-not-read-")
             .tempdir()
             .expect("a fake home");
         let home = temporary.path().to_path_buf();
@@ -302,8 +302,8 @@ mod tests {
 
     #[test]
     fn a_home_that_is_not_a_folder_is_an_error_rather_than_an_empty_listing() {
-        assert!(list_items(Some(PathBuf::from("/nowhere/agentsweep"))).is_err());
-        assert!(scan_items(Some(PathBuf::from("/nowhere/agentsweep"))).is_err());
+        assert!(list_items(Some(PathBuf::from("/nowhere/agentpatrol"))).is_err());
+        assert!(scan_items(Some(PathBuf::from("/nowhere/agentpatrol"))).is_err());
     }
 
     /// The scan runs on a home of this test's own, never on the real one. It
@@ -313,7 +313,7 @@ mod tests {
     #[test]
     fn the_scan_reports_the_rules_that_fired_and_never_the_content() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-developer-scan-")
+            .prefix("agentpatrol-developer-scan-")
             .tempdir()
             .expect("a fake home");
         let home = temporary.path().to_path_buf();
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn a_quiet_machine_reads_the_same_as_a_quiet_corpus() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-developer-quiet-")
+            .prefix("agentpatrol-developer-quiet-")
             .tempdir()
             .expect("a fake home");
         let home = temporary.path().to_path_buf();

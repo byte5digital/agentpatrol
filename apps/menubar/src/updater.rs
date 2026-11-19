@@ -34,11 +34,11 @@ use tauri_plugin_updater::UpdaterExt;
 /// project's repository. It carries no variable, so every check asks the
 /// same URL.
 pub const ENDPOINT: &str =
-    "https://github.com/byte5digital/agentsweep/releases/latest/download/latest.json";
+    "https://github.com/byte5digital/agentpatrol/releases/latest/download/latest.json";
 
 /// The popover's line once an update is downloaded and verified (spec
 /// section 8.1).
-pub const READY: &str = "Update ready, restart AgentSweep";
+pub const READY: &str = "Update ready, restart AgentPatrol";
 
 /// How long after one check the next is due.
 pub const EVERY: Duration = Duration::from_secs(24 * 60 * 60);
@@ -73,7 +73,7 @@ pub fn toggle(held: Option<bool>, daemon: Option<bool>, copy: &dyn Remembered) -
         }
         None => copy
             .recall()
-            .unwrap_or_else(|| agentsweep_core::settings::Settings::default().update_check),
+            .unwrap_or_else(|| agentpatrol_core::settings::Settings::default().update_check),
     }
 }
 
@@ -220,7 +220,7 @@ pub fn into_popover(mut view: serde_json::Value, line: Option<&'static str>) -> 
 }
 
 /// What **Reopen** says when it cannot start the app anew.
-pub const COULD_NOT_REOPEN: &str = "AgentSweep could not reopen. Quit it and open it again.";
+pub const COULD_NOT_REOPEN: &str = "AgentPatrol could not reopen. Quit it and open it again.";
 
 /// **Reopen**, on an app older than its daemon: starts a new copy of the app
 /// from the bundle `executable` runs out of, which an update replaced while
@@ -292,7 +292,7 @@ impl Installer<Ready> for PluginInstaller {
     }
 }
 
-/// The app's preferences (`~/Library/Preferences/de.byte5.agentsweep.plist`)
+/// The app's preferences (`~/Library/Preferences/de.byte5.agentpatrol.plist`)
 /// as the place of the app's copy of the toggle. **Delete everything** on
 /// Uninstall removes them (spec section 9.6).
 pub struct Preferences;
@@ -341,7 +341,9 @@ mod tests {
     fn reopen_starts_the_app_anew_from_its_bundle() {
         let asked = RefCell::new(Vec::new());
         let answer = reopen(
-            std::path::Path::new("/Applications/AgentSweep.app/Contents/MacOS/agentsweep-menubar"),
+            std::path::Path::new(
+                "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol-menubar",
+            ),
             |arguments: &[std::ffi::OsString]| {
                 asked.borrow_mut().push(arguments.to_vec());
                 true
@@ -352,7 +354,7 @@ mod tests {
             asked.into_inner(),
             vec![vec![
                 std::ffi::OsString::from("-n"),
-                std::ffi::OsString::from("/Applications/AgentSweep.app"),
+                std::ffi::OsString::from("/Applications/AgentPatrol.app"),
             ]]
         );
     }
@@ -363,7 +365,7 @@ mod tests {
     fn reopen_says_when_it_cannot_start_the_app() {
         let asked = Cell::new(0);
         let answer = reopen(
-            std::path::Path::new("/tmp/target/debug/agentsweep-menubar"),
+            std::path::Path::new("/tmp/target/debug/agentpatrol-menubar"),
             |_: &[std::ffi::OsString]| {
                 asked.set(asked.get() + 1);
                 true
@@ -372,7 +374,9 @@ mod tests {
         assert_eq!(answer, Err(COULD_NOT_REOPEN.to_string()));
         assert_eq!(asked.get(), 0);
         let answer = reopen(
-            std::path::Path::new("/Applications/AgentSweep.app/Contents/MacOS/agentsweep-menubar"),
+            std::path::Path::new(
+                "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol-menubar",
+            ),
             |_: &[std::ffi::OsString]| false,
         );
         assert_eq!(answer, Err(COULD_NOT_REOPEN.to_string()));
@@ -451,7 +455,7 @@ mod tests {
         let copy = Copy::default();
         assert_eq!(
             toggle(None, None, &copy),
-            agentsweep_core::settings::Settings::default().update_check
+            agentpatrol_core::settings::Settings::default().update_check
         );
         assert!(
             toggle(None, None, &copy),
@@ -573,7 +577,7 @@ mod tests {
 
     #[test]
     fn the_popover_carries_the_line_only_while_an_update_is_ready() {
-        use agentsweep_core::settings::Posture;
+        use agentpatrol_core::settings::Posture;
 
         use crate::popover::View;
 

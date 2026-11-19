@@ -1,16 +1,16 @@
 //! **Install command line tool** (spec section 8.10): a symbolic link to the
-//! `agentsweep` binary inside the bundle, at `~/.local/bin/agentsweep`.
+//! `agentpatrol` binary inside the bundle, at `~/.local/bin/agentpatrol`.
 //!
 //! No admin prompt: the directory belongs to the user, and the app creates it
 //! when it is absent. The app writes that one link and nothing else, never a
 //! shell profile. Where the directory is not on the PATH the app was given,
 //! the answer carries the line the user may add to their profile.
 //!
-//! A link is AgentSweep's own when it points at an `agentsweep` binary in the
+//! A link is AgentPatrol's own when it points at an `agentpatrol` binary in the
 //! `Contents/MacOS` directory of an app bundle: that is what this module
 //! writes, and a link left behind by a moved or older copy of the app is
 //! replaced. Anything else at that place, a file, a directory, or a link to
-//! another `agentsweep` (a `cargo install`, say), is the user's and is never
+//! another `agentpatrol` (a `cargo install`, say), is the user's and is never
 //! overwritten.
 //!
 //! Every function takes the home directory, the binary and the PATH it works
@@ -34,7 +34,7 @@ pub const PATH_LINE: &str = "export PATH=\"$HOME/.local/bin:$PATH\"";
 pub enum Outcome {
     /// The link was made.
     Created,
-    /// A link of AgentSweep's own that pointed elsewhere was replaced.
+    /// A link of AgentPatrol's own that pointed elsewhere was replaced.
     Replaced,
     /// The link was already there, pointing at this binary.
     AlreadyThere,
@@ -57,20 +57,20 @@ impl Installed {
     pub fn lines(&self) -> Vec<String> {
         let mut lines =
             vec![match self.outcome {
-            Outcome::Created => "The command line tool is installed: agentsweep in ~/.local/bin.",
+            Outcome::Created => "The command line tool is installed: agentpatrol in ~/.local/bin.",
             Outcome::Replaced => {
-                "The command line tool is installed: agentsweep in ~/.local/bin now points at \
-                 this copy of AgentSweep."
+                "The command line tool is installed: agentpatrol in ~/.local/bin now points at \
+                 this copy of AgentPatrol."
             }
             Outcome::AlreadyThere => {
-                "The command line tool was already installed: agentsweep in ~/.local/bin."
+                "The command line tool was already installed: agentpatrol in ~/.local/bin."
             }
         }
         .to_string()];
         if let Some(line) = self.path_line {
             lines.push(
-                "~/.local/bin is not on the PATH AgentSweep was started with. If a new \
-                 terminal does not find agentsweep, add this line to your shell profile, \
+                "~/.local/bin is not on the PATH AgentPatrol was started with. If a new \
+                 terminal does not find agentpatrol, add this line to your shell profile, \
                  such as ~/.zshrc:"
                     .to_string(),
             );
@@ -83,9 +83,9 @@ impl Installed {
 /// Why nothing was installed.
 #[derive(Debug)]
 pub enum Refused {
-    /// This copy of AgentSweep carries no command line tool.
+    /// This copy of AgentPatrol carries no command line tool.
     NoBinary(PathBuf),
-    /// Something that is not AgentSweep's own link is at the place.
+    /// Something that is not AgentPatrol's own link is at the place.
     Occupied(PathBuf),
     /// The file system said no.
     Io(io::Error),
@@ -96,11 +96,11 @@ impl fmt::Display for Refused {
         match self {
             Refused::NoBinary(_) => write!(
                 f,
-                "This copy of AgentSweep carries no command line tool, so nothing was installed."
+                "This copy of AgentPatrol carries no command line tool, so nothing was installed."
             ),
             Refused::Occupied(_) => write!(
                 f,
-                "Something else is already at ~/.local/bin/agentsweep, so AgentSweep left it \
+                "Something else is already at ~/.local/bin/agentpatrol, so AgentPatrol left it \
                  as it is and installed nothing. Move it away and try again."
             ),
             Refused::Io(error) => write!(
@@ -128,9 +128,9 @@ pub fn link_path(home: &Path) -> PathBuf {
     home.join(LINK_DIRECTORY).join(CLI_BINARY)
 }
 
-/// True when `target` is where AgentSweep links to: an `agentsweep` binary in
+/// True when `target` is where AgentPatrol links to: an `agentpatrol` binary in
 /// the `Contents/MacOS` directory of an app bundle. Whether it still exists
-/// does not matter; a link into a bundle that moved is still AgentSweep's.
+/// does not matter; a link into a bundle that moved is still AgentPatrol's.
 pub fn is_own_target(target: &Path) -> bool {
     let mut up = target.iter().rev();
     up.next() == Some(OsStr::new(CLI_BINARY))
@@ -243,7 +243,7 @@ mod tests {
             let macos = self.root.path().join(name).join("Contents/MacOS");
             std::fs::create_dir_all(&macos).expect("a bundle");
             let cli = macos.join(CLI_BINARY);
-            std::fs::write(&cli, b"#!/bin/sh\necho agentsweep\n").expect("a binary");
+            std::fs::write(&cli, b"#!/bin/sh\necho agentpatrol\n").expect("a binary");
             cli
         }
 
@@ -255,10 +255,10 @@ mod tests {
     #[test]
     fn the_link_is_made_in_a_new_local_bin_pointing_at_the_bundle() {
         let machine = Machine::new();
-        let cli = machine.bundle("AgentSweep.app");
+        let cli = machine.bundle("AgentPatrol.app");
         let installed = install(&machine.home(), &cli, None).expect("installed");
         assert_eq!(installed.outcome, Outcome::Created);
-        let link = machine.home().join(".local/bin/agentsweep");
+        let link = machine.home().join(".local/bin/agentpatrol");
         assert_eq!(installed.link, link);
         assert_eq!(std::fs::read_link(&link).expect("a link"), cli);
         // Nothing else was written: the directory holds the link alone.
@@ -266,7 +266,7 @@ mod tests {
             .expect("the directory")
             .map(|entry| entry.expect("an entry").file_name())
             .collect();
-        assert_eq!(entries, vec![OsString::from("agentsweep")]);
+        assert_eq!(entries, vec![OsString::from("agentpatrol")]);
         // And no shell profile was touched.
         assert!(!machine.home().join(".zshrc").exists());
         assert!(!machine.home().join(".zprofile").exists());
@@ -275,10 +275,10 @@ mod tests {
     #[test]
     fn a_stale_link_of_its_own_is_replaced_and_a_current_one_kept() {
         let machine = Machine::new();
-        let old = machine.bundle("Old/AgentSweep.app");
-        let cli = machine.bundle("AgentSweep.app");
+        let old = machine.bundle("Old/AgentPatrol.app");
+        let cli = machine.bundle("AgentPatrol.app");
         install(&machine.home(), &old, None).expect("the old link");
-        // The old copy is gone; its link dangles and is still AgentSweep's.
+        // The old copy is gone; its link dangles and is still AgentPatrol's.
         std::fs::remove_dir_all(machine.root.path().join("Old")).expect("removed");
 
         let installed = install(&machine.home(), &cli, None).expect("replaced");
@@ -297,10 +297,10 @@ mod tests {
     #[test]
     fn what_is_not_its_own_link_is_never_overwritten() {
         let machine = Machine::new();
-        let cli = machine.bundle("AgentSweep.app");
+        let cli = machine.bundle("AgentPatrol.app");
         let bin = machine.home().join(".local/bin");
         std::fs::create_dir_all(&bin).expect("the directory");
-        let link = bin.join("agentsweep");
+        let link = bin.join("agentpatrol");
 
         // A file of the user's.
         std::fs::write(&link, b"mine").expect("a file");
@@ -311,8 +311,8 @@ mod tests {
         assert_eq!(std::fs::read(&link).expect("still there"), b"mine");
         std::fs::remove_file(&link).expect("removed");
 
-        // A link to another agentsweep, such as a cargo install.
-        let cargo = machine.home().join(".cargo/bin/agentsweep");
+        // A link to another agentpatrol, such as a cargo install.
+        let cargo = machine.home().join(".cargo/bin/agentpatrol");
         std::fs::create_dir_all(cargo.parent().expect("a parent")).expect("a directory");
         std::fs::write(&cargo, b"cargo").expect("a binary");
         std::os::unix::fs::symlink(&cargo, &link).expect("a link");
@@ -337,7 +337,7 @@ mod tests {
         let missing = machine
             .root
             .path()
-            .join("Dev.app/Contents/MacOS/agentsweep");
+            .join("Dev.app/Contents/MacOS/agentpatrol");
         assert!(matches!(
             install(&machine.home(), &missing, None),
             Err(Refused::NoBinary(_))
@@ -348,7 +348,7 @@ mod tests {
     #[test]
     fn the_path_line_is_reported_only_when_the_directory_is_not_on_the_path() {
         let machine = Machine::new();
-        let cli = machine.bundle("AgentSweep.app");
+        let cli = machine.bundle("AgentPatrol.app");
         let bin = machine.home().join(".local/bin");
 
         let without = machine.path_with(&[PathBuf::from("/usr/bin"), PathBuf::from("/bin")]);
@@ -373,22 +373,22 @@ mod tests {
     #[test]
     fn its_own_target_is_the_binary_inside_an_app_bundle() {
         assert!(is_own_target(Path::new(
-            "/Applications/AgentSweep.app/Contents/MacOS/agentsweep"
+            "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol"
         )));
         assert!(is_own_target(Path::new(
-            "/Users/x/Downloads/AgentSweep 2.app/Contents/MacOS/agentsweep"
+            "/Users/x/Downloads/AgentPatrol 2.app/Contents/MacOS/agentpatrol"
         )));
-        assert!(!is_own_target(Path::new("/Users/x/.cargo/bin/agentsweep")));
+        assert!(!is_own_target(Path::new("/Users/x/.cargo/bin/agentpatrol")));
         assert!(!is_own_target(Path::new(
-            "/Applications/AgentSweep.app/Contents/MacOS/agentsweepd"
+            "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrold"
         )));
-        assert!(!is_own_target(Path::new("/Contents/MacOS/agentsweep")));
+        assert!(!is_own_target(Path::new("/Contents/MacOS/agentpatrol")));
         assert_eq!(
             bundled_cli(Path::new(
-                "/Applications/AgentSweep.app/Contents/MacOS/agentsweep-menubar"
+                "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol-menubar"
             )),
             Some(PathBuf::from(
-                "/Applications/AgentSweep.app/Contents/MacOS/agentsweep"
+                "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol"
             ))
         );
     }

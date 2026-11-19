@@ -1,4 +1,4 @@
-//! `agentsweep gate`, the Gate both Agents run as a hook, run as the Agents
+//! `agentpatrol gate`, the Gate both Agents run as a hook, run as the Agents
 //! run it: the event JSON on stdin, the decision on stdout, exit 0.
 //!
 //! The daemon here is a stand-in on a socket under the temporary directory: it
@@ -22,14 +22,15 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use agentsweep_ipc::{Message, read_frame, welcome, write_frame};
+use agentpatrol_ipc::{Message, read_frame, welcome, write_frame};
 use serde_json::{Value, json};
 
 /// Keeps one test's temporary paths apart from another's.
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
 /// What every failure prints, the fixed fail-open answer.
-const FAIL_OPEN: &str = "{\"systemMessage\":\"AgentSweep is not running, nothing was checked.\"}\n";
+const FAIL_OPEN: &str =
+    "{\"systemMessage\":\"AgentPatrol is not running, nothing was checked.\"}\n";
 
 /// The deadline of spec section 7.4 plus what starting a process may take on
 /// a busy machine.
@@ -61,7 +62,7 @@ struct Temporary(PathBuf);
 impl Temporary {
     fn new(purpose: &str) -> Temporary {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-gate-{purpose}-{}-{}",
+            "agentpatrol-gate-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -160,7 +161,7 @@ fn answering(socket: &Path, verdict: Value) -> JoinHandle<Sent> {
 /// home of the test's own, and says how long it took.
 fn gate(agent: &str, socket: &Path, stdin: &[u8], home: &Path) -> (Output, Duration) {
     let started = Instant::now();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_agentsweep"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_agentpatrol"))
         .args(["gate", "--agent", agent, "--socket"])
         .arg(socket)
         .current_dir(home)
@@ -358,11 +359,11 @@ fn each_reason_code_prints_the_fixed_sentence_where_the_agent_reads_it() {
         "tool_input": { "command": "./run.sh" },
     })
     .to_string();
-    let project = "AgentSweep stopped this turn. 3 items in this project need your decision. \
-                   Open AgentSweep, decide, then try again.";
-    let item = "AgentSweep blocked this step: the skill, tool or script it uses is flagged and \
+    let project = "AgentPatrol stopped this turn. 3 items in this project need your decision. \
+                   Open AgentPatrol, decide, then try again.";
+    let item = "AgentPatrol blocked this step: the skill, tool or script it uses is flagged and \
                 waits for the user's decision. Do not retry or work around it. Tell the user to \
-                open AgentSweep.";
+                open AgentPatrol.";
     let cases = [
         (
             "claude-code",
@@ -389,8 +390,8 @@ fn each_reason_code_prints_the_fixed_sentence_where_the_agent_reads_it() {
             1,
             json!({
                 "decision": "block",
-                "reason": "AgentSweep stopped this turn. Your Claude Code instructions file was \
-                           flagged and needs your decision. Open AgentSweep.",
+                "reason": "AgentPatrol stopped this turn. Your Claude Code instructions file was \
+                           flagged and needs your decision. Open AgentPatrol.",
             }),
         ),
         (
@@ -400,8 +401,8 @@ fn each_reason_code_prints_the_fixed_sentence_where_the_agent_reads_it() {
             1,
             json!({
                 "decision": "block",
-                "reason": "AgentSweep stopped this turn. Your Codex instructions file was flagged \
-                           and needs your decision. Open AgentSweep.",
+                "reason": "AgentPatrol stopped this turn. Your Codex instructions file was flagged \
+                           and needs your decision. Open AgentPatrol.",
             }),
         ),
         (
@@ -517,7 +518,7 @@ fn malformed_input_allows_with_the_fail_open_message() {
         assert_eq!(text(&output.stdout), FAIL_OPEN);
         assert!(took < DEADLINE_PLUS_START_UP, "{took:?}");
     }
-    let output = Command::new(env!("CARGO_BIN_EXE_agentsweep"))
+    let output = Command::new(env!("CARGO_BIN_EXE_agentpatrol"))
         .args(["gate", "--agent", "cursor"])
         .stdin(Stdio::null())
         .output()

@@ -2,10 +2,10 @@
 
 use std::fs;
 
-use agentsweep_core::item::sha256_hex;
-use agentsweep_core::pack::{Bands, MANIFEST_FILE, Manifest, STATEMENT_FILE};
-use agentsweep_core::pack_archive;
-use agentsweep_xtask::repo_root;
+use agentpatrol_core::item::sha256_hex;
+use agentpatrol_core::pack::{Bands, MANIFEST_FILE, Manifest, STATEMENT_FILE};
+use agentpatrol_core::pack_archive;
+use agentpatrol_xtask::repo_root;
 
 /// The release moment every manifest of this file states.
 const RELEASED: &str = "2026-09-25T08:00:00Z";

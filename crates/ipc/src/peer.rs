@@ -1,11 +1,11 @@
 //! Who is on the other end of the socket, and whether the daemon answers them.
 //!
 //! The daemon holds the file access the operating system attributed to
-//! AgentSweep, the Keychain key behind both chains and the only write path into
+//! AgentPatrol, the Keychain key behind both chains and the only write path into
 //! the quarantine store. Any local process that can reach the socket could
 //! otherwise ask it to read or rewrite what the caller itself may not touch, so
 //! ADR 0008 admits a peer only when it runs as the same user **and** carries
-//! AgentSweep's own code signature.
+//! AgentPatrol's own code signature.
 //!
 //! The check is a trait, for two reasons. The signature check is a macOS
 //! Security framework call that no test can satisfy without a signed binary,
@@ -94,8 +94,8 @@ pub trait PeerCheck: Send + Sync {
 
 /// Admits any peer running as the same user.
 ///
-/// This is what a debug build uses: a developer's `agentsweepd` and
-/// `agentsweep` are not signed, and refusing them would mean no build could be
+/// This is what a debug build uses: a developer's `agentpatrold` and
+/// `agentpatrol` are not signed, and refusing them would mean no build could be
 /// run by hand. It is never what a release build uses, because every process
 /// the user runs has the user's own uid, including an Agent that has been
 /// prompt-injected (ADR 0008).

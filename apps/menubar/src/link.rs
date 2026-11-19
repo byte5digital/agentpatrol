@@ -12,7 +12,7 @@
 //! it once per launch, which stops that daemon and starts its own. A daemon
 //! newer than the app means the app's own bundle was updated while it kept
 //! running: registering again would only start the newer daemon again, so
-//! the app says once "AgentSweep was updated. Reopen it." and stops trying.
+//! the app says once "AgentPatrol was updated. Reopen it." and stops trying.
 //!
 //! A daemon that does not answer at all can be the same thing one step
 //! earlier: a job SMAppService calls enabled, registered by another bundle
@@ -25,8 +25,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use agentsweep_ipc::protocol::{Refusal, Role, StateEvent};
-use agentsweep_ipc::{Client, ClientError};
+use agentpatrol_ipc::protocol::{Refusal, Role, StateEvent};
+use agentpatrol_ipc::{Client, ClientError};
 
 use crate::popover::{Off, View};
 use crate::supervision::{self, Mismatch, ServiceState, Services, Stale};
@@ -66,10 +66,10 @@ pub enum Socket {
 
 impl Socket {
     /// The socket this build of the app connects to: the documented one,
-    /// or in a debug build the one `AGENTSWEEP_DEV_SOCKET` names.
+    /// or in a debug build the one `AGENTPATROL_DEV_SOCKET` names.
     pub fn for_this_build() -> Socket {
         if cfg!(debug_assertions)
-            && let Some(path) = std::env::var_os("AGENTSWEEP_DEV_SOCKET").filter(|p| !p.is_empty())
+            && let Some(path) = std::env::var_os("AGENTPATROL_DEV_SOCKET").filter(|p| !p.is_empty())
         {
             return Socket::At(PathBuf::from(path));
         }
@@ -254,7 +254,7 @@ impl Link {
             }
             Err(error) => {
                 eprintln!(
-                    "agentsweep-menubar: the stale daemon job could not be registered again: {error}"
+                    "agentpatrol-menubar: the stale daemon job could not be registered again: {error}"
                 );
                 None
             }
@@ -287,16 +287,16 @@ mod tests {
 
     use std::sync::Mutex;
 
-    use agentsweep_core::health::Health;
-    use agentsweep_ipc::protocol::{Hello, Message, welcome};
-    use agentsweep_ipc::socket::SocketListener;
+    use agentpatrol_core::health::Health;
+    use agentpatrol_ipc::protocol::{Hello, Message, welcome};
+    use agentpatrol_ipc::socket::SocketListener;
 
     use crate::popover::Orb;
     use crate::supervision::tests::Recorded;
     use crate::supervision::{BUNDLE_VERSION, EX_CONFIG, Job, Unsupervised};
 
     fn socket_in(directory: &tempfile::TempDir) -> PathBuf {
-        directory.path().join("agentsweep.sock")
+        directory.path().join("agentpatrol.sock")
     }
 
     fn views(updates: &Mutex<Vec<Update>>) -> Vec<View> {
@@ -471,7 +471,7 @@ mod tests {
                 connection
                     .send(&Message::Refused(Refusal::VersionMismatch {
                         daemon_version: "0.0.1".to_string(),
-                        peer_version: agentsweep_core::VERSION.to_string(),
+                        peer_version: agentpatrol_core::VERSION.to_string(),
                     }))
                     .expect("a refusal");
             }
@@ -505,14 +505,14 @@ mod tests {
                 let _ = connection.receive();
                 let _ = connection.send(&Message::Refused(Refusal::VersionMismatch {
                     daemon_version: daemon_version.to_string(),
-                    peer_version: agentsweep_core::VERSION.to_string(),
+                    peer_version: agentpatrol_core::VERSION.to_string(),
                 }));
             }
         });
     }
 
     /// An app older than its daemon was replaced by an update while it kept
-    /// running: it says once that AgentSweep was updated, registers nothing,
+    /// running: it says once that AgentPatrol was updated, registers nothing,
     /// since that would only start the newer daemon again, and stops trying
     /// the handshake, so the link returns without being stopped.
     #[test]
@@ -540,7 +540,7 @@ mod tests {
         let seen = views(&updates);
         assert_eq!(
             seen,
-            vec![View::reopen(agentsweep_core::VERSION, "999.0.0")]
+            vec![View::reopen(agentpatrol_core::VERSION, "999.0.0")]
         );
     }
 
@@ -592,7 +592,7 @@ mod tests {
             assert!(!view.protection_off);
             assert_eq!(
                 view.sentence,
-                "AgentSweep registered its background item again."
+                "AgentPatrol registered its background item again."
             );
             assert_eq!(
                 view.detail,
@@ -726,7 +726,7 @@ mod tests {
         // The variable is not set in the suite, so both builds take the
         // documented socket here; what a debug build does with it set is
         // the one branch above.
-        if std::env::var_os("AGENTSWEEP_DEV_SOCKET").is_none() {
+        if std::env::var_os("AGENTPATROL_DEV_SOCKET").is_none() {
             assert_eq!(Socket::for_this_build(), Socket::Installed);
         }
     }

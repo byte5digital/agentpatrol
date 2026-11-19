@@ -24,16 +24,16 @@
 //! daemon, which is the only writer of the settings and the only process
 //! that touches the Keychain; the app never calls an engine.
 
-use agentsweep_core::apple::AppleAvailability;
-use agentsweep_core::eval_bar::{self, Passing};
-use agentsweep_core::keychain::ClaudeKey;
-use agentsweep_core::ollama::OllamaPresence;
-use agentsweep_core::settings::{
+use agentpatrol_core::apple::AppleAvailability;
+use agentpatrol_core::eval_bar::{self, Passing};
+use agentpatrol_core::keychain::ClaudeKey;
+use agentpatrol_core::ollama::OllamaPresence;
+use agentpatrol_core::settings::{
     CLAUDE_MODEL, CloudCaps, DEFAULT_CLAUDE_MODEL, DEFAULT_OLLAMA_ADDRESS, JudgementEngine,
     OLLAMA_MODEL, OllamaAddress, Posture, model_id,
 };
-use agentsweep_ipc::engine::{EngineChange, EngineState};
-use agentsweep_ipc::preview::{PreviewOutcome, RequestPreview};
+use agentpatrol_ipc::engine::{EngineChange, EngineState};
+use agentpatrol_ipc::preview::{PreviewOutcome, RequestPreview};
 use serde_json::{Value, json};
 
 use crate::asking::{Asking, refusal};
@@ -72,7 +72,7 @@ pub fn bar_in(table: &[Passing], state: &EngineState, engine: JudgementEngine) -
 }
 
 /// What the Simple Posture says the AI check is.
-pub const SIMPLE_INTRO: &str = "The AI check takes a second look at items AgentSweep's own \
+pub const SIMPLE_INTRO: &str = "The AI check takes a second look at items AgentPatrol's own \
      checks could not settle. It never decides anything by itself: what it finds is shown to \
      you, and nothing is moved because of it.";
 
@@ -120,10 +120,10 @@ pub const REMOVE_KEY: &str = "Remove the key";
 /// The Claude model id field's label (Developer Posture only).
 pub const CLAUDE_MODEL_LABEL: &str = "Claude model id (unsupported)";
 /// What the Claude model id field says.
-pub const CLAUDE_MODEL_LINE: &str = "Unsupported and outside the eval: AgentSweep measured only \
+pub const CLAUDE_MODEL_LINE: &str = "Unsupported and outside the eval: AgentPatrol measured only \
      its default model. Leave it empty to use the default.";
 /// What the model price line says when the model in use has no price.
-pub const UNPRICED_LINE: &str = "AgentSweep does not know this model's price, so every request \
+pub const UNPRICED_LINE: &str = "AgentPatrol does not know this model's price, so every request \
      is counted at the price of the most expensive Claude model.";
 
 /// The line under the key field once a key is set.
@@ -142,7 +142,7 @@ pub fn dollars(cents: u64) -> String {
 /// The three caps in one sentence.
 pub fn caps_line(caps: &CloudCaps) -> String {
     format!(
-        "AgentSweep stops at {} items per check, {} items per day and {} per month.",
+        "AgentPatrol stops at {} items per check, {} items per day and {} per month.",
         caps.items_per_scan,
         caps.items_per_day,
         dollars(u64::from(caps.cents_per_month))
@@ -173,9 +173,9 @@ fn ollama_reason(state: &EngineState) -> Option<&'static str> {
     Some(match &state.ollama {
         Some(OllamaPresence::Absent) => "Ollama is not running on this Mac.",
         Some(OllamaPresence::Running { .. }) => {
-            "Ollama has no model of 4B or more. AgentSweep never downloads one."
+            "Ollama has no model of 4B or more. AgentPatrol never downloads one."
         }
-        None => "AgentSweep has not seen Ollama on this Mac.",
+        None => "AgentPatrol has not seen Ollama on this Mac.",
     })
 }
 
@@ -263,11 +263,11 @@ pub fn ollama_confirmation(state: &EngineState) -> Option<Value> {
         "question": format!("Use Ollama with the model '{model}'?"),
         "lines": [
             format!(
-                "AgentSweep asks Ollama at {} only, a loopback address on this Mac. Nothing \
+                "AgentPatrol asks Ollama at {} only, a loopback address on this Mac. Nothing \
                  leaves your Mac.",
                 state.ollama_address
             ),
-            "AgentSweep never downloads a model and never starts Ollama.".to_string(),
+            "AgentPatrol never downloads a model and never starts Ollama.".to_string(),
         ],
         "ok": "Use Ollama",
         "model": model,
@@ -287,7 +287,7 @@ pub fn consent(state: &EngineState, posture: Posture) -> Value {
             {
                 "label": "What",
                 "text": "One unclear item at a time: its kind and where it sits, the signs \
-                         AgentSweep noticed, and its content with passwords, tokens and your \
+                         AgentPatrol noticed, and its content with passwords, tokens and your \
                          user name taken out.",
             },
             {
@@ -296,7 +296,7 @@ pub fn consent(state: &EngineState, posture: Posture) -> Value {
             },
             {
                 "label": "When",
-                "text": "Only for items AgentSweep's own checks could not settle, while it \
+                "text": "Only for items AgentPatrol's own checks could not settle, while it \
                          checks. Never for items it already decided.",
             },
             {
@@ -314,7 +314,7 @@ pub fn consent(state: &EngineState, posture: Posture) -> Value {
         },
         "preview": PREVIEW,
         "keyLabel": "Your Claude API key",
-        "keyLine": "AgentSweep keeps it in your login Keychain. This window does not keep it.",
+        "keyLine": "AgentPatrol keeps it in your login Keychain. This window does not keep it.",
         "agree": AGREE,
     })
 }
@@ -423,7 +423,7 @@ pub fn recorded_line(state: &EngineState, posture: Posture) -> String {
 /// An Ollama address off this Mac and a malformed model id are refused here,
 /// before anything is sent.
 pub fn change_of(asked: &Value) -> Result<EngineChange, String> {
-    let unknown = || "That is not a setting AgentSweep knows.".to_string();
+    let unknown = || "That is not a setting AgentPatrol knows.".to_string();
     let refused = |reason: String| format!("Nothing was changed: {reason}.");
     let object = asked.as_object().ok_or_else(unknown)?;
     let mut change = EngineChange::default();
@@ -463,7 +463,7 @@ pub fn change_of(asked: &Value) -> Result<EngineChange, String> {
 }
 
 /// A refusal as the AI check says it.
-fn said(error: &agentsweep_ipc::ClientError) -> String {
+fn said(error: &agentpatrol_ipc::ClientError) -> String {
     refusal(error).replace("Nothing was done", "Nothing was changed")
 }
 
@@ -540,7 +540,7 @@ pub fn change(asking: &Asking, asked: &Value) -> Result<EngineState, String> {
 /// user turn verbatim, with what it measured, or that the Item is too large.
 pub fn preview_view(preview: &RequestPreview) -> Value {
     let about = match preview.sample {
-        true => "A sample item AgentSweep ships, as Claude would receive it.".to_string(),
+        true => "A sample item AgentPatrol ships, as Claude would receive it.".to_string(),
         false => format!("The item {}, as Claude would receive it.", preview.item),
     };
     match &preview.outcome {
@@ -594,9 +594,9 @@ pub fn preview(asking: &Asking, item: Option<&str>) -> Result<Value, String> {
 mod tests {
     use super::*;
 
-    use agentsweep_core::ollama::OllamaModel;
-    use agentsweep_core::spend::{CapNotice, JudgementCap};
-    use agentsweep_ipc::engine::CloudUse;
+    use agentpatrol_core::ollama::OllamaModel;
+    use agentpatrol_core::spend::{CapNotice, JudgementCap};
+    use agentpatrol_ipc::engine::CloudUse;
 
     fn state(engine: JudgementEngine) -> EngineState {
         EngineState {

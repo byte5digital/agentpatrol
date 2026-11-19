@@ -1,5 +1,5 @@
 # Fixture for as_0580. The hook is the user's own and looks ordinary; what the
-# Heuristic reads is that its content is not the content AgentSweep accepted.
+# Heuristic reads is that its content is not the content AgentPatrol accepted.
 [item]
 agent = "claude-code"
 kind = "Hook"

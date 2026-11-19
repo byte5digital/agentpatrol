@@ -1,5 +1,5 @@
 //! The **Scan a folder** dialog (spec section 8.9): a folder picker and a
-//! drop zone that takes one folder, the equivalent `agentsweep scan <dir>` in
+//! drop zone that takes one folder, the equivalent `agentpatrol scan <dir>` in
 //! the Developer Posture, and the one-off answer of a Folder Scan the daemon
 //! ran, "safe to open" or "do not open yet", with the Findings beneath in the
 //! Posture's wording and the line that nothing was recorded.
@@ -12,15 +12,15 @@
 //! on the Health "checking now" rung.
 //!
 //! The answer's wording is the command line interface's for
-//! `agentsweep scan <dir>`, less the line about Drift: that line says the
+//! `agentpatrol scan <dir>`, less the line about Drift: that line says the
 //! in-process pass reaches no daemon, and this one was the daemon's. It names
 //! the Rule Pack in force that judged the folder, because the command line
 //! interface uses the bundled pack and the two may answer differently.
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::settings::Posture;
-use agentsweep_ipc::protocol::{FolderFinding, FolderScanResult, NOTHING_RECORDED};
+use agentpatrol_core::settings::Posture;
+use agentpatrol_ipc::protocol::{FolderFinding, FolderScanResult, NOTHING_RECORDED};
 use serde_json::{Value, json};
 
 use crate::asking::{Asking, refusal};
@@ -110,7 +110,7 @@ pub fn shell_quoted(path: &str) -> String {
 /// The command line that runs the same check from a terminal, shown in the
 /// Developer Posture only.
 pub fn command_line(root: &str) -> String {
-    format!("agentsweep scan {}", shell_quoted(root))
+    format!("agentpatrol scan {}", shell_quoted(root))
 }
 
 /// The command line for a chosen folder in the Posture the dialog is shown
@@ -170,7 +170,7 @@ pub fn result_view(result: &FolderScanResult, posture: Posture) -> Value {
 /// One Finding of a Folder Scan as the dialog renders it: the Simple
 /// wording, the Developer heading and the technical table of tickets 71 and
 /// 72, and no actions, since nothing was recorded to act on. Two body lines
-/// of the Simple wording speak of what AgentSweep did to an Item it watches,
+/// of the Simple wording speak of what AgentPatrol did to an Item it watches,
 /// and nothing was done to this one, so they are left out: why nothing
 /// happened by itself, and that git will show a change Restore undoes. The
 /// three parts of layout B lose the same notes under **More**, and **What
@@ -229,9 +229,9 @@ pub fn scan(asking: &Asking, root: &str, posture: Posture) -> Value {
 mod tests {
     use super::*;
 
-    use agentsweep_core::finding::{Category, FindingState};
-    use agentsweep_core::item::Kind;
-    use agentsweep_ipc::protocol::FolderFinding;
+    use agentpatrol_core::finding::{Category, FindingState};
+    use agentpatrol_core::item::Kind;
+    use agentpatrol_ipc::protocol::FolderFinding;
 
     use crate::findings::tests::recorded;
 
@@ -245,7 +245,7 @@ mod tests {
             FindingState::Open,
         );
         finding.facts.why_nothing_happened =
-            Some(agentsweep_core::finding_facts::WhyNothingHappened::Probation);
+            Some(agentpatrol_core::finding_facts::WhyNothingHappened::Probation);
         let result = FolderScanResult {
             root: "/src/demo".to_string(),
             items: 2,
@@ -286,7 +286,7 @@ mod tests {
             "0501  weight 2  It downloads something."
         );
         // In the Posture's wording: the Simple title and the Developer
-        // heading, with no line about what AgentSweep did to it.
+        // heading, with no line about what AgentPatrol did to it.
         let simple = crate::wording::simple(&finding);
         assert_eq!(card["simple"]["title"], simple.title.as_str());
         assert_eq!(card["simple"]["severity"], simple.severity);
@@ -368,7 +368,7 @@ mod tests {
             Posture::Developer,
         );
         assert_eq!(failed["state"], "failed");
-        assert_eq!(failed["command"], "agentsweep scan '/src/demo'");
+        assert_eq!(failed["command"], "agentpatrol scan '/src/demo'");
     }
 
     fn folder() -> PathBuf {
@@ -431,7 +431,7 @@ mod tests {
     #[test]
     fn a_drop_on_disk_resolves_to_one_absolute_folder() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-drop-")
+            .prefix("agentpatrol-drop-")
             .tempdir()
             .expect("a temporary folder");
         let base = temporary.path().to_path_buf();
@@ -457,10 +457,10 @@ mod tests {
 
     #[test]
     fn the_folder_is_quoted_for_a_shell() {
-        assert_eq!(command_line("/src/demo"), "agentsweep scan '/src/demo'");
+        assert_eq!(command_line("/src/demo"), "agentpatrol scan '/src/demo'");
         assert_eq!(
             command_line("/Users/me/My Projects/it's here"),
-            "agentsweep scan '/Users/me/My Projects/it'\\''s here'"
+            "agentpatrol scan '/Users/me/My Projects/it'\\''s here'"
         );
     }
 
@@ -476,7 +476,7 @@ mod tests {
         };
         assert_eq!(
             result_view(&result, Posture::Developer)["command"],
-            "agentsweep scan '/src/my demo'"
+            "agentpatrol scan '/src/my demo'"
         );
         assert_eq!(
             result_view(&result, Posture::Simple)["command"],
@@ -484,7 +484,7 @@ mod tests {
         );
         assert_eq!(
             running_view("/src/my demo", Posture::Developer)["command"],
-            "agentsweep scan '/src/my demo'"
+            "agentpatrol scan '/src/my demo'"
         );
         assert_eq!(
             running_view("/src/my demo", Posture::Simple)["command"],

@@ -15,8 +15,8 @@
 //! window, so a long-lived install with a long Event Log renders as fast as
 //! a new one.
 
-use agentsweep_core::settings::Posture;
-use agentsweep_ipc::protocol::{ActivityLine, StateEvent, Status};
+use agentpatrol_core::settings::Posture;
+use agentpatrol_ipc::protocol::{ActivityLine, StateEvent, Status};
 use serde_json::{Value, json};
 
 use crate::findings::Follow;
@@ -170,7 +170,7 @@ fn technical(line: &ActivityLine) -> Value {
 mod tests {
     use super::*;
 
-    use agentsweep_core::envelope::Timestamp;
+    use agentpatrol_core::envelope::Timestamp;
 
     fn line(sequence: u64, at: &str, said: &str) -> ActivityLine {
         ActivityLine {

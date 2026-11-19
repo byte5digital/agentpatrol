@@ -219,7 +219,7 @@ pub fn eligibility(kind: Kind) -> &'static Eligibility {
 }
 
 /// Whether a stable T0 or T1 Threat Finding on this Item may quarantine it
-/// without asking. Managed Items are read-only for AgentSweep, so Scope can
+/// without asking. Managed Items are read-only for AgentPatrol, so Scope can
 /// only ever take the answer away, never grant it.
 pub fn quarantines_automatically(item: &Item) -> bool {
     item.scope != Scope::Managed && eligibility(item.kind).automatic
@@ -284,13 +284,13 @@ impl ProblemReason {
     pub fn plain(self) -> &'static str {
         match self {
             ProblemReason::Unreadable => {
-                "AgentSweep could not read this, so it has not been checked."
+                "AgentPatrol could not read this, so it has not been checked."
             }
             ProblemReason::Unparseable => {
-                "AgentSweep could not make sense of this file, so it has not been checked."
+                "AgentPatrol could not make sense of this file, so it has not been checked."
             }
             ProblemReason::Unsupported => {
-                "This is too large for AgentSweep to check all the way through."
+                "This is too large for AgentPatrol to check all the way through."
             }
         }
     }
@@ -521,7 +521,7 @@ pub trait SurfaceAdapter {
     /// Writes the Gate's own entries into this Agent's user settings, one for
     /// each event the Gate listens on that does not carry one unchanged
     /// already, in a group of its own or in one another tool shares, takes
-    /// away every entry that carries AgentSweep's arguments and
+    /// away every entry that carries AgentPatrol's arguments and
     /// timeout under another command line interface path, and names every
     /// entry it wrote or took away (spec sections 7.2 and 7.6).
     ///
@@ -540,7 +540,7 @@ pub trait SurfaceAdapter {
         Err(GateError::NoGate)
     }
 
-    /// Whether every event the Gate listens on carries AgentSweep's entry with
+    /// Whether every event the Gate listens on carries AgentPatrol's entry with
     /// the command, arguments and timeout unchanged, and whether managed
     /// policy or the user's own settings switch the Agent's hooks off. Reads,
     /// never writes. The default is that this Agent has no Gate.
@@ -550,9 +550,9 @@ pub trait SurfaceAdapter {
     }
 
     /// Takes away exactly the entries whose command, arguments and timeout
-    /// are AgentSweep's, handler by handler, and names every entry it took
+    /// are AgentPatrol's, handler by handler, and names every entry it took
     /// away. A group goes only when that left it empty, so another tool's
-    /// handler in a group it shares with AgentSweep's stays (spec section
+    /// handler in a group it shares with AgentPatrol's stays (spec section
     /// 7.6). Where the Agent files trust by position, the pins of the groups
     /// that moved up are filed again under their new position, and the pin of
     /// another tool's handler that moved forward inside a shared group is left

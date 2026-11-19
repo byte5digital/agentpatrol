@@ -1,5 +1,5 @@
 # Fixture for as_0581. The project's instruction file is not the one
-# AgentSweep accepted; a pull is the ordinary reason, which is why this is
+# AgentPatrol accepted; a pull is the ordinary reason, which is why this is
 # worth one point and no more.
 [item]
 agent = "claude-code"

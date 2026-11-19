@@ -4,7 +4,7 @@
 //! Nothing here scans, reads a Surface, opens or stats a file, consults `PATH`
 //! or waits for a running Scan: the answer comes from the pooled project roots
 //! and the Gate facts of the open Threat Findings alone, which every Scan
-//! writes (ticket 37's [`agentsweep_core::gate_facts`]).
+//! writes (ticket 37's [`agentpatrol_core::gate_facts`]).
 //!
 //! What blocks:
 //!
@@ -31,10 +31,10 @@
 use std::collections::BTreeSet;
 use std::path::{Component, Path, PathBuf};
 
-use agentsweep_core::finding::FindingId;
-use agentsweep_core::gate_facts::{GateFacts, GateRecord};
-use agentsweep_core::item::{Invoked, Kind};
-use agentsweep_ipc::gate::{GateReason, GateRequest, GateTool, GateVerdict};
+use agentpatrol_core::finding::FindingId;
+use agentpatrol_core::gate_facts::{GateFacts, GateRecord};
+use agentpatrol_core::item::{Invoked, Kind};
+use agentpatrol_ipc::gate::{GateReason, GateRequest, GateTool, GateVerdict};
 
 /// The Gate's verdict on one request.
 ///
@@ -217,8 +217,8 @@ fn fold(path: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use agentsweep_core::item::Invocation;
-    use agentsweep_ipc::gate::{GateEvent, McpServerRef};
+    use agentpatrol_core::item::Invocation;
+    use agentpatrol_ipc::gate::{GateEvent, McpServerRef};
 
     const HOME: &str = "/home/u";
 

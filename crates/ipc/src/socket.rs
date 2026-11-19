@@ -1,13 +1,13 @@
 //! The socket itself: where it is, who may bind it and who may connect.
 //!
-//! `$TMPDIR/de.byte5.agentsweep.sock`, mode 0600, with a stale socket unlinked
+//! `$TMPDIR/de.byte5.agentpatrol.sock`, mode 0600, with a stale socket unlinked
 //! at start (spec section 6.3). The path is under the per-user temporary
 //! directory rather than under Application Support because `sun_path` is 104
 //! bytes on macOS and a long user name would overflow a path under the data
 //! directory (`docs/research/rust-stack.md` section 9).
 //!
 //! Nothing here is asynchronous. The daemon serves each connection on a thread
-//! of its own, which is what the rest of AgentSweep is shaped like: a Scan is
+//! of its own, which is what the rest of AgentPatrol is shaped like: a Scan is
 //! processor-bound and a YARA-X scanner cannot move between threads, so an
 //! asynchronous runtime would buy the daemon nothing and cost every crate that
 //! links it.
@@ -24,12 +24,12 @@ use crate::peer::Peer;
 use crate::protocol::Message;
 
 /// The file name of the socket, under the per-user temporary directory.
-pub const SOCKET_NAME: &str = "de.byte5.agentsweep.sock";
+pub const SOCKET_NAME: &str = "de.byte5.agentpatrol.sock";
 
 /// The longest a Unix socket path may be on macOS, including the terminator.
 const SUN_PATH: usize = 104;
 
-/// Where the daemon listens: `$TMPDIR/de.byte5.agentsweep.sock`.
+/// Where the daemon listens: `$TMPDIR/de.byte5.agentpatrol.sock`.
 ///
 /// `std::env::temp_dir` reads `TMPDIR`, which on macOS is the per-user
 /// directory launchd sets, created 0700 for the user alone.
@@ -337,8 +337,10 @@ mod tests {
     use crate::protocol::{Hello, Role};
 
     fn temporary_socket(name: &str) -> PathBuf {
-        let path =
-            std::env::temp_dir().join(format!("agentsweep-ipc-{name}-{}.sock", std::process::id()));
+        let path = std::env::temp_dir().join(format!(
+            "agentpatrol-ipc-{name}-{}.sock",
+            std::process::id()
+        ));
         let _ = std::fs::remove_file(&path);
         path
     }
@@ -351,7 +353,7 @@ mod tests {
             Some(SOCKET_NAME)
         );
         assert_eq!(path.parent(), Some(std::env::temp_dir().as_path()));
-        assert_eq!(SOCKET_NAME, format!("{}.sock", agentsweep_core::BUNDLE_ID));
+        assert_eq!(SOCKET_NAME, format!("{}.sock", agentpatrol_core::BUNDLE_ID));
     }
 
     /// A path too long for `sun_path` is refused before a bind rather than
@@ -423,7 +425,7 @@ mod tests {
 
         match client.join().expect("the client thread") {
             Some(Message::Welcome { version, .. }) => {
-                assert_eq!(version, agentsweep_core::VERSION);
+                assert_eq!(version, agentpatrol_core::VERSION);
             }
             other => panic!("expected a welcome, got {other:?}"),
         }

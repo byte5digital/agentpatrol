@@ -18,55 +18,55 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
-name = "agentsweep"
+name = "agentpatrol"
 version = "0.1.0"
 dependencies = [
- "agentsweep-adapter-claude-code",
- "agentsweep-adapter-codex",
- "agentsweep-adapter-workspace",
- "agentsweep-core",
- "agentsweep-ipc",
+ "agentpatrol-adapter-claude-code",
+ "agentpatrol-adapter-codex",
+ "agentpatrol-adapter-workspace",
+ "agentpatrol-core",
+ "agentpatrol-ipc",
  "serde_json",
  "tempfile",
 ]
 
 [[package]]
-name = "agentsweep-adapter-claude-code"
+name = "agentpatrol-adapter-claude-code"
 version = "0.1.0"
 dependencies = [
- "agentsweep-adapter-workspace",
- "agentsweep-core",
+ "agentpatrol-adapter-workspace",
+ "agentpatrol-core",
  "serde_json",
 ]
 
 [[package]]
-name = "agentsweep-adapter-codex"
+name = "agentpatrol-adapter-codex"
 version = "0.1.0"
 dependencies = [
- "agentsweep-adapter-workspace",
- "agentsweep-core",
+ "agentpatrol-adapter-workspace",
+ "agentpatrol-core",
  "serde_json",
  "tempfile",
  "toml 1.1.6+spec-1.1.0",
 ]
 
 [[package]]
-name = "agentsweep-adapter-conformance"
+name = "agentpatrol-adapter-conformance"
 version = "0.1.0"
 dependencies = [
- "agentsweep-adapter-claude-code",
- "agentsweep-adapter-codex",
- "agentsweep-adapter-conformance",
- "agentsweep-adapter-workspace",
- "agentsweep-core",
+ "agentpatrol-adapter-claude-code",
+ "agentpatrol-adapter-codex",
+ "agentpatrol-adapter-conformance",
+ "agentpatrol-adapter-workspace",
+ "agentpatrol-core",
  "serde_json",
 ]
 
 [[package]]
-name = "agentsweep-adapter-workspace"
+name = "agentpatrol-adapter-workspace"
 version = "0.1.0"
 dependencies = [
- "agentsweep-core",
+ "agentpatrol-core",
  "gix-config",
  "gix-hash",
  "gix-index",
@@ -74,10 +74,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "agentsweep-core"
+name = "agentpatrol-core"
 version = "0.1.0"
 dependencies = [
- "agentsweep-core",
+ "agentpatrol-core",
  "getrandom 0.4.3",
  "hmac 0.13.0",
  "minisign",
@@ -93,16 +93,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "agentsweep-daemon"
+name = "agentpatrol-daemon"
 version = "0.1.0"
 dependencies = [
- "agentsweep-adapter-claude-code",
- "agentsweep-adapter-codex",
- "agentsweep-adapter-conformance",
- "agentsweep-adapter-workspace",
- "agentsweep-core",
- "agentsweep-ipc",
- "agentsweep-xtask",
+ "agentpatrol-adapter-claude-code",
+ "agentpatrol-adapter-codex",
+ "agentpatrol-adapter-conformance",
+ "agentpatrol-adapter-workspace",
+ "agentpatrol-core",
+ "agentpatrol-ipc",
+ "agentpatrol-xtask",
  "core-foundation",
  "getrandom 0.4.3",
  "libc",
@@ -118,10 +118,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "agentsweep-ipc"
+name = "agentpatrol-ipc"
 version = "0.1.0"
 dependencies = [
- "agentsweep-core",
+ "agentpatrol-core",
  "interprocess",
  "libc",
  "serde_json",
@@ -129,14 +129,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "agentsweep-menubar"
+name = "agentpatrol-menubar"
 version = "0.1.0"
 dependencies = [
- "agentsweep-adapter-claude-code",
- "agentsweep-adapter-codex",
- "agentsweep-core",
- "agentsweep-daemon",
- "agentsweep-ipc",
+ "agentpatrol-adapter-claude-code",
+ "agentpatrol-adapter-codex",
+ "agentpatrol-core",
+ "agentpatrol-daemon",
+ "agentpatrol-ipc",
  "base64 0.22.1",
  "block2",
  "libc",
@@ -155,13 +155,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "agentsweep-xtask"
+name = "agentpatrol-xtask"
 version = "0.1.0"
 dependencies = [
- "agentsweep-adapter-claude-code",
- "agentsweep-adapter-codex",
- "agentsweep-adapter-workspace",
- "agentsweep-core",
+ "agentpatrol-adapter-claude-code",
+ "agentpatrol-adapter-codex",
+ "agentpatrol-adapter-workspace",
+ "agentpatrol-core",
  "flate2",
  "gix-hash",
  "minisign",

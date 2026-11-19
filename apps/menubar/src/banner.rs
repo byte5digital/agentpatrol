@@ -21,7 +21,7 @@
 //!   it, and it is a note meanwhile (the owner's decision of 2026-10-14).
 //!
 //! One more banner stands outside the Health: an app older than its daemon,
-//! whose bundle an update replaced while it kept running, says "AgentSweep
+//! whose bundle an update replaced while it kept running, says "AgentPatrol
 //! was updated. Reopen it." with **Reopen** (spec section 9.5); the link
 //! chooses it from the handshake ([`crate::link`]).
 //!
@@ -34,9 +34,9 @@
 //! window, [`Banner::in_popover`]; their buttons are only in the window
 //! (spec section 8.1).
 
-use agentsweep_core::DAEMON_LABEL;
-use agentsweep_core::health::{Health, Rung};
-use agentsweep_core::settings::Posture;
+use agentpatrol_core::DAEMON_LABEL;
+use agentpatrol_core::health::{Health, Rung};
+use agentpatrol_core::settings::Posture;
 use serde_json::{Value, json};
 
 /// What the app knows about the daemon beside the Health it last sent.
@@ -227,7 +227,7 @@ pub const NOT_WATCHING: &str = "Not watching right now";
 
 /// What "Not watching right now" says from a click on **Start it** until the
 /// daemon answers.
-pub const STARTING: &str = "Starting AgentSweep…";
+pub const STARTING: &str = "Starting AgentPatrol…";
 
 /// What Protection off says in place of **Turn on protection** from a click
 /// on it, and the title the popover and the Overview show in the banner's
@@ -235,20 +235,20 @@ pub const STARTING: &str = "Starting AgentSweep…";
 pub const STARTING_PROTECTION: &str = "Starting protection…";
 
 /// The title of the banner of an app older than its daemon.
-pub const REOPEN: &str = "AgentSweep was updated. Reopen it.";
+pub const REOPEN: &str = "AgentPatrol was updated. Reopen it.";
 
 /// What that banner says from a click on **Reopen** until the app quits.
 pub const REOPENING: &str = "Reopening…";
 
 /// The title of the key missing banner.
-pub const KEY_MISSING: &str = "AgentSweep cannot check its own records.";
+pub const KEY_MISSING: &str = "AgentPatrol cannot check its own records.";
 
 /// The title of the chain broken banner.
-pub const CHAIN_BROKEN: &str = "AgentSweep's records were changed by something else.";
+pub const CHAIN_BROKEN: &str = "AgentPatrol's records were changed by something else.";
 
 /// The one line the popover shows in place of an integrity banner, whose
 /// buttons are only in the window (spec section 8.1).
-pub const NEEDS_A_LOOK: &str = "Something needs a look. Open AgentSweep.";
+pub const NEEDS_A_LOOK: &str = "Something needs a look. Open AgentPatrol.";
 
 /// What the Developer Posture adds to the key missing banner (ADR 0003).
 pub const RESET_CANNOT_RULE_OUT_TAMPERING: &str = "A reset cannot rule out tampering: no key in \
@@ -317,7 +317,7 @@ impl Banner {
             } => Shown {
                 tone: Tone::Red,
                 title: PROTECTION_OFF,
-                body: "Nothing is checking your agents' setup right now. Allow AgentSweep in \
+                body: "Nothing is checking your agents' setup right now. Allow AgentPatrol in \
                        Login Items to turn protection back on.",
                 developer: only(reason.clone()),
                 buttons: vec![Button::OpenLoginItems],
@@ -345,7 +345,7 @@ impl Banner {
                 tone: Tone::Red,
                 title: CHAIN_BROKEN,
                 body: "One of its records no longer matches. Something on this Mac may have \
-                       tampered with AgentSweep. Decisions made after that point are set aside, \
+                       tampered with AgentPatrol. Decisions made after that point are set aside, \
                        and nothing is stopped automatically until you answer.",
                 developer: None,
                 buttons: vec![Button::ShowWhatChanged, Button::ScanAgainTrustingNothing],
@@ -365,7 +365,7 @@ impl Banner {
 mod tests {
     use super::*;
 
-    use agentsweep_core::chain::{BreakReason, ChainState};
+    use agentpatrol_core::chain::{BreakReason, ChainState};
 
     fn broken() -> ChainState {
         ChainState::Broken {
@@ -375,7 +375,7 @@ mod tests {
     }
 
     /// Every button says at once that it is working, and Start it that
-    /// AgentSweep is starting.
+    /// AgentPatrol is starting.
     #[test]
     fn every_button_carries_its_working_line() {
         let shown = Banner::NotWatching.shown(Posture::Simple).to_value();
@@ -602,7 +602,7 @@ mod tests {
         }
     }
 
-    /// An app older than its daemon says that AgentSweep was updated, in the
+    /// An app older than its daemon says that AgentPatrol was updated, in the
     /// popover and the window alike, with **Reopen**; the Developer Posture
     /// adds the two versions.
     #[test]
@@ -613,7 +613,7 @@ mod tests {
         };
         for posture in [Posture::Simple, Posture::Developer] {
             let shown = banner.shown(posture);
-            assert_eq!(shown.title, "AgentSweep was updated. Reopen it.");
+            assert_eq!(shown.title, "AgentPatrol was updated. Reopen it.");
             assert_eq!(shown.body, "");
             assert_eq!(shown.tone, Tone::Amber);
             assert_eq!(shown.buttons, vec![Button::Reopen]);

@@ -1,11 +1,11 @@
-# AgentSweep
+# AgentPatrol
 
 A scanner for the local configuration surfaces of coding agents (Claude Code, Codex) that finds and quarantines malicious skills, plugins, MCP servers, hooks and instruction files before the agent loads them.
 
 ## Language
 
-**AgentSweep**:
-The product. Written AgentSweep in prose and UI, `agentsweep` in every machine-readable name (CLI, crate, cask, bundle identifier suffix).
+**AgentPatrol**:
+The product. Written AgentPatrol in prose and UI, `agentpatrol` in every machine-readable name (CLI, crate, cask, bundle identifier suffix).
 _Avoid_: the antivirus, the scanner (as a proper name), AV
 
 **Agent**:
@@ -25,11 +25,11 @@ The per-Agent component that knows where that Agent's Surfaces live and how they
 _Avoid_: Plugin, connector, integration
 
 **Item**:
-One thing an Agent would load from a Surface, as scanned by AgentSweep: a file, a directory tree, or one entry inside a config file. The unit of identity, Trust, Baseline and Quarantine.
+One thing an Agent would load from a Surface, as scanned by AgentPatrol: a file, a directory tree, or one entry inside a config file. The unit of identity, Trust, Baseline and Quarantine.
 _Avoid_: Artifact, object, record, file (when an entry or tree is meant)
 
 **Scope**:
-Where an Item sits in the Agent's precedence: Managed, User or Project. Managed Items are read-only for AgentSweep.
+Where an Item sits in the Agent's precedence: Managed, User or Project. Managed Items are read-only for AgentPatrol.
 _Avoid_: Layer, level, tier (reserved for detection)
 
 **Provenance**:
@@ -57,11 +57,11 @@ A Finding about the user's own risky configuration, such as a plaintext secret o
 _Avoid_: Hygiene, warning, misconfiguration
 
 **Baseline**:
-The content hash AgentSweep last accepted for each Item it protects, kept per Item so the next Scan can tell what changed. It moves forward only when a Scan leaves the Item without an open Threat Finding or a known action stands behind the change, never merely because time passed. An Exposure does not hold it. An Item scanned before its Surface was covered has no Baseline yet and is never Drift.
+The content hash AgentPatrol last accepted for each Item it protects, kept per Item so the next Scan can tell what changed. It moves forward only when a Scan leaves the Item without an open Threat Finding or a known action stands behind the change, never merely because time passed. An Exposure does not hold it. An Item scanned before its Surface was covered has no Baseline yet and is never Drift.
 _Avoid_: Snapshot, fingerprint store, cache
 
 **Drift**:
-The condition of an Item whose content differs from its Baseline, or that newly appeared, without a known action behind it. A known action is one of AgentSweep's own writes, content that already carries Trust, or the user saying the change was theirs; AgentSweep never guesses who made a change. Drift is context on any Finding about the Item and raises a Finding of its own only on the user's own executable configuration. Drift alone never quarantines.
+The condition of an Item whose content differs from its Baseline, or that newly appeared, without a known action behind it. A known action is one of AgentPatrol's own writes, content that already carries Trust, or the user saying the change was theirs; AgentPatrol never guesses who made a change. Drift is context on any Finding about the Item and raises a Finding of its own only on the user's own executable configuration. Drift alone never quarantines.
 _Avoid_: Change, diff, modification
 
 **Acknowledge**:
@@ -89,7 +89,7 @@ One pass over one or more Surfaces producing Findings. Comes in three kinds: Ful
 _Avoid_: Check (UI wording only), sweep
 
 **Full Scan**:
-A Scan of everything AgentSweep protects: every Agent found again, every project root pooled again, every Item enumerated and hashed again. The only Scan kind that can be trusted to have seen it all, which is why one runs whenever the daemon starts, once a day, on request, and whenever the watcher admits it may have missed something.
+A Scan of everything AgentPatrol protects: every Agent found again, every project root pooled again, every Item enumerated and hashed again. The only Scan kind that can be trusted to have seen it all, which is why one runs whenever the daemon starts, once a day, on request, and whenever the watcher admits it may have missed something.
 _Avoid_: Deep scan, complete scan, rescan
 
 **Change Scan**:
@@ -101,23 +101,23 @@ A Scan of one folder the user points at before an Agent opens it. It reads and j
 _Avoid_: Pre-open scan (the situation, not the kind), directory scan, ad-hoc scan
 
 **Inventory**:
-Counting what AgentSweep would protect, without scanning it: which Agents are installed and which projects they list. Read from the Agents' own registries only, so it can run before Protection exists and never touches a project folder. What onboarding shows before the first Full Scan.
+Counting what AgentPatrol would protect, without scanning it: which Agents are installed and which projects they list. Read from the Agents' own registries only, so it can run before Protection exists and never touches a project folder. What onboarding shows before the first Full Scan.
 _Avoid_: Scan, discovery, preview scan
 
 **Protection**:
-AgentSweep working in the background: watching the Surfaces and running scheduled Scans. It belongs to the Mac, not to the open window, so quitting the app does not end it. It is either on or off, and "off" is always shown, never implied.
+AgentPatrol working in the background: watching the Surfaces and running scheduled Scans. It belongs to the Mac, not to the open window, so quitting the app does not end it. It is either on or off, and "off" is always shown, never implied.
 _Avoid_: Real-time protection, shield, monitoring (runtime monitoring of an Agent is a different product)
 
 **Needs Permission**:
-The state of a project that the operating system will not let AgentSweep read until the user allows it. A project that Needs Permission has not been scanned and never counts towards an all-clear.
+The state of a project that the operating system will not let AgentPatrol read until the user allows it. A project that Needs Permission has not been scanned and never counts towards an all-clear.
 _Avoid_: Skipped, unreadable, clean
 
 **Uninstall**:
-Removing AgentSweep with an explicit choice about what is in Quarantine: restore it all, keep it, or delete everything. Keeping is the default, so removing the app never silently loses a quarantined Item.
+Removing AgentPatrol with an explicit choice about what is in Quarantine: restore it all, keep it, or delete everything. Keeping is the default, so removing the app never silently loses a quarantined Item.
 _Avoid_: Remove, delete the app, reset
 
 **Gate**:
-AgentSweep's own hook in each Agent that refuses a turn or a tool call while an open Threat Finding stands on the project in use, on the user's instruction files, or on the Item about to be used. Defence in depth behind Quarantine: it never quarantines, never acts on Exposure or the Ambiguous Band, allows when AgentSweep is not running, and a project can switch it off, which is shown rather than fought.
+AgentPatrol's own hook in each Agent that refuses a turn or a tool call while an open Threat Finding stands on the project in use, on the user's instruction files, or on the Item about to be used. Defence in depth behind Quarantine: it never quarantines, never acts on Exposure or the Ambiguous Band, allows when AgentPatrol is not running, and a project can switch it off, which is shown rather than fought.
 _Avoid_: Interceptor, guard, hook (the mechanism, not the thing), real-time protection, load-time blocking
 
 **Posture**:

@@ -8,13 +8,13 @@
 
 use serde_json::{Map, Value};
 
-use agentsweep_core::apple::AppleAvailability;
-use agentsweep_core::ollama::{OllamaModel, OllamaPresence};
-use agentsweep_core::settings::{
+use agentpatrol_core::apple::AppleAvailability;
+use agentpatrol_core::ollama::{OllamaModel, OllamaPresence};
+use agentpatrol_core::settings::{
     CLAUDE_MODEL, CLOUD_CENTS_PER_MONTH, CLOUD_ITEMS_PER_DAY, CLOUD_ITEMS_PER_SCAN, CloudCaps,
     JUDGEMENT_ENGINE, JudgementEngine, OLLAMA_ADDRESS, OLLAMA_MODEL,
 };
-use agentsweep_core::spend::CapNotice;
+use agentpatrol_core::spend::CapNotice;
 
 /// The field the engine state names the key's last four characters under.
 const CLAUDE_KEY_ENDING: &str = "claude_key_ending";
@@ -448,7 +448,7 @@ mod tests {
             microdollars_this_month: 4_200_000,
             model_priced: false,
             judgement_cap: Some(CapNotice {
-                cap: agentsweep_core::spend::JudgementCap::Day,
+                cap: agentpatrol_core::spend::JudgementCap::Day,
                 waiting: 3,
             }),
         };

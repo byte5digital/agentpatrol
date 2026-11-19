@@ -21,15 +21,15 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.98.1"
 license = "Apache-2.0"
-repository = "https://github.com/byte5digital/agentsweep"
-authors = ["The AgentSweep contributors"]
+repository = "https://github.com/byte5digital/agentpatrol"
+authors = ["The AgentPatrol contributors"]
 
 [workspace.dependencies]
-agentsweep-core = { version = "0.1.0", path = "crates/core" }
-agentsweep-ipc = { version = "0.1.0", path = "crates/ipc" }
-agentsweep-adapter-claude-code = { version = "0.1.0", path = "crates/adapters/claude-code" }
-agentsweep-adapter-codex = { version = "0.1.0", path = "crates/adapters/codex" }
-agentsweep-adapter-workspace = { version = "0.1.0", path = "crates/adapters/workspace" }
+agentpatrol-core = { version = "0.1.0", path = "crates/core" }
+agentpatrol-ipc = { version = "0.1.0", path = "crates/ipc" }
+agentpatrol-adapter-claude-code = { version = "0.1.0", path = "crates/adapters/claude-code" }
+agentpatrol-adapter-codex = { version = "0.1.0", path = "crates/adapters/codex" }
+agentpatrol-adapter-workspace = { version = "0.1.0", path = "crates/adapters/workspace" }
 
 # Debug and test builds keep line tables for the workspace's own crates, so a
 # backtrace names file and line, and no debug info for dependencies: nobody

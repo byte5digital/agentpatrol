@@ -16,30 +16,30 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_core::adapter::SurfaceAdapter;
-use agentsweep_core::eventlog::{Action, EventLog};
-use agentsweep_core::gate_registration::{GateCheck, GateCommand};
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::SettingsFile;
-use agentsweep_core::state::Trigger;
-use agentsweep_daemon::gate::Removal;
-use agentsweep_daemon::machine::Machine;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service;
-use agentsweep_daemon::{Daemon, Tuning};
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::Role;
+use agentpatrol_core::adapter::SurfaceAdapter;
+use agentpatrol_core::eventlog::{Action, EventLog};
+use agentpatrol_core::gate_registration::{GateCheck, GateCommand};
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::SettingsFile;
+use agentpatrol_core::state::Trigger;
+use agentpatrol_daemon::gate::Removal;
+use agentpatrol_daemon::machine::Machine;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service;
+use agentpatrol_daemon::{Daemon, Tuning};
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::Role;
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
 /// Where the bundle puts the command line interface. Nothing runs it, and it
 /// sits outside every temporary directory.
-const CLI: &str = "/Applications/AgentSweep.app/Contents/MacOS/agentsweep";
+const CLI: &str = "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol";
 
 /// The user's own Claude Code settings, with a hook of their own.
 const USERS_SETTINGS: &str = r#"{
@@ -116,7 +116,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-gate-switch-{purpose}-{}-{}",
+            "agentpatrol-gate-switch-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -234,7 +234,7 @@ impl Sandbox {
             && self.check(&Codex::new()) == GateCheck::Registered
     }
 
-    /// Neither Agent carries an AgentSweep entry, and the user's own files
+    /// Neither Agent carries an AgentPatrol entry, and the user's own files
     /// are exactly as they were.
     fn assert_only_the_users_own(&self) {
         assert!(
@@ -290,7 +290,7 @@ fn count(events: &[(Action, String)], action: Action) -> usize {
     events.iter().filter(|(found, _)| *found == action).count()
 }
 
-/// Spec sections 7.6 and 8.10: switching off takes every AgentSweep entry and
+/// Spec sections 7.6 and 8.10: switching off takes every AgentPatrol entry and
 /// pin away, one `gate-removed` event per entry, and leaves the user's own
 /// hooks as they were; a Full Scan afterwards writes nothing, even where a
 /// write would fail, and raises no Gate line and no Finding.
@@ -437,7 +437,7 @@ fn an_unreadable_settings_file_leaves_the_gate_on_and_is_not_rewritten() {
     assert!(
         health
             .notes()
-            .contains(&agentsweep_core::health::SETTINGS_UNREADABLE.to_string()),
+            .contains(&agentpatrol_core::health::SETTINGS_UNREADABLE.to_string()),
         "{:?}",
         health.notes()
     );
@@ -475,7 +475,7 @@ fn the_removal_is_callable_on_its_own_and_leaves_the_users_hooks() {
     assert!(daemon.gate_hooks_enabled(), "the switch did not move");
     assert_eq!(count(&sandbox.gate_events(), Action::GateRemoved), 5);
 
-    // Called again it finds nothing of AgentSweep's and writes nothing.
+    // Called again it finds nothing of AgentPatrol's and writes nothing.
     assert_eq!(daemon.remove_the_gate(), Removal::default());
     assert_eq!(count(&sandbox.gate_events(), Action::GateRemoved), 5);
     sandbox.assert_only_the_users_own();

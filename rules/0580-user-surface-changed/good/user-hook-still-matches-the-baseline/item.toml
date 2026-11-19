@@ -1,4 +1,4 @@
-# Near miss: the same hook, byte for byte what AgentSweep last accepted.
+# Near miss: the same hook, byte for byte what AgentPatrol last accepted.
 [item]
 agent = "claude-code"
 kind = "Hook"

@@ -60,7 +60,7 @@ pub const CLOUD_ITEMS_PER_DAY: &str = "cloud_items_per_day";
 /// The key the cloud cap per month, in US cents, is kept under.
 pub const CLOUD_CENTS_PER_MONTH: &str = "cloud_cents_per_month";
 
-/// The Ollama address AgentSweep asks unless the user names another loopback
+/// The Ollama address AgentPatrol asks unless the user names another loopback
 /// one (spec section 4.4).
 pub const DEFAULT_OLLAMA_ADDRESS: &str = "127.0.0.1:11434";
 
@@ -312,7 +312,7 @@ pub fn agent_id(text: &str) -> Result<String, ChoiceRefused> {
     }
 }
 
-/// The config directory AgentSweep reads for one Agent in place of its
+/// The config directory AgentPatrol reads for one Agent in place of its
 /// default (spec section 3.1). It is an explicit choice of the user's, never
 /// followed from an env file or a settings block, and it is the one path the
 /// settings file holds.
@@ -397,7 +397,7 @@ pub struct JudgementSettings {
     pub engine: JudgementEngine,
     /// Where Ollama is asked, loopback only.
     pub ollama_address: OllamaAddress,
-    /// The Ollama model, empty until the user names one. AgentSweep never
+    /// The Ollama model, empty until the user names one. AgentPatrol never
     /// pulls a model.
     pub ollama_model: String,
     /// The Claude model id override, empty for [`DEFAULT_CLAUDE_MODEL`].

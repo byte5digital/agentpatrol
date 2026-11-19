@@ -1,6 +1,6 @@
-//! `agentsweep gate-hooks [on | off]`: the Gate switch.
+//! `agentpatrol gate-hooks [on | off]`: the Gate switch.
 //!
-//! The Gate is a hook of AgentSweep's in Claude Code and Codex that refuses a
+//! The Gate is a hook of AgentPatrol's in Claude Code and Codex that refuses a
 //! step while something flagged waits for the user's decision (spec section
 //! 7), on by default with one switch. The daemon is the only process that
 //! writes the Agents' settings and the only one that keeps the switch, so
@@ -9,8 +9,8 @@
 
 use std::path::PathBuf;
 
-use agentsweep_ipc::protocol::Role;
-use agentsweep_ipc::{Client, ClientError};
+use agentpatrol_ipc::protocol::Role;
+use agentpatrol_ipc::{Client, ClientError};
 
 use crate::actions::{DONE, NOT_DONE, UNREACHABLE};
 
@@ -55,13 +55,13 @@ pub fn run(invocation: &Invocation) -> (String, u8) {
     });
     match answered {
         Ok(true) => (
-            "The Gate is on: AgentSweep keeps a hook in Claude Code and Codex that \
+            "The Gate is on: AgentPatrol keeps a hook in Claude Code and Codex that \
              refuses a step while something flagged waits for your decision.\n"
                 .to_string(),
             DONE,
         ),
         Ok(false) => (
-            "The Gate is off: AgentSweep's hooks are taken out of Claude Code and \
+            "The Gate is off: AgentPatrol's hooks are taken out of Claude Code and \
              Codex and are not added again until you switch it on.\n"
                 .to_string(),
             DONE,
@@ -74,7 +74,7 @@ pub fn run(invocation: &Invocation) -> (String, u8) {
             UNREACHABLE,
         ),
         Err(error) => (
-            format!("AgentSweep could not be asked: {error}\n"),
+            format!("AgentPatrol could not be asked: {error}\n"),
             NOT_DONE,
         ),
     }
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn no_daemon_is_protection_off_and_nothing_changed() {
         let nowhere = std::env::temp_dir().join(format!(
-            "agentsweep-gate-hooks-nobody-{}.sock",
+            "agentpatrol-gate-hooks-nobody-{}.sock",
             std::process::id()
         ));
         let _ = std::fs::remove_file(&nowhere);

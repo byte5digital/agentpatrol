@@ -23,23 +23,23 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::eventlog::{EventLog, EventLogWriter};
-use agentsweep_core::judgement::{EngineError, JudgementEngine, Prompt, Usage};
-use agentsweep_core::keychain::{ChainKey, ClaudeKeyStore, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::{self, JudgementSettings, Settings, SettingsFile, SettingsWriter};
-use agentsweep_core::spend::{CapNotice, JudgementCap, LocalDate, SpendRecord};
-use agentsweep_core::state::Trigger;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::cloud_caps::Calendar;
-use agentsweep_daemon::due::PowerState;
-use agentsweep_daemon::judgement_queue::{Engines, Opened};
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, Status};
+use agentpatrol_core::eventlog::{EventLog, EventLogWriter};
+use agentpatrol_core::judgement::{EngineError, JudgementEngine, Prompt, Usage};
+use agentpatrol_core::keychain::{ChainKey, ClaudeKeyStore, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::{self, JudgementSettings, Settings, SettingsFile, SettingsWriter};
+use agentpatrol_core::spend::{CapNotice, JudgementCap, LocalDate, SpendRecord};
+use agentpatrol_core::state::Trigger;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::cloud_caps::Calendar;
+use agentpatrol_daemon::due::PowerState;
+use agentpatrol_daemon::judgement_queue::{Engines, Opened};
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, Status};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -190,7 +190,7 @@ impl Sandbox {
         today: LocalDate,
     ) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-caps-{purpose}-{}-{}",
+            "agentpatrol-caps-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

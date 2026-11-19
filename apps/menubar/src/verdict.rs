@@ -5,7 +5,7 @@
 //!   characters stripped, labelled "AI explanation, from <engine>"; the
 //!   Developer Posture adds the model. The daemon contains the reason before
 //!   it records it; the app contains it again, because what it renders is
-//!   the engine's text and never AgentSweep's.
+//!   the engine's text and never AgentPatrol's.
 //! - **Benign and unsure** never show engine text. A benign Item shows a
 //!   "checked by <engine>" note in the Developer Posture only.
 //! - **The queue progress line** "AI check: 3 of 12" while the queue runs,
@@ -17,12 +17,12 @@
 //!
 //! Everything here is a pure function of what the daemon sent.
 
-use agentsweep_core::finding::Tier;
-use agentsweep_core::health::Health;
-use agentsweep_core::judgement::contain_reason;
-use agentsweep_core::overview::CheckedItem;
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::RecordedFinding;
+use agentpatrol_core::finding::Tier;
+use agentpatrol_core::health::Health;
+use agentpatrol_core::judgement::contain_reason;
+use agentpatrol_core::overview::CheckedItem;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::RecordedFinding;
 use serde_json::{Value, json};
 
 use crate::wording;
@@ -32,9 +32,9 @@ use crate::wording;
 pub enum Said {
     /// Malicious: the only Verdict whose reason is ever shown.
     Malicious,
-    /// Benign: fixed AgentSweep wording only.
+    /// Benign: fixed AgentPatrol wording only.
     Benign,
-    /// Unsure, or no Verdict at all: fixed AgentSweep wording only.
+    /// Unsure, or no Verdict at all: fixed AgentPatrol wording only.
     Unsure,
 }
 
@@ -189,14 +189,14 @@ mod tests {
 
     use std::collections::BTreeMap;
 
-    use agentsweep_core::finding::{Category, FindingState};
-    use agentsweep_core::finding_facts::HeuristicLine;
-    use agentsweep_core::item::{ItemId, Kind};
-    use agentsweep_core::overview::AmbiguousItem;
-    use agentsweep_core::settings::{CloudCaps, JudgementEngine};
-    use agentsweep_core::spend::{CapNotice, JudgementCap};
-    use agentsweep_ipc::engine::{CloudUse, EngineState};
-    use agentsweep_ipc::protocol::{SettingsState, StateEvent, Status};
+    use agentpatrol_core::finding::{Category, FindingState};
+    use agentpatrol_core::finding_facts::HeuristicLine;
+    use agentpatrol_core::item::{ItemId, Kind};
+    use agentpatrol_core::overview::AmbiguousItem;
+    use agentpatrol_core::settings::{CloudCaps, JudgementEngine};
+    use agentpatrol_core::spend::{CapNotice, JudgementCap};
+    use agentpatrol_ipc::engine::{CloudUse, EngineState};
+    use agentpatrol_ipc::protocol::{SettingsState, StateEvent, Status};
 
     use crate::findings::tests::{recorded, status_of};
     use crate::frame::Frame;

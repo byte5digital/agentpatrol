@@ -251,6 +251,6 @@ $("consent").addEventListener("close", () => {
 
 // The engine look arrives without a command. Leaving screen 5 closes the
 // wizard; the first check's result shows in the Findings window.
-listen("agentsweep://onboarding", (event) => render(event.payload));
+listen("agentpatrol://onboarding", (event) => render(event.payload));
 
 ask("onboarding");

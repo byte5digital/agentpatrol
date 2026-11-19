@@ -1,4 +1,4 @@
-//! `agentsweep gate --agent claude-code|codex`: the Gate, the hook both Agents
+//! `agentpatrol gate --agent claude-code|codex`: the Gate, the hook both Agents
 //! run before a turn and before a tool call (spec sections 7.2 to 7.5, ADR
 //! 0008, ADR 0009).
 //!
@@ -18,7 +18,7 @@
 //! wrong, it allows with the fail-open `systemMessage`.
 //!
 //! The command keeps no state, writes nothing to disk and always exits 0, so
-//! neither Agent ever reads a failure of AgentSweep as a decision. Fail-closed
+//! neither Agent ever reads a failure of AgentPatrol as a decision. Fail-closed
 //! is neither wanted nor enforceable (ADR 0009).
 
 use std::io::Read;
@@ -26,11 +26,11 @@ use std::path::PathBuf;
 use std::sync::mpsc;
 use std::time::Duration;
 
-use agentsweep_ipc::Client;
-use agentsweep_ipc::gate::{
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::gate::{
     GateEvent, GateReason, GateRequest, GateTool, GateVerdict, McpServerRef,
 };
-use agentsweep_ipc::protocol::Role;
+use agentpatrol_ipc::protocol::Role;
 use serde_json::{Value, json};
 
 /// The connect-and-read deadline (spec section 7.4), well under the five
@@ -38,7 +38,7 @@ use serde_json::{Value, json};
 pub const DEADLINE: Duration = Duration::from_secs(2);
 
 /// What the Gate tells the user when it could not check anything.
-pub const FAIL_OPEN: &str = "AgentSweep is not running, nothing was checked.";
+pub const FAIL_OPEN: &str = "AgentPatrol is not running, nothing was checked.";
 
 /// The key of a `Skill` call's `tool_input` that holds the skill's name.
 ///
@@ -386,22 +386,22 @@ fn shell_words(command: &str) -> Vec<String> {
 /// The fixed sentence of spec section 7.5 for one reason code.
 pub fn sentence(agent: Agent, reason: GateReason, count: usize) -> String {
     match reason {
-        GateReason::Project if count == 1 => "AgentSweep stopped this turn. 1 item in this \
-                                              project needs your decision. Open AgentSweep, \
+        GateReason::Project if count == 1 => "AgentPatrol stopped this turn. 1 item in this \
+                                              project needs your decision. Open AgentPatrol, \
                                               decide, then try again."
             .to_string(),
         GateReason::Project => format!(
-            "AgentSweep stopped this turn. {count} items in this project need your decision. \
-             Open AgentSweep, decide, then try again."
+            "AgentPatrol stopped this turn. {count} items in this project need your decision. \
+             Open AgentPatrol, decide, then try again."
         ),
         GateReason::UserInstructions => format!(
-            "AgentSweep stopped this turn. Your {} instructions file was flagged and needs \
-             your decision. Open AgentSweep.",
+            "AgentPatrol stopped this turn. Your {} instructions file was flagged and needs \
+             your decision. Open AgentPatrol.",
             agent.display_name()
         ),
-        GateReason::Item => "AgentSweep blocked this step: the skill, tool or script it uses is \
+        GateReason::Item => "AgentPatrol blocked this step: the skill, tool or script it uses is \
                              flagged and waits for the user's decision. Do not retry or work \
-                             around it. Tell the user to open AgentSweep."
+                             around it. Tell the user to open AgentPatrol."
             .to_string(),
     }
 }
@@ -682,30 +682,30 @@ mod tests {
     fn each_reason_code_is_the_fixed_sentence() {
         assert_eq!(
             sentence(Agent::ClaudeCode, GateReason::Project, 3),
-            "AgentSweep stopped this turn. 3 items in this project need your decision. Open \
-             AgentSweep, decide, then try again."
+            "AgentPatrol stopped this turn. 3 items in this project need your decision. Open \
+             AgentPatrol, decide, then try again."
         );
         assert_eq!(
             sentence(Agent::Codex, GateReason::Project, 1),
-            "AgentSweep stopped this turn. 1 item in this project needs your decision. Open \
-             AgentSweep, decide, then try again."
+            "AgentPatrol stopped this turn. 1 item in this project needs your decision. Open \
+             AgentPatrol, decide, then try again."
         );
         assert_eq!(
             sentence(Agent::ClaudeCode, GateReason::UserInstructions, 1),
-            "AgentSweep stopped this turn. Your Claude Code instructions file was flagged and \
-             needs your decision. Open AgentSweep."
+            "AgentPatrol stopped this turn. Your Claude Code instructions file was flagged and \
+             needs your decision. Open AgentPatrol."
         );
         assert_eq!(
             sentence(Agent::Codex, GateReason::UserInstructions, 2),
-            "AgentSweep stopped this turn. Your Codex instructions file was flagged and needs \
-             your decision. Open AgentSweep."
+            "AgentPatrol stopped this turn. Your Codex instructions file was flagged and needs \
+             your decision. Open AgentPatrol."
         );
         for agent in [Agent::ClaudeCode, Agent::Codex] {
             assert_eq!(
                 sentence(agent, GateReason::Item, 4),
-                "AgentSweep blocked this step: the skill, tool or script it uses is flagged and \
+                "AgentPatrol blocked this step: the skill, tool or script it uses is flagged and \
                  waits for the user's decision. Do not retry or work around it. Tell the user \
-                 to open AgentSweep."
+                 to open AgentPatrol."
             );
         }
         assert!(!FAIL_OPEN.contains('\u{2014}'));
@@ -760,7 +760,7 @@ mod tests {
         let value: Value = serde_json::from_str(&fail_open()).expect("JSON");
         assert_eq!(
             value,
-            json!({ "systemMessage": "AgentSweep is not running, nothing was checked." })
+            json!({ "systemMessage": "AgentPatrol is not running, nothing was checked." })
         );
         assert_eq!(
             run(Err("bad".to_string()), std::io::empty(), DEADLINE),

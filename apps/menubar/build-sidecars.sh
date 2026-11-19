@@ -71,10 +71,10 @@ done
 # bundle carries the in-bundle build, so its feature is asked for here (ADR
 # 0008).
 cargo "$@" --locked --manifest-path "$root/Cargo.toml" \
-  -p agentsweep-daemon -p agentsweep --features agentsweep/bundle
+  -p agentpatrol-daemon -p agentpatrol --features agentpatrol/bundle
 
 mkdir -p "$here/binaries"
-for binary in agentsweepd agentsweep; do
+for binary in agentpatrold agentpatrol; do
   if [ "$name" = "universal-apple-darwin" ]; then
     for triple in $triples; do
       cp "$target_dir/$triple/$profile/$binary" "$here/binaries/$binary-$triple"
@@ -96,7 +96,7 @@ done
 # swiftc from the Command Line Tools for the same triples and joined the same
 # way. It needs an SDK with Foundation Models (macOS 26 or later); its minimum
 # stays macOS 14, where it answers that the model is unavailable.
-apple_judge="agentsweep-apple-judge"
+apple_judge="agentpatrol-apple-judge"
 build_apple_judge() {
   case "$1" in
     aarch64-apple-darwin) swift_triple="arm64-apple-macosx14.0" ;;

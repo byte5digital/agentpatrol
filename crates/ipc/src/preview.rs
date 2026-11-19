@@ -7,7 +7,7 @@
 
 use serde_json::{Map, Value};
 
-use agentsweep_core::settings::JudgementEngine;
+use agentpatrol_core::settings::JudgementEngine;
 
 /// The answer to a `preview-request`.
 #[derive(Clone, Debug, Eq, PartialEq)]

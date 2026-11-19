@@ -13,7 +13,7 @@
 # the paths this manifest takes and their bytes, in path order, because the
 # tarball GitHub generates is not promised to be byte-stable while its content
 # is. A moved tag or an edited file therefore fails the fetch, and re-recording
-# a hash is a commit somebody reviews. `cargo run -p agentsweep-xtask --
+# a hash is a commit somebody reviews. `cargo run -p agentpatrol-xtask --
 # benign-corpus --record` writes the hashes of what it fetched back into this
 # file.
 #

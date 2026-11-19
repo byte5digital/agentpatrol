@@ -24,30 +24,30 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use agentsweep_core::allowlist::{self, Allowlist};
-use agentsweep_core::derived::TrustTable;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::{Action, EventLog};
-use agentsweep_core::finding::{FindingState, Tier};
-use agentsweep_core::judged::Judge;
-use agentsweep_core::judgement::{Category, Verdict};
-use agentsweep_core::judgement_request::Normalisation;
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::packs::LoadedPack;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::scan::Scanners;
-use agentsweep_core::settings::{JudgementEngine, Settings, SettingsFile, SettingsWriter};
-use agentsweep_core::verdicts::{CachedVerdict, VerdictCache, VerdictCacheWriter};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::full_scan::{Covering, pool, survey};
-use agentsweep_daemon::machine::{Machine, adapters};
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::engine::EngineChange;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, Status};
+use agentpatrol_core::allowlist::{self, Allowlist};
+use agentpatrol_core::derived::TrustTable;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::{Action, EventLog};
+use agentpatrol_core::finding::{FindingState, Tier};
+use agentpatrol_core::judged::Judge;
+use agentpatrol_core::judgement::{Category, Verdict};
+use agentpatrol_core::judgement_request::Normalisation;
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::packs::LoadedPack;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::scan::Scanners;
+use agentpatrol_core::settings::{JudgementEngine, Settings, SettingsFile, SettingsWriter};
+use agentpatrol_core::verdicts::{CachedVerdict, VerdictCache, VerdictCacheWriter};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::full_scan::{Covering, pool, survey};
+use agentpatrol_daemon::machine::{Machine, adapters};
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::engine::EngineChange;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, Status};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -92,7 +92,7 @@ impl Sandbox {
     /// A home where Claude Code is installed, with Ollama the active engine.
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-verdicts-{purpose}-{}-{}",
+            "agentpatrol-verdicts-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -118,7 +118,7 @@ impl Sandbox {
         let mut settings = Settings::default();
         settings.judgement.engine = JudgementEngine::Ollama;
         // An engine outside the eval bar runs in the Developer Posture only.
-        settings.posture = agentsweep_core::settings::Posture::Developer;
+        settings.posture = agentpatrol_core::settings::Posture::Developer;
         settings.judgement.ollama_model = MODEL.to_string();
         SettingsWriter::write(&SettingsFile::in_data_directory(&sandbox.data()), &settings)
             .expect("the settings are written");
@@ -150,9 +150,9 @@ impl Sandbox {
     fn request_hash(&self, name: &str, engine: JudgementEngine, model: &str) -> String {
         let machine = Machine::named(self.home.clone());
         let readable = std::collections::BTreeSet::new();
-        let access = agentsweep_daemon::permission::Access {
+        let access = agentpatrol_daemon::permission::Access {
             readable: &readable,
-            folders: &agentsweep_daemon::permission::Disk,
+            folders: &agentpatrol_daemon::permission::Disk,
         };
         let pooled = pool(&machine, &access);
         let found = survey(
@@ -177,9 +177,9 @@ impl Sandbox {
             engine.as_str(),
             model,
             match engine {
-                JudgementEngine::Apple => agentsweep_core::judged::APPLE_BUDGET,
-                JudgementEngine::Claude => agentsweep_core::judged::CLAUDE_BUDGET,
-                _ => agentsweep_core::judged::OLLAMA_BUDGET,
+                JudgementEngine::Apple => agentpatrol_core::judged::APPLE_BUDGET,
+                JudgementEngine::Claude => agentpatrol_core::judged::CLAUDE_BUDGET,
+                _ => agentpatrol_core::judged::OLLAMA_BUDGET,
             },
             Normalisation::of_home(&self.home),
         );
@@ -272,7 +272,7 @@ impl Sandbox {
             let finished = daemon.daemon().status().scan;
             if finished.is_some_and(|scan| {
                 scan.started_at >= asked_at
-                    && scan.kind == agentsweep_core::scan_pass::ScanKind::Full
+                    && scan.kind == agentpatrol_core::scan_pass::ScanKind::Full
             }) {
                 return;
             }
@@ -325,7 +325,7 @@ fn last_segment(id: &str) -> String {
 fn open_findings_on<'s>(
     status: &'s Status,
     name: &str,
-) -> Vec<&'s agentsweep_core::state::RecordedFinding> {
+) -> Vec<&'s agentpatrol_core::state::RecordedFinding> {
     status
         .findings
         .iter()
@@ -557,7 +557,7 @@ fn compaction_drops_a_model_no_longer_installed_at_most_once_a_day() {
     let detail = &events[0].event.detail;
     assert_eq!(detail.get("old_records").map(String::as_str), Some("2"));
     assert_eq!(detail.get("new_records").map(String::as_str), Some("1"));
-    let hash = agentsweep_core::item::sha256_hex(&sandbox.cache_bytes());
+    let hash = agentpatrol_core::item::sha256_hex(&sandbox.cache_bytes());
     assert_eq!(detail.get("hash"), Some(&hash));
 
     // Another stale record, and another Full Scan the same day: nothing is

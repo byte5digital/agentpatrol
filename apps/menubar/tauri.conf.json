@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "AgentSweep",
-  "mainBinaryName": "agentsweep-menubar",
-  "identifier": "de.byte5.agentsweep",
+  "productName": "AgentPatrol",
+  "mainBinaryName": "agentpatrol-menubar",
+  "identifier": "de.byte5.agentpatrol",
   "build": {
     "frontendDist": "ui"
   },
@@ -11,7 +11,7 @@
     "windows": [
       {
         "label": "popover",
-        "title": "AgentSweep",
+        "title": "AgentPatrol",
         "url": "index.html",
         "width": 300,
         "height": 300,
@@ -24,7 +24,7 @@
       },
       {
         "label": "findings",
-        "title": "AgentSweep",
+        "title": "AgentPatrol",
         "url": "window.html",
         "width": 980,
         "height": 660,
@@ -35,7 +35,7 @@
       },
       {
         "label": "onboarding",
-        "title": "Set up AgentSweep",
+        "title": "Set up AgentPatrol",
         "url": "onboarding.html",
         "width": 560,
         "height": 600,
@@ -63,7 +63,7 @@
     "macOS": {
       "minimumSystemVersion": "14.0",
       "files": {
-        "Library/LaunchAgents/de.byte5.agentsweep.daemon.plist": "LaunchAgents/de.byte5.agentsweep.daemon.plist"
+        "Library/LaunchAgents/de.byte5.agentpatrol.daemon.plist": "LaunchAgents/de.byte5.agentpatrol.daemon.plist"
       }
     }
   },
@@ -71,7 +71,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc1Mzk1OTJFMDdEQUNGNTUKUldSVno5b0hMbGs1ZGN4aHYzWmxuY29tSzdGNVg5UTFSaWNzOElvK056NjIvS1diZmFkMjg0QU8K",
       "endpoints": [
-        "https://github.com/byte5digital/agentsweep/releases/latest/download/latest.json"
+        "https://github.com/byte5digital/agentpatrol/releases/latest/download/latest.json"
       ]
     }
   }

@@ -38,15 +38,15 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_core::finding::{Category, Tier};
-use agentsweep_core::judged::Judge;
-use agentsweep_core::judgement::{
+use agentpatrol_core::finding::{Category, Tier};
+use agentpatrol_core::judged::Judge;
+use agentpatrol_core::judgement::{
     self, JudgementEngine, NONCE_CHARS, NoVerdict, PROMPT_VERSION, SYSTEM_PROMPT, Verdict,
     user_turn,
 };
-use agentsweep_core::judgement_request::{ByteEstimate, NoRequest, Normalisation, TokenCounter};
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_core::judgement_request::{ByteEstimate, NoRequest, Normalisation, TokenCounter};
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 
 use crate::bad;
 use crate::benign::fetch::{Cache, Fetch};
@@ -67,7 +67,7 @@ pub const LEAST_IN_THE_BAND: usize = 30;
 
 /// How the eval's temporary directory is named, under the system's
 /// temporary directory.
-pub const WORK_PREFIX: &str = "agentsweep-eval";
+pub const WORK_PREFIX: &str = "agentpatrol-eval";
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -359,7 +359,7 @@ impl Report {
     /// The report, ready to write.
     pub fn render(&self) -> String {
         let mut out = String::new();
-        let _ = writeln!(out, "AgentSweep AI Judgement eval");
+        let _ = writeln!(out, "AgentPatrol AI Judgement eval");
         let _ = writeln!(
             out,
             "engine {}, model {}, prompt_version {}",
@@ -476,7 +476,7 @@ impl Report {
             let _ = writeln!(
                 out,
                 "Token estimate ({} bytes to a token) against the engine's own prompt count: {} answered requests, {} counted above the estimate, highest count {} % of its estimate",
-                agentsweep_core::judgement_request::BYTES_PER_TOKEN,
+                agentpatrol_core::judgement_request::BYTES_PER_TOKEN,
                 check.requests,
                 check.over,
                 check.highest_percent
@@ -594,7 +594,7 @@ pub fn injection_set(
 
 /// The benign set: the corpus of the pinned manifest under `root`, fetched
 /// through `fetch` and laid out under `work`. Offline it is a skip, unless
-/// `required`, which is what `AGENTSWEEP_CORPUS_REQUIRED` asks for.
+/// `required`, which is what `AGENTPATROL_CORPUS_REQUIRED` asks for.
 pub fn benign_set(
     root: &Path,
     fetch: &dyn Fetch,

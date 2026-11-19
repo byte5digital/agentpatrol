@@ -17,21 +17,21 @@
 use std::io::ErrorKind;
 use std::sync::Mutex;
 
-use agentsweep_core::envelope::ChainId;
-use agentsweep_core::eventlog::{Outcome, Primitive};
-use agentsweep_core::item::ItemId;
-use agentsweep_core::keychain::ClaudeKey;
-use agentsweep_core::quarantine::{Conflict, RestoreReport};
-use agentsweep_core::settings::JudgementEngine;
-use agentsweep_ipc::engine::{EngineChange, EngineState};
-use agentsweep_ipc::integrity::{ChainRecords, IntegrityAnswer};
-use agentsweep_ipc::notifications::Unnotified;
-use agentsweep_ipc::preview::RequestPreview;
-use agentsweep_ipc::protocol::{
+use agentpatrol_core::envelope::ChainId;
+use agentpatrol_core::eventlog::{Outcome, Primitive};
+use agentpatrol_core::item::ItemId;
+use agentpatrol_core::keychain::ClaudeKey;
+use agentpatrol_core::quarantine::{Conflict, RestoreReport};
+use agentpatrol_core::settings::JudgementEngine;
+use agentpatrol_ipc::engine::{EngineChange, EngineState};
+use agentpatrol_ipc::integrity::{ChainRecords, IntegrityAnswer};
+use agentpatrol_ipc::notifications::Unnotified;
+use agentpatrol_ipc::preview::RequestPreview;
+use agentpatrol_ipc::protocol::{
     ActionReport, FolderScanResult, RevealedReceipt, Sessions, SettingsChange, SettingsState,
     Status, UninstallChoice, UninstallReport,
 };
-use agentsweep_ipc::{Client, ClientError};
+use agentpatrol_ipc::{Client, ClientError};
 use serde_json::{Value, json};
 
 use crate::actions::{after_quarantine, sessions_sentence};
@@ -240,7 +240,7 @@ impl Asking {
         self.with(true, |client| client.reveal_receipts(None))
     }
 
-    /// Uninstall with the user's choice: the request `agentsweep uninstall`
+    /// Uninstall with the user's choice: the request `agentpatrol uninstall`
     /// sends (spec section 9.6). Asked again only when it provably never
     /// reached the daemon.
     pub fn uninstall(&self, choice: UninstallChoice) -> Result<UninstallReport, ClientError> {
@@ -463,7 +463,7 @@ pub fn refusal(error: &ClientError) -> String {
             }
         }
         ClientError::Request(refusal) => format!("Nothing was done: {}.", refusal.message),
-        other => format!("AgentSweep could not be asked: {other}"),
+        other => format!("AgentPatrol could not be asked: {other}"),
     }
 }
 
@@ -471,8 +471,8 @@ pub fn refusal(error: &ClientError) -> String {
 mod tests {
     use super::*;
 
-    use agentsweep_core::eventlog::{Primitive, ReceiptStep, SessionsRunning};
-    use agentsweep_ipc::protocol::{AgentSessions, RequestError};
+    use agentpatrol_core::eventlog::{Primitive, ReceiptStep, SessionsRunning};
+    use agentpatrol_ipc::protocol::{AgentSessions, RequestError};
 
     fn report(action: &str, result: Outcome, steps: Vec<ReceiptStep>) -> ActionReport {
         ActionReport {
@@ -489,7 +489,7 @@ mod tests {
                 running: SessionsRunning::Yes,
                 live: 1,
             }]),
-            message: "Quarantined the skill 'x'. `agentsweep restore q-0123` puts it back."
+            message: "Quarantined the skill 'x'. `agentpatrol restore q-0123` puts it back."
                 .to_string(),
         }
     }

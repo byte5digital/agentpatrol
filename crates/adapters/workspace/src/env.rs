@@ -7,7 +7,7 @@
 //! module: the parsed view carries key names, a Finding shows a hashed stand-in
 //! and the bytes themselves stay on the machine for the local Tiers.
 
-use agentsweep_core::item::sha256_hex;
+use agentpatrol_core::item::sha256_hex;
 
 /// The five keys that take an Agent somewhere else. `CLAUDE_CONFIG_DIR` and
 /// `CODEX_HOME` relocate the whole configuration directory, the two base URLs

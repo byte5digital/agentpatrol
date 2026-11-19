@@ -25,19 +25,19 @@
 use std::collections::BTreeMap;
 use std::time::Duration;
 
-use agentsweep_core::pack::MANIFEST_FILE;
-use agentsweep_core::pack_archive::{ARCHIVE_FILE, LARGEST_PACK};
-use agentsweep_core::pack_signature::PINNED_KEYS;
-use agentsweep_core::packs::{LoadedPack, PackStore, SignedManifest, Verdict, judge};
-use agentsweep_core::state::IgnoredPack;
+use agentpatrol_core::pack::MANIFEST_FILE;
+use agentpatrol_core::pack_archive::{ARCHIVE_FILE, LARGEST_PACK};
+use agentpatrol_core::pack_signature::PINNED_KEYS;
+use agentpatrol_core::packs::{LoadedPack, PackStore, SignedManifest, Verdict, judge};
+use agentpatrol_core::state::IgnoredPack;
 
 /// Where the index lives: `rules/latest.json` on the `feed` branch of the
 /// project's repository.
 pub const FEED_INDEX: &str =
-    "https://raw.githubusercontent.com/byte5digital/agentsweep/feed/rules/latest.json";
+    "https://raw.githubusercontent.com/byte5digital/agentpatrol/feed/rules/latest.json";
 
 /// Where the pack releases are: one `rules-v<N>` release per pack.
-pub const FEED_RELEASES: &str = "https://github.com/byte5digital/agentsweep/releases/download";
+pub const FEED_RELEASES: &str = "https://github.com/byte5digital/agentpatrol/releases/download";
 
 /// The most a fetch waits before it asks, drawn afresh every time.
 pub const JITTER_AT_MOST: Duration = Duration::from_secs(60 * 60);
@@ -81,8 +81,8 @@ impl Endpoints {
     pub fn under(origin: &str) -> Endpoints {
         let origin = origin.trim_end_matches('/');
         Endpoints {
-            index: format!("{origin}/byte5digital/agentsweep/feed/rules/latest.json"),
-            releases: format!("{origin}/byte5digital/agentsweep/releases/download"),
+            index: format!("{origin}/byte5digital/agentpatrol/feed/rules/latest.json"),
+            releases: format!("{origin}/byte5digital/agentpatrol/releases/download"),
         }
     }
 
@@ -177,7 +177,7 @@ pub enum Fetched {
         /// The version in use.
         in_use: u64,
     },
-    /// A newer pack that needs a newer AgentSweep, ignored.
+    /// A newer pack that needs a newer AgentPatrol, ignored.
     NeedsNewerEngine(IgnoredPack),
     /// A newer pack verified, installed and ready to be put in force.
     Accepted(Box<LoadedPack>),
@@ -313,7 +313,7 @@ impl FeedClient {
 
 /// The User-Agent: the product and its version, nothing else.
 pub fn user_agent() -> String {
-    format!("{}/{}", agentsweep_core::NAME, agentsweep_core::VERSION)
+    format!("{}/{}", agentpatrol_core::NAME, agentpatrol_core::VERSION)
 }
 
 /// What a failed request says in a log line: its kind, never the address or
@@ -449,14 +449,14 @@ mod tests {
         assert_eq!(github.host(), "raw.githubusercontent.com");
         assert_eq!(
             github.asset(7, "manifest.json"),
-            "https://github.com/byte5digital/agentsweep/releases/download/rules-v7/manifest.json"
+            "https://github.com/byte5digital/agentpatrol/releases/download/rules-v7/manifest.json"
         );
         let local = Endpoints::under("http://127.0.0.1:4711");
         assert_eq!(local.host(), "127.0.0.1:4711");
         assert!(local.index.ends_with("/feed/rules/latest.json"));
         assert_eq!(
             local.asset(3, "pack.tar"),
-            "http://127.0.0.1:4711/byte5digital/agentsweep/releases/download/rules-v3/pack.tar"
+            "http://127.0.0.1:4711/byte5digital/agentpatrol/releases/download/rules-v3/pack.tar"
         );
     }
 
@@ -476,7 +476,7 @@ mod tests {
     fn the_user_agent_names_the_product_and_its_version_only() {
         assert_eq!(
             user_agent(),
-            format!("agentsweep/{}", agentsweep_core::VERSION)
+            format!("agentpatrol/{}", agentpatrol_core::VERSION)
         );
     }
 

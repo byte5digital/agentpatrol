@@ -1,4 +1,4 @@
-//! The data directory AgentSweep keeps its stores in.
+//! The data directory AgentPatrol keeps its stores in.
 //!
 //! One directory under Application Support holds every store the daemon owns
 //! (spec section 6.9): the Event Log, the Baseline chain, the Verdict cache,
@@ -14,13 +14,13 @@ use std::path::{Path, PathBuf};
 
 use crate::BUNDLE_ID;
 
-/// Where AgentSweep keeps its stores.
+/// Where AgentPatrol keeps its stores.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct DataDirectory(PathBuf);
 
 impl DataDirectory {
     /// The directory for the user running this process:
-    /// `~/Library/Application Support/de.byte5.agentsweep`. `None` when the
+    /// `~/Library/Application Support/de.byte5.agentpatrol`. `None` when the
     /// home directory is not known.
     pub fn for_user() -> Option<DataDirectory> {
         let home = std::env::var_os("HOME")?;
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn every_store_sits_under_the_one_data_directory() {
-        let dir = DataDirectory::at("/tmp/agentsweep-test");
+        let dir = DataDirectory::at("/tmp/agentpatrol-test");
         for path in [
             dir.event_log(),
             dir.baseline(),
@@ -132,16 +132,16 @@ mod tests {
         let dir = DataDirectory::under_home(Path::new("/Users/nobody"));
         assert_eq!(
             dir.root(),
-            Path::new("/Users/nobody/Library/Application Support/de.byte5.agentsweep")
+            Path::new("/Users/nobody/Library/Application Support/de.byte5.agentpatrol")
         );
     }
 
     #[test]
     fn a_payload_sits_under_its_receipt_id() {
-        let dir = DataDirectory::at("/tmp/agentsweep-test");
+        let dir = DataDirectory::at("/tmp/agentpatrol-test");
         assert_eq!(
             dir.quarantine_payload("r-1"),
-            Path::new("/tmp/agentsweep-test/quarantine/r-1/payload")
+            Path::new("/tmp/agentpatrol-test/quarantine/r-1/payload")
         );
     }
 }

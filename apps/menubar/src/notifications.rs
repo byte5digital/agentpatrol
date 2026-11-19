@@ -26,10 +26,10 @@
 
 use std::sync::Mutex;
 
-use agentsweep_core::eventlog::SessionsRunning;
-use agentsweep_ipc::ClientError;
-use agentsweep_ipc::notifications::{NotificationClass, Unnotified};
-use agentsweep_ipc::protocol::StateEvent;
+use agentpatrol_core::eventlog::SessionsRunning;
+use agentpatrol_ipc::ClientError;
+use agentpatrol_ipc::notifications::{NotificationClass, Unnotified};
+use agentpatrol_ipc::protocol::StateEvent;
 
 use crate::asking::Asking;
 use crate::frame::Pane;
@@ -46,23 +46,23 @@ pub struct Notice {
 
 /// The body of a "needs you" notification, whatever raised the Finding.
 pub const NEEDS_YOU_BODY: &str =
-    "Nothing was changed. Open AgentSweep to decide what happens to it.";
+    "Nothing was changed. Open AgentPatrol to decide what happens to it.";
 
 /// The body of a "keeps coming back" notification.
-pub const KEEPS_COMING_BACK_BODY: &str = "AgentSweep removed it three times in the last hour and \
+pub const KEEPS_COMING_BACK_BODY: &str = "AgentPatrol removed it three times in the last hour and \
      it came back each time, most likely from an agent session that is still open. Open \
-     AgentSweep to see what to do.";
+     AgentPatrol to see what to do.";
 
 /// The title of a "records changed" notification.
-pub const RECORDS_CHANGED_TITLE: &str = "AgentSweep's records were changed";
+pub const RECORDS_CHANGED_TITLE: &str = "AgentPatrol's records were changed";
 
 /// The body of a "records changed" notification.
 pub const RECORDS_CHANGED_BODY: &str =
-    "Something other than AgentSweep changed its records. Open AgentSweep to see what changed.";
+    "Something other than AgentPatrol changed its records. Open AgentPatrol to see what changed.";
 
 /// The body of a permission notification.
 pub const PERMISSION_BODY: &str =
-    "macOS has not let AgentSweep look there yet. Open AgentSweep and choose Check now.";
+    "macOS has not let AgentPatrol look there yet. Open AgentPatrol and choose Check now.";
 
 /// What one un-notified change says when it is raised.
 pub fn notice(change: &Unnotified) -> Notice {
@@ -70,7 +70,7 @@ pub fn notice(change: &Unnotified) -> Notice {
         NotificationClass::StoppedAutomatically => Notice {
             title: format!("Stopped: {}", item(change)),
             body: format!(
-                "AgentSweep moved it out of the way by itself. {}",
+                "AgentPatrol moved it out of the way by itself. {}",
                 sessions_lines(change)
             ),
         },
@@ -88,8 +88,8 @@ pub fn notice(change: &Unnotified) -> Notice {
         },
         NotificationClass::Permission => Notice {
             title: match change.count {
-                1 => "AgentSweep can't check 1 project yet".to_string(),
-                n => format!("AgentSweep can't check {n} projects yet"),
+                1 => "AgentPatrol can't check 1 project yet".to_string(),
+                n => format!("AgentPatrol can't check {n} projects yet"),
             },
             body: PERMISSION_BODY.to_string(),
         },
@@ -116,7 +116,7 @@ fn agent(change: &Unnotified) -> Option<&'static str> {
     }
 }
 
-/// Whether Agent sessions appeared to be running when AgentSweep stopped the
+/// Whether Agent sessions appeared to be running when AgentPatrol stopped the
 /// Item, and the restart request where one may be, in the words of the
 /// confirmation after a Quarantine (ticket 73). The daemon tells only the
 /// answer, not the count, so no count is named.
@@ -134,10 +134,10 @@ fn sessions_lines(change: &Unnotified) -> String {
         }
         (SessionsRunning::No, None) => "No coding agent session appears to be running.".to_string(),
         (SessionsRunning::Unknown, Some(agent)) => format!(
-            "AgentSweep could not tell whether {agent} is running. If it is open, restart it so \
+            "AgentPatrol could not tell whether {agent} is running. If it is open, restart it so \
              it picks up the change."
         ),
-        (SessionsRunning::Unknown, None) => "AgentSweep could not tell whether a coding agent is \
+        (SessionsRunning::Unknown, None) => "AgentPatrol could not tell whether a coding agent is \
              running. If it is open, restart it so it picks up the change."
             .to_string(),
     }
@@ -302,7 +302,7 @@ impl Notifications {
         // leaves these changes to the ordinary notifications, and the
         // notice is never raised twice.
         if !told.is_empty() && asking.notified(&told).is_err() {
-            eprintln!("agentsweep-menubar: the changes the notice stands for were not confirmed");
+            eprintln!("agentpatrol-menubar: the changes the notice stands for were not confirmed");
         }
         Ok(true)
     }
@@ -354,7 +354,7 @@ mod tests {
 
     use std::sync::Arc;
 
-    use agentsweep_core::item::{ItemId, Kind};
+    use agentpatrol_core::item::{ItemId, Kind};
 
     fn change(class: NotificationClass) -> Unnotified {
         let finding = !matches!(
@@ -387,7 +387,7 @@ mod tests {
             notice(&stopped),
             Notice {
                 title: "Stopped: the skill 'setup'".to_string(),
-                body: "AgentSweep moved it out of the way by itself. Claude Code appears to be \
+                body: "AgentPatrol moved it out of the way by itself. Claude Code appears to be \
                        running. Restart it so it picks up the change."
                     .to_string(),
             }
@@ -395,14 +395,14 @@ mod tests {
         stopped.sessions = SessionsRunning::No;
         assert_eq!(
             notice(&stopped).body,
-            "AgentSweep moved it out of the way by itself. No Claude Code session appears to be \
+            "AgentPatrol moved it out of the way by itself. No Claude Code session appears to be \
              running."
         );
         stopped.sessions = SessionsRunning::Unknown;
         assert!(
             notice(&stopped)
                 .body
-                .ends_with("AgentSweep could not tell whether Claude Code is running. If it is open, restart it so it picks up the change."),
+                .ends_with("AgentPatrol could not tell whether Claude Code is running. If it is open, restart it so it picks up the change."),
         );
     }
 
@@ -482,11 +482,11 @@ mod tests {
         );
         assert_eq!(
             notice(&change(NotificationClass::Permission)).title,
-            "AgentSweep can't check 2 projects yet"
+            "AgentPatrol can't check 2 projects yet"
         );
         let mut one = change(NotificationClass::Permission);
         one.count = 1;
-        assert_eq!(notice(&one).title, "AgentSweep can't check 1 project yet");
+        assert_eq!(notice(&one).title, "AgentPatrol can't check 1 project yet");
     }
 
     #[test]
@@ -508,7 +508,7 @@ mod tests {
             total: 2
         }));
         assert!(may_carry(&StateEvent::FindingChanged {
-            id: agentsweep_core::finding::FindingId::from_recorded("x|rule/0001|abc"),
+            id: agentpatrol_core::finding::FindingId::from_recorded("x|rule/0001|abc"),
             state: "open".to_string(),
             finding: None,
         }));

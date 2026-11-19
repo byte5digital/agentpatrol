@@ -1,4 +1,4 @@
-//! The daemon's log: `tracing` to `~/Library/Logs/AgentSweep/daemon.log`,
+//! The daemon's log: `tracing` to `~/Library/Logs/AgentPatrol/daemon.log`,
 //! five files of five megabytes (spec section 6.9).
 //!
 //! A line names paths and ids and never content or a sensitive field. That
@@ -8,7 +8,7 @@
 //! The shipped daemon writes the file. A developer run (one that names a home
 //! or keeps its key in memory) and a run started with `--log stderr` write to
 //! the standard error stream instead, so a hand run reads its own output and
-//! never adds to the log of the installed AgentSweep.
+//! never adds to the log of the installed AgentPatrol.
 
 use std::collections::HashMap;
 use std::fs::{self, File, OpenOptions};
@@ -61,7 +61,7 @@ impl LogChoice {
 
 /// The directory the installed daemon logs to, under the given home.
 pub fn log_directory(home: &Path) -> PathBuf {
-    home.join("Library").join("Logs").join("AgentSweep")
+    home.join("Library").join("Logs").join("AgentPatrol")
 }
 
 /// A file that moves on to a fresh one once it would grow past its size,
@@ -278,7 +278,7 @@ mod tests {
         assert_eq!(LOG_FILE_BYTES, 5 * 1024 * 1024);
         assert_eq!(
             log_directory(Path::new("/Users/someone")).join(LOG_NAME),
-            PathBuf::from("/Users/someone/Library/Logs/AgentSweep/daemon.log")
+            PathBuf::from("/Users/someone/Library/Logs/AgentPatrol/daemon.log")
         );
     }
 

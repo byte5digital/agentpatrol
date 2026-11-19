@@ -26,10 +26,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_core::pack::{MANIFEST_FILE, Manifest, engine_satisfies};
-use agentsweep_core::pack_archive::{self, ARCHIVE_FILE};
-use agentsweep_core::pack_signature::{self, PinnedKey, SIGNATURE_EXTENSION};
-use agentsweep_core::packs::{SignedManifest, compile_tree};
+use agentpatrol_core::pack::{MANIFEST_FILE, Manifest, engine_satisfies};
+use agentpatrol_core::pack_archive::{self, ARCHIVE_FILE};
+use agentpatrol_core::pack_signature::{self, PinnedKey, SIGNATURE_EXTENSION};
+use agentpatrol_core::packs::{SignedManifest, compile_tree};
 
 /// What every Rule Pack release tag starts with.
 pub const TAG_PREFIX: &str = "rules-v";
@@ -227,9 +227,9 @@ pub fn sign(release: &Path, keys: &[SigningKey]) -> Result<Vec<String>, String> 
             .map_err(|_| format!("the key {} holds no public half", key.key_id()))?;
         let trusted = format!(
             "timestamp:{}\tfile:{MANIFEST_FILE}\thashed",
-            agentsweep_core::envelope::Timestamp::now().as_unix_ms() / 1000
+            agentpatrol_core::envelope::Timestamp::now().as_unix_ms() / 1000
         );
-        let untrusted = format!("signature of AgentSweep Rule Pack {pack_version}");
+        let untrusted = format!("signature of AgentPatrol Rule Pack {pack_version}");
         let signature = minisign::sign(
             Some(&public),
             &key.secret,
@@ -335,7 +335,7 @@ pub fn verify(release: &Path, keys: &[PinnedKey]) -> Result<Verified, String> {
 
     let signed = SignedManifest::verify_with(keys, manifest_bytes, signatures)
         .map_err(|error| format!("refused: {error}"))?;
-    let engine = agentsweep_core::VERSION;
+    let engine = agentpatrol_core::VERSION;
     if !engine_satisfies(&signed.manifest.minimum_engine_version, engine) {
         return Err(format!(
             "refused: the manifest asks for engine {}, newer than this commit's {engine}",
@@ -446,7 +446,7 @@ impl Scratch {
     fn new() -> Result<Scratch, String> {
         static NEXT: AtomicU32 = AtomicU32::new(0);
         let path = std::env::temp_dir().join(format!(
-            "agentsweep-pack-verify-{}-{}",
+            "agentpatrol-pack-verify-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));

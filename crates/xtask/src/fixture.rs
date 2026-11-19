@@ -17,8 +17,8 @@ use std::fmt;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::item::{FileFacts, Kind, is_document};
-use agentsweep_core::views::Views;
+use agentpatrol_core::item::{FileFacts, Kind, is_document};
+use agentpatrol_core::views::Views;
 use serde_json::{Number, Value};
 
 /// The `[expect]` section: what the corpus runner must observe.

@@ -13,7 +13,7 @@ section rather than editing an old one.
 ## 2026-09-24, milestone 6 (watcher, Change Scans, due check)
 
 Machine: Apple M2 Max, 12 cores, 64 GB, macOS 26.6.2. Release build of
-`agentsweepd`, taken with `--developer-budgets` for the Scans and by sampling
+`agentpatrold`, taken with `--developer-budgets` for the Scans and by sampling
 the running daemon for the idle figures.
 
 What was on the machine: 535 Items across 35 pooled project roots and both
@@ -54,7 +54,7 @@ machine's own ordinary activity, each between 0.56 s and 0.61 s.
 ## 2026-09-25, milestone 6 re-measured on the final code
 
 Machine: Apple M2 Max, 12 cores, 64 GB, macOS 26.6.2. Release build of
-`agentsweepd` with `--locked`, the Scans taken with `--developer-budgets` three
+`agentpatrold` with `--locked`, the Scans taken with `--developer-budgets` three
 times over, the idle figures from a daemon left running for fourteen minutes
 after its start Full Scan and sampled with `ps` and `footprint` once a minute.
 

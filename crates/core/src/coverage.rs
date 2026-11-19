@@ -1,4 +1,4 @@
-//! Coverage: which Surfaces AgentSweep had already looked at.
+//! Coverage: which Surfaces AgentPatrol had already looked at.
 //!
 //! Coverage is what keeps `none` apart from `added` (spec section 4.6.2). It is
 //! recorded per adapter, root and kind, written before a newly registered root
@@ -26,7 +26,7 @@ use crate::adapter::Descriptor;
 use crate::envelope::Timestamp;
 use crate::item::{Kind, Scope};
 
-/// One stretch of Surface AgentSweep has looked at: one adapter, one root, one
+/// One stretch of Surface AgentPatrol has looked at: one adapter, one root, one
 /// kind.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct CoverageKey {

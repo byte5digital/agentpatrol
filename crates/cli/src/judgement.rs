@@ -1,10 +1,10 @@
-//! AI Judgement for `agentsweep scan <dir>` (spec section 4.4, "Caps, cache,
+//! AI Judgement for `agentpatrol scan <dir>` (spec section 4.4, "Caps, cache,
 //! CLI").
 //!
 //! After the Tiers, the Folder Scan asks the Judgement Engine the settings
 //! file names about each Item it left in the Ambiguous Band, and waits for
 //! the Verdicts, since nothing is left behind to receive a late one. There is
-//! no consent of its own: the engine was chosen in AgentSweep. `--no-ai` asks
+//! no consent of its own: the engine was chosen in AgentPatrol. `--no-ai` asks
 //! nothing.
 //!
 //! The settings file is read, never written: it is plain JSON and holds no
@@ -34,22 +34,22 @@
 
 use std::path::Path;
 
-use agentsweep_core::adapter::Enumeration;
+use agentpatrol_core::adapter::Enumeration;
 #[cfg(feature = "bundle")]
-use agentsweep_core::apple_engine::{AppleEngine, AppleHelper};
-use agentsweep_core::eval_bar;
-use agentsweep_core::finding::FiredHeuristic;
-use agentsweep_core::item::ItemId;
-use agentsweep_core::judged::{self, AppliedVerdict, Judge};
-use agentsweep_core::judgement::{self, EngineError, JudgementEngine, Verdict};
-use agentsweep_core::judgement_request::{JudgementRequest, Normalisation};
-use agentsweep_core::ollama::{OllamaClient, OllamaEngine};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::scan::ScanReport;
-use agentsweep_core::settings::{
+use agentpatrol_core::apple_engine::{AppleEngine, AppleHelper};
+use agentpatrol_core::eval_bar;
+use agentpatrol_core::finding::FiredHeuristic;
+use agentpatrol_core::item::ItemId;
+use agentpatrol_core::judged::{self, AppliedVerdict, Judge};
+use agentpatrol_core::judgement::{self, EngineError, JudgementEngine, Verdict};
+use agentpatrol_core::judgement_request::{JudgementRequest, Normalisation};
+use agentpatrol_core::ollama::{OllamaClient, OllamaEngine};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::scan::ScanReport;
+use agentpatrol_core::settings::{
     JudgementEngine as EngineChoice, JudgementSettings, Settings, SettingsFile,
 };
-use agentsweep_core::spend::CapNotice;
+use agentpatrol_core::spend::CapNotice;
 
 /// The most Items one Folder Scan asks a local engine about, the same cap
 /// the daemon's queue applies (spec section 4.4).
@@ -58,7 +58,7 @@ pub const LOCAL_ITEMS_PER_SCAN: usize = 25;
 /// The one line printed when the Folder Scan left Items in the Ambiguous
 /// Band and no engine this build can ask is chosen.
 pub const DID_NOT_RUN: &str =
-    "The AI check did not run: AgentSweep's settings choose no AI engine this build can ask.";
+    "The AI check did not run: AgentPatrol's settings choose no AI engine this build can ask.";
 
 /// What a benign Verdict says.
 pub const BENIGN: &str = "nothing in it looks written to cause harm.";
@@ -138,7 +138,7 @@ impl Judgement {
         match self {
             Judgement::Ran { held_back, .. } if *held_back > 0 => Some(
                 CapNotice {
-                    cap: agentsweep_core::spend::JudgementCap::Scan,
+                    cap: agentpatrol_core::spend::JudgementCap::Scan,
                     waiting: *held_back,
                 }
                 .line(),
@@ -295,10 +295,10 @@ pub fn admitted(settings: &Settings) -> bool {
 #[cfg(feature = "bundle")]
 fn apple_version() -> Option<String> {
     match AppleHelper::beside_this_executable()?.check() {
-        agentsweep_core::apple::AppleAvailability::Available { model_version, .. } => {
+        agentpatrol_core::apple::AppleAvailability::Available { model_version, .. } => {
             Some(model_version)
         }
-        agentsweep_core::apple::AppleAvailability::Unavailable { .. } => None,
+        agentpatrol_core::apple::AppleAvailability::Unavailable { .. } => None,
     }
 }
 
@@ -365,11 +365,11 @@ pub fn choose(
 mod daemon {
     use std::path::Path;
 
-    use agentsweep_core::finding::FiredHeuristic;
-    use agentsweep_core::judgement_request::JudgementRequest;
-    use agentsweep_ipc::judge::{JudgeOutcome, JudgeRequest};
-    use agentsweep_ipc::protocol::Role;
-    use agentsweep_ipc::{Client, ClientError};
+    use agentpatrol_core::finding::FiredHeuristic;
+    use agentpatrol_core::judgement_request::JudgementRequest;
+    use agentpatrol_ipc::judge::{JudgeOutcome, JudgeRequest};
+    use agentpatrol_ipc::protocol::Role;
+    use agentpatrol_ipc::{Client, ClientError};
 
     use super::{Asked, Asker, label};
 
@@ -425,8 +425,8 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
 
-    use agentsweep_core::judged::OLLAMA_BUDGET;
-    use agentsweep_core::judgement::ScriptedEngine;
+    use agentpatrol_core::judged::OLLAMA_BUDGET;
+    use agentpatrol_core::judgement::ScriptedEngine;
 
     use super::*;
     use crate::folder_scan::{exit_code, folder_scan_with_items, render_with};
@@ -454,7 +454,7 @@ mod tests {
     /// engine, through every check, under `cap`.
     fn judged(name: &str, script: Vec<Result<String, EngineError>>, cap: usize) -> (String, u8) {
         let temporary = tempfile::Builder::new()
-            .prefix(&format!("agentsweep-cli-judgement-{name}-"))
+            .prefix(&format!("agentpatrol-cli-judgement-{name}-"))
             .tempdir()
             .expect("a temporary folder");
         let root = temporary.path().to_path_buf();
@@ -540,7 +540,7 @@ mod tests {
         );
 
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-cli-judgement-benign-")
+            .prefix("agentpatrol-cli-judgement-benign-")
             .tempdir()
             .expect("a temporary folder");
         let root = temporary.path().to_path_buf();
@@ -602,10 +602,10 @@ mod tests {
         settings.judgement.engine = EngineChoice::Ollama;
         settings.judgement.ollama_model = "qwen3:8b".to_string();
         assert!(!admitted(&settings), "Simple, untested");
-        settings.posture = agentsweep_core::settings::Posture::Developer;
+        settings.posture = agentpatrol_core::settings::Posture::Developer;
         assert!(admitted(&settings), "Developer");
         settings.judgement.engine = EngineChoice::Off;
-        settings.posture = agentsweep_core::settings::Posture::Simple;
+        settings.posture = agentpatrol_core::settings::Posture::Simple;
         assert!(admitted(&settings), "off asks nothing anyway");
     }
 

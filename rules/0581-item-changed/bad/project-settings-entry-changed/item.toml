@@ -1,5 +1,5 @@
 # Fixture for as_0581. A settings key committed to the project is not the one
-# AgentSweep accepted. Outside User Scope a settings entry is this Heuristic's,
+# AgentPatrol accepted. Outside User Scope a settings entry is this Heuristic's,
 # so the change is carried rather than falling between 0580 and 0581.
 [item]
 agent = "claude-code"

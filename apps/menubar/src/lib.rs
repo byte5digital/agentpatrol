@@ -1,4 +1,4 @@
-//! The AgentSweep menu bar app.
+//! The AgentPatrol menu bar app.
 //!
 //! The app never scans (spec section 6.2). It shows the onboarding wizard
 //! while the daemon is not registered, registers the daemon and itself with
@@ -54,11 +54,11 @@
 //!   sends nothing.
 //! - [`folder`]: the answer of a Folder Scan as the window shows it.
 //! - [`settings_pane`]: the Settings pane: the Detail choice, the background
-//!   toggles, Advanced and what AgentSweep does not protect against.
+//!   toggles, Advanced and what AgentPatrol does not protect against.
 //! - [`ai_check`]: the AI check in the Settings pane: the four engine
 //!   cards, the Ollama confirmation, the Claude consent screen and the key
 //!   handed to the daemon once.
-//! - [`uninstall`]: **Uninstall AgentSweep…**, behind a Trash seam.
+//! - [`uninstall`]: **Uninstall AgentPatrol…**, behind a Trash seam.
 //! - [`gate`]: the Gate's Health lines, "Gate off in this project" on the
 //!   Overview and the Gate switch in the Settings pane.
 //! - [`cli_link`]: **Install command line tool**, the link in

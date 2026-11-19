@@ -31,19 +31,19 @@
 //! - Screen 6 of spec section 8.3 is no screen: the first Scan runs in the
 //!   background, and [`crate::first_check`] says when its result is ready.
 
-use agentsweep_core::apple::AppleAvailability;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eval_bar::{self, Passing};
-use agentsweep_core::judgement::{EngineSuggestion, suggested_engine};
-use agentsweep_core::keychain::ClaudeKey;
-use agentsweep_core::location::LocationClass;
-use agentsweep_core::ollama::OllamaPresence;
-use agentsweep_core::settings::{
+use agentpatrol_core::apple::AppleAvailability;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eval_bar::{self, Passing};
+use agentpatrol_core::judgement::{EngineSuggestion, suggested_engine};
+use agentpatrol_core::keychain::ClaudeKey;
+use agentpatrol_core::location::LocationClass;
+use agentpatrol_core::ollama::OllamaPresence;
+use agentpatrol_core::settings::{
     CloudCaps, DEFAULT_CLAUDE_MODEL, DEFAULT_OLLAMA_ADDRESS, JudgementEngine, Posture,
 };
-use agentsweep_ipc::ClientError;
-use agentsweep_ipc::engine::{CloudUse, EngineChange, EngineState};
-use agentsweep_ipc::protocol::{SettingsChange, SettingsState};
+use agentpatrol_ipc::ClientError;
+use agentpatrol_ipc::engine::{CloudUse, EngineChange, EngineState};
+use agentpatrol_ipc::protocol::{SettingsChange, SettingsState};
 use serde_json::{Value, json};
 
 use crate::ai_check::{self, Bar};
@@ -54,7 +54,7 @@ use crate::supervision::{self, Launched, Services};
 /// One screen of the wizard, in order.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Screen {
-    /// Screen 1: the setup: what AgentSweep checks, that its rules update,
+    /// Screen 1: the setup: what AgentPatrol checks, that its rules update,
     /// and that nothing leaves this Mac.
     Welcome,
     /// Screen 2: What was found: the Inventory.
@@ -105,10 +105,10 @@ pub enum Step {
 }
 
 /// Screen 1's heading: the setup.
-pub const WELCOME_TITLE: &str = "Set up AgentSweep";
+pub const WELCOME_TITLE: &str = "Set up AgentPatrol";
 /// Screen 1's sentences.
 pub const WELCOME: [&str; 2] = [
-    "AgentSweep checks Claude Code and Codex and stops what is proven harmful.",
+    "AgentPatrol checks Claude Code and Codex and stops what is proven harmful.",
     "Its detection rules update regularly.",
 ];
 /// Screen 1's last line.
@@ -137,13 +137,13 @@ pub const APPLE_LINE: &str =
 /// The line over the Ollama and Claude choices in the Developer Posture.
 pub const OTHER_ENGINES: &str = "Or choose another engine:";
 /// What "Preview a request" says before the daemon runs.
-pub const PREVIEW_LATER: &str = "A request can be previewed once AgentSweep runs: in Settings, \
+pub const PREVIEW_LATER: &str = "A request can be previewed once AgentPatrol runs: in Settings, \
      under AI check.";
 /// Screen 5's sentences, in order.
 pub const BACKGROUND_LINES: [&str; 3] = [
     "macOS will announce a background item and ask about notifications.",
-    "Protection continues after you quit AgentSweep.",
-    "AgentSweep also adds a check to Claude Code and Codex so flagged items cannot be used until \
+    "Protection continues after you quit AgentPatrol.",
+    "AgentPatrol also adds a check to Claude Code and Codex so flagged items cannot be used until \
      you decide.",
 ];
 /// Screen 5's one line disclosing the Rule Feed and the app update check.
@@ -458,7 +458,7 @@ impl Wizard {
         match key {
             "rule_feed" => self.rule_feed = on,
             "update_check" => self.update_check = on,
-            _ => return Err("That is not a setting AgentSweep knows.".to_string()),
+            _ => return Err("That is not a setting AgentPatrol knows.".to_string()),
         }
         Ok(())
     }
@@ -753,14 +753,14 @@ impl Handover {
 /// calls it.
 pub fn look_here() -> EngineState {
     let mut state = unanswered();
-    state.ollama = agentsweep_core::settings::OllamaAddress::parse(DEFAULT_OLLAMA_ADDRESS)
+    state.ollama = agentpatrol_core::settings::OllamaAddress::parse(DEFAULT_OLLAMA_ADDRESS)
         .ok()
-        .map(|address| agentsweep_core::ollama::OllamaClient::new(&address).presence());
+        .map(|address| agentpatrol_core::ollama::OllamaClient::new(&address).presence());
     state.apple = Some(
-        match agentsweep_core::apple_engine::AppleHelper::beside_this_executable() {
+        match agentpatrol_core::apple_engine::AppleHelper::beside_this_executable() {
             Some(helper) => helper.check(),
             None => AppleAvailability::Unavailable {
-                reason: agentsweep_core::apple::HELPER_MISSING.to_string(),
+                reason: agentpatrol_core::apple::HELPER_MISSING.to_string(),
             },
         },
     );
@@ -774,7 +774,7 @@ mod tests {
     use std::cell::RefCell;
     use std::io;
 
-    use agentsweep_core::ollama::OllamaModel;
+    use agentpatrol_core::ollama::OllamaModel;
 
     use crate::inventory::{Found, OWN_LISTS};
     use crate::supervision::ServiceState;
@@ -1166,7 +1166,7 @@ mod tests {
     fn the_texts_are_short() {
         let view = Wizard::new(inventory()).to_value();
         let welcome = &view["welcome"];
-        assert_eq!(welcome["title"], "Set up AgentSweep");
+        assert_eq!(welcome["title"], "Set up AgentPatrol");
         let lines: Vec<&str> = welcome["lines"]
             .as_array()
             .expect("lines")
@@ -1260,7 +1260,7 @@ mod tests {
             self.keys.borrow_mut().push(key.ending());
             if self.refuse_key {
                 return Err(ClientError::Request(
-                    agentsweep_ipc::protocol::RequestError::new("malformed", "not a key"),
+                    agentpatrol_ipc::protocol::RequestError::new("malformed", "not a key"),
                 ));
             }
             Ok(unanswered())

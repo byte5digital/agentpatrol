@@ -24,15 +24,15 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::Primitive;
-use agentsweep_core::composite::{Step, carry_out};
-use agentsweep_core::entry_edit::{EntryPath, Format};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Item, Kind, Scope, Shape, canonical_entry, sha256_hex};
-use agentsweep_core::quarantine::{
+use agentpatrol_core::adapter::Primitive;
+use agentpatrol_core::composite::{Step, carry_out};
+use agentpatrol_core::entry_edit::{EntryPath, Format};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Item, Kind, Scope, Shape, canonical_entry, sha256_hex};
+use agentpatrol_core::quarantine::{
     EnforcementError, MoveOutPlan, Receipt, Store, current_hash, settled,
 };
-use agentsweep_core::views::{HookView, ParsedView};
+use agentpatrol_core::views::{HookView, ParsedView};
 use serde_json::Value;
 
 use crate::{
@@ -55,7 +55,7 @@ pub fn enforce(
         Kind::Plugin => plugin(adapter, host, store, item, primitives),
         Kind::Marketplace => marketplace(adapter, host, store, item, primitives),
         _ => {
-            agentsweep_core::quarantine::move_out_only(host, store, item, adapter.caps, primitives)
+            agentpatrol_core::quarantine::move_out_only(host, store, item, adapter.caps, primitives)
         }
     }
 }
@@ -281,7 +281,7 @@ fn at<'a>(value: &'a Value, entry: &EntryPath) -> Option<&'a Value> {
 }
 
 /// The script a hook entry runs, when it sits inside a Surface this scanner
-/// covers and is therefore AgentSweep's to move (spec section 5.2).
+/// covers and is therefore AgentPatrol's to move (spec section 5.2).
 fn hook_script(adapter: &ClaudeCode, host: &Host, item: &Item) -> Option<PathBuf> {
     if item.kind != Kind::Hook {
         return None;
@@ -421,6 +421,6 @@ fn read(host: &Host, path: &Path) -> Result<String, EnforcementError> {
 }
 
 /// The hash the script a hook points at has right now.
-fn script_hash(host: &Host, script: &Path, caps: agentsweep_core::item::TreeCaps) -> String {
+fn script_hash(host: &Host, script: &Path, caps: agentpatrol_core::item::TreeCaps) -> String {
     current_hash(host, script, Shape::File, caps).unwrap_or_default()
 }

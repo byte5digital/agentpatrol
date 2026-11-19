@@ -35,23 +35,24 @@ use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{Duration, Instant};
 
-use agentsweep_ipc::{SOCKET_NAME, default_socket_path};
+use agentpatrol_ipc::{SOCKET_NAME, default_socket_path};
 use serde_json::{Value, json};
 
 /// Keeps one test's temporary paths apart from another's.
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
 /// The per-call sentence of spec section 7.5.
-const PER_CALL: &str = "AgentSweep blocked this step: the skill, tool or script it uses is \
+const PER_CALL: &str = "AgentPatrol blocked this step: the skill, tool or script it uses is \
                         flagged and waits for the user's decision. Do not retry or work around \
-                        it. Tell the user to open AgentSweep.";
+                        it. Tell the user to open AgentPatrol.";
 
 /// The per-turn project sentence of spec section 7.5 for one open Finding.
-const PROJECT_ONE: &str = "AgentSweep stopped this turn. 1 item in this project needs your \
-                           decision. Open AgentSweep, decide, then try again.";
+const PROJECT_ONE: &str = "AgentPatrol stopped this turn. 1 item in this project needs your \
+                           decision. Open AgentPatrol, decide, then try again.";
 
 /// The fail-open answer of spec section 7.4.
-const FAIL_OPEN: &str = "{\"systemMessage\":\"AgentSweep is not running, nothing was checked.\"}\n";
+const FAIL_OPEN: &str =
+    "{\"systemMessage\":\"AgentPatrol is not running, nothing was checked.\"}\n";
 
 /// The defanged Threat: a download from a `.invalid` host piped into `sh`,
 /// which Rule 0001 fires on.
@@ -64,7 +65,7 @@ const PLANTED_SCRIPT: &str = "#!/bin/sh\necho setup\n";
 /// The binary this suite was compiled as: the in-bundle command line
 /// interface.
 fn this_build() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_agentsweep"))
+    PathBuf::from(env!("CARGO_BIN_EXE_agentpatrol"))
 }
 
 /// The daemon binary, built offline and from the lock file into the target
@@ -78,12 +79,12 @@ fn daemon_build() -> PathBuf {
                 .parent()
                 .and_then(Path::parent)
                 .expect("the target directory")
-                .join("agentsweep-variants");
+                .join("agentpatrol-variants");
             let output = Command::new(env!("CARGO"))
                 .arg("build")
                 .arg("--target-dir")
                 .arg(&target)
-                .args(["-p", "agentsweep-daemon", "--bin", "agentsweepd"])
+                .args(["-p", "agentpatrol-daemon", "--bin", "agentpatrold"])
                 .args(["--locked", "--offline"])
                 .current_dir(env!("CARGO_MANIFEST_DIR"))
                 .env_remove("CARGO_TARGET_DIR")
@@ -94,7 +95,7 @@ fn daemon_build() -> PathBuf {
                 "the daemon did not build:\n{}",
                 String::from_utf8_lossy(&output.stderr)
             );
-            target.join("debug").join("agentsweepd")
+            target.join("debug").join("agentpatrold")
         })
         .clone()
 }
@@ -228,7 +229,7 @@ impl Machine {
         assert_ne!(self.socket(), default_socket_path());
         assert_ne!(
             self.data(),
-            real_home.join("Library/Application Support/de.byte5.agentsweep")
+            real_home.join("Library/Application Support/de.byte5.agentpatrol")
         );
     }
 }
@@ -248,9 +249,9 @@ impl Daemon {
     /// Starts the daemon over the machine, the chain key held in memory, and
     /// waits until its start Full Scan has finished.
     fn start(machine: &Machine) -> Daemon {
-        let daemon = machine.bundle().join("agentsweepd");
+        let daemon = machine.bundle().join("agentpatrold");
         place(&daemon_build(), &daemon);
-        place(&this_build(), &machine.bundle().join("agentsweep"));
+        place(&this_build(), &machine.bundle().join("agentpatrol"));
         let child = Command::new(&daemon)
             .arg("--data-dir")
             .arg(machine.data())
@@ -288,7 +289,7 @@ impl Daemon {
         }
     }
 
-    /// Stops the daemon, the way a stopped AgentSweep looks to the Gate.
+    /// Stops the daemon, the way a stopped AgentPatrol looks to the Gate.
     fn stop(&mut self) {
         if let Some(mut child) = self.child.take() {
             let _ = child.kill();
@@ -523,7 +524,7 @@ fn the_registered_gate_blocks_allows_and_fails_open_from_the_outside() {
     let ids = open_finding_ids(&before);
     assert_eq!(ids.len(), 2, "both planted skills stay open:\n{before}");
 
-    let bundled_cli = machine.bundle().join("agentsweep");
+    let bundled_cli = machine.bundle().join("agentpatrol");
     let mut entries = Vec::new();
     for agent in ["claude-code", "codex"] {
         let submit = registered(&machine, agent, "UserPromptSubmit");

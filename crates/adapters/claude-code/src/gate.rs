@@ -10,16 +10,16 @@
 //!
 //! Each group is appended after the groups already written, so nothing the
 //! user registered moves. Another tool may append its own handler into a
-//! group AgentSweep wrote, so AgentSweep's handler is recognised by the
+//! group AgentPatrol wrote, so AgentPatrol's handler is recognised by the
 //! handler itself, wherever it sits (spec section 7.6): a group is appended
-//! only for an event that carries no handler of AgentSweep's under the Gate's
-//! matcher. A handler that carries AgentSweep's arguments and timeout under
-//! another command line interface path is AgentSweep's own entry after the
+//! only for an event that carries no handler of AgentPatrol's under the Gate's
+//! matcher. A handler that carries AgentPatrol's arguments and timeout under
+//! another command line interface path is AgentPatrol's own entry after the
 //! bundle moved, and registering takes it out, so there is exactly one
-//! AgentSweep entry per event (the owner's decision of 2026-10-14). An entry
+//! AgentPatrol entry per event (the owner's decision of 2026-10-14). An entry
 //! edited in any other way is never repaired in place: a fresh one is
 //! appended and the edited one stays, a Hook Item whose locator changed.
-//! Removal takes out exactly AgentSweep's handlers, command, arguments and
+//! Removal takes out exactly AgentPatrol's handlers, command, arguments and
 //! timeout alike, and a group only when that left it empty; another tool's
 //! handler in a shared group stays where it is. Every entry written or taken
 //! away is named by the id and hash the enumeration gives its Hook Item,
@@ -28,20 +28,20 @@
 //! The check also reads what switches hooks off. A managed
 //! `allowManagedHooksOnly` or `disableAllHooks` is managed policy, and
 //! nothing is written; a User-scope `disableAllHooks` is the user's own
-//! choice, which AgentSweep reports and never writes (spec section 7.6 as
+//! choice, which AgentPatrol reports and never writes (spec section 7.6 as
 //! amended on 2026-10-14).
 
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use agentsweep_core::adapter::Enumeration;
-use agentsweep_core::entry_edit::{EditError, EntryPath, append_json, drop_json_members};
-use agentsweep_core::gate_registration::{
+use agentpatrol_core::adapter::Enumeration;
+use agentpatrol_core::entry_edit::{EditError, EntryPath, append_json, drop_json_members};
+use agentpatrol_core::gate_registration::{
     GATE_TIMEOUT_SECONDS, GateCheck, GateCommand, GateEntry, GateError, GateWrite, SurfaceWriter,
     rewrite,
 };
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{ItemId, Kind, Scope, sha256_hex};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{ItemId, Kind, Scope, sha256_hex};
 use serde_json::{Value, json};
 
 use crate::document::{Document, surface_name};
@@ -76,7 +76,7 @@ pub fn group(matcher: Option<&str>, command: &GateCommand) -> Value {
     }
 }
 
-/// True when `handler`, under `event`, is AgentSweep's own: exactly the
+/// True when `handler`, under `event`, is AgentPatrol's own: exactly the
 /// handler the Gate writes, under one of the Gate's events, whatever group it
 /// sits in and whatever else that group holds.
 fn is_ours(event: &str, handler: &Value, ours: &Value) -> bool {
@@ -109,7 +109,7 @@ fn under_gate_matcher(event: &str, matcher: &str) -> bool {
         .any(|(name, gate)| *name == event && matcher == gate.unwrap_or_default())
 }
 
-/// The events that carry AgentSweep's handler, unchanged, under the matcher
+/// The events that carry AgentPatrol's handler, unchanged, under the matcher
 /// the Gate gives them, whether its group holds it alone or shares it.
 fn registered_events(document: &Document, command: &GateCommand) -> BTreeSet<&'static str> {
     let ours = handler(command);
@@ -127,9 +127,9 @@ fn registered_events(document: &Document, command: &GateCommand) -> BTreeSet<&'s
     found
 }
 
-/// True when `handler`, in `group` under `event`, carries AgentSweep's
+/// True when `handler`, in `group` under `event`, carries AgentPatrol's
 /// arguments and timeout under the matcher the Gate gives the event, but runs
-/// a command line interface at another path. That is AgentSweep's own entry
+/// a command line interface at another path. That is AgentPatrol's own entry
 /// after the bundle moved, and the registration replaces it (the owner's
 /// decision of 2026-10-14), whatever else the group holds.
 fn is_moved(event: &str, group: &Value, handler: &Value, ours: &Value) -> bool {
@@ -150,7 +150,7 @@ fn is_moved(event: &str, group: &Value, handler: &Value, ours: &Value) -> bool {
         && handler.get("command") != ours.get("command")
 }
 
-/// The Gate's events that carry a handler of AgentSweep's under another path.
+/// The Gate's events that carry a handler of AgentPatrol's under another path.
 fn moved_events(document: &Document, command: &GateCommand) -> BTreeSet<&'static str> {
     let ours = handler(command);
     let carries = |event: &str, group: &Value| {
@@ -205,9 +205,9 @@ fn entries_where(
         .collect()
 }
 
-/// Takes out every handler that is AgentSweep's under another path, a group
+/// Takes out every handler that is AgentPatrol's under another path, a group
 /// only when that left it empty, appends a group for every event that does
-/// not carry AgentSweep's handler unchanged, and names the entries written
+/// not carry AgentPatrol's handler unchanged, and names the entries written
 /// and taken away.
 pub fn register(
     adapter: &ClaudeCode,
@@ -277,7 +277,7 @@ fn managed_policy_blocks(adapter: &ClaudeCode, host: &Host) -> bool {
         })
 }
 
-/// Whether every event carries AgentSweep's entry unchanged, and whether
+/// Whether every event carries AgentPatrol's entry unchanged, and whether
 /// managed policy or the user's own settings switch hooks off.
 pub fn check(adapter: &ClaudeCode, host: &Host, command: &GateCommand) -> GateCheck {
     if managed_policy_blocks(adapter, host) {
@@ -310,7 +310,7 @@ pub fn check(adapter: &ClaudeCode, host: &Host, command: &GateCommand) -> GateCh
     }
 }
 
-/// Takes out AgentSweep's handlers, a group only when that left it empty,
+/// Takes out AgentPatrol's handlers, a group only when that left it empty,
 /// and names the entries taken away. Another tool's handler in a shared group
 /// stays where it is.
 pub fn remove(
@@ -355,13 +355,13 @@ mod tests {
     use std::path::Path;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    use agentsweep_core::adapter::SurfaceAdapter;
-    use agentsweep_core::gate_registration::{WriteError, hash_now};
-    use agentsweep_core::item::Shape;
+    use agentpatrol_core::adapter::SurfaceAdapter;
+    use agentpatrol_core::gate_registration::{WriteError, hash_now};
+    use agentpatrol_core::item::Shape;
 
     /// Where the bundle puts the command line interface. It does not exist on
     /// the machine the test runs on, and nothing runs it.
-    const CLI: &str = "/Applications/AgentSweep.app/Contents/MacOS/agentsweep";
+    const CLI: &str = "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol";
 
     /// The compare and the write, as the daemon's writer does them, and
     /// optionally somebody else's edit between the read and the write.
@@ -407,7 +407,7 @@ mod tests {
     impl Home {
         fn new() -> Home {
             let root = std::env::temp_dir().join(format!(
-                "agentsweep-claude-code-gate-{}-{}",
+                "agentpatrol-claude-code-gate-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
@@ -588,7 +588,7 @@ mod tests {
         }
     }
 
-    /// The file under the AgentSweep config-dir override is written and the
+    /// The file under the AgentPatrol config-dir override is written and the
     /// default one is not touched.
     #[test]
     fn the_config_dir_override_is_the_file_written() {
@@ -715,12 +715,12 @@ mod tests {
         assert!(again.is_empty());
     }
 
-    /// A group whose handler differs from AgentSweep's in command, arguments
-    /// or timeout is not AgentSweep's to take away. From a group where
-    /// AgentSweep's handler sits beside one of the user's, only AgentSweep's
+    /// A group whose handler differs from AgentPatrol's in command, arguments
+    /// or timeout is not AgentPatrol's to take away. From a group where
+    /// AgentPatrol's handler sits beside one of the user's, only AgentPatrol's
     /// handler goes and the group stays with the user's.
     #[test]
-    fn removing_leaves_every_handler_that_is_not_exactly_agentsweeps() {
+    fn removing_leaves_every_handler_that_is_not_exactly_agentpatrols() {
         let home = Home::new();
         let ours = handler(&command());
         let mut other_timeout = ours.clone();
@@ -728,7 +728,7 @@ mod tests {
         let mut other_args = ours.clone();
         other_args["args"] = json!(["gate", "--agent", "codex"]);
         let mut other_command = ours.clone();
-        other_command["command"] = json!("/opt/elsewhere/agentsweep");
+        other_command["command"] = json!("/opt/elsewhere/agentpatrol");
         let shared = json!({"hooks": [ours.clone(), {"type": "command", "command": "./mine.sh"}]});
         let file = json!({"hooks": {"UserPromptSubmit": [
             {"hooks": [other_timeout]},
@@ -762,7 +762,7 @@ mod tests {
         json!({"type": "command", "command": "/usr/local/bin/othertool hook claude", "timeout": 10})
     }
 
-    /// How many of AgentSweep's handlers each event of the file holds.
+    /// How many of AgentPatrol's handlers each event of the file holds.
     fn count_ours(value: &Value) -> Vec<(String, usize)> {
         let ours = handler(&command());
         EVENTS
@@ -780,9 +780,9 @@ mod tests {
             .collect()
     }
 
-    /// A group another tool shares with AgentSweep's handler, in either
-    /// order: registering twice adds no second handler of AgentSweep's, and
-    /// removing takes out AgentSweep's handler alone, leaving the other
+    /// A group another tool shares with AgentPatrol's handler, in either
+    /// order: registering twice adds no second handler of AgentPatrol's, and
+    /// removing takes out AgentPatrol's handler alone, leaving the other
     /// tool's handler in its group (spec section 7.6).
     #[test]
     fn a_shared_group_gets_no_second_handler_and_keeps_the_other_tools_on_removal() {
@@ -847,14 +847,14 @@ mod tests {
         }
     }
 
-    /// AgentSweep's handler under another path inside a shared group is
+    /// AgentPatrol's handler under another path inside a shared group is
     /// replaced: it goes, the other tool's handler stays in its group, and
     /// the fresh handler comes in a group of its own.
     #[test]
     fn registering_replaces_a_handler_under_another_path_inside_a_shared_group() {
         let home = Home::new();
         let old = handler(&GateCommand::at(
-            "/Volumes/Old/AgentSweep.app/Contents/MacOS/agentsweep",
+            "/Volumes/Old/AgentPatrol.app/Contents/MacOS/agentpatrol",
         ));
         let file = json!({"hooks": {"UserPromptSubmit": [{"hooks": [old, theirs()]}]}});
         std::fs::write(
@@ -887,7 +887,7 @@ mod tests {
     #[test]
     fn the_workspace_adapter_has_no_gate() {
         let home = Home::new();
-        let workspace = agentsweep_adapter_workspace::Workspace::new();
+        let workspace = agentpatrol_adapter_workspace::Workspace::new();
         assert_eq!(
             workspace.check_gate(&home.host(), &command()),
             GateCheck::NoGate
@@ -903,15 +903,15 @@ mod tests {
         assert!(!home.settings().exists());
     }
 
-    /// The owner's decision of 2026-10-14: an entry with AgentSweep's
-    /// arguments and timeout under another path is AgentSweep's after the
+    /// The owner's decision of 2026-10-14: an entry with AgentPatrol's
+    /// arguments and timeout under another path is AgentPatrol's after the
     /// bundle moved, and registering leaves exactly one entry per event.
     #[test]
     fn registering_replaces_the_entries_under_another_cli_path() {
         let home = Home::new();
         std::fs::write(home.settings(), USERS_OWN).expect("a settings file");
         let adapter = ClaudeCode::new();
-        let old = GateCommand::at("/Volumes/Old/AgentSweep.app/Contents/MacOS/agentsweep");
+        let old = GateCommand::at("/Volumes/Old/AgentPatrol.app/Contents/MacOS/agentpatrol");
         let before = adapter
             .register_gate(&home.host(), &Writer::plain(), &old)
             .expect("registered under the old path")

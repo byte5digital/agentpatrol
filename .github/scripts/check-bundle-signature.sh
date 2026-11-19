@@ -1,5 +1,5 @@
 #!/bin/sh
-# The release bundle checker: inspects an AgentSweep bundle as Tauri leaves it,
+# The release bundle checker: inspects an AgentPatrol bundle as Tauri leaves it,
 # and the DMG around it, and reports every miss at once with the file it
 # concerns, so the release workflow fails on them before a human sees the draft
 # and the human can run the same script on the downloaded draft. CI runs it in
@@ -13,8 +13,8 @@
 #             identity the bundle was signed with, as in
 #             APPLE_SIGNING_IDENTITY ("Developer ID Application: <name>
 #             (<Team ID>)").
-#   bundle    AgentSweep.app, a DMG holding it, or the updater archive
-#             AgentSweep.app.tar.gz.
+#   bundle    AgentPatrol.app, a DMG holding it, or the updater archive
+#             AgentPatrol.app.tar.gz.
 #
 # Checked on every Mach-O inside the app (the app executable, the daemon, the
 # CLI and anything else Tauri placed), in every architecture (release
@@ -24,7 +24,7 @@
 #   arm64 and x86_64.
 # - The hardened runtime flag is set, and `codesign -d --entitlements -` shows
 #   none.
-# - The daemon `agentsweepd` has the identifier `de.byte5.agentsweep.daemon`,
+# - The daemon `agentpatrold` has the identifier `de.byte5.agentpatrol.daemon`,
 #   which codesign takes from the Info.plist the daemon binary embeds, since
 #   Tauri signs sidecars without naming an identifier.
 # - Release mode only: `Timestamp=` is present, the signature is not ad hoc,
@@ -39,7 +39,7 @@
 #   `development-keys` feature pins the development pairs, whose secret halves
 #   are in the repository, and carries their public keys.
 # - The daemon carries a filled Team ID in its peer check, the record
-#   `agentsweep-team-id=<Team ID>;` the check reads at run time. A daemon
+#   `agentpatrol-team-id=<Team ID>;` the check reads at run time. A daemon
 #   without one admits nobody. In release mode it must be the Team ID the
 #   identity names, so a daemon built for another team is refused too.
 # - Release mode only: no development updater public key. The app pins the
@@ -56,7 +56,7 @@
 
 set -eu
 
-daemon_identifier="de.byte5.agentsweep.daemon"
+daemon_identifier="de.byte5.agentpatrol.daemon"
 
 # The development public keys, whose secret halves are committed for the tests:
 # the Rule Pack pairs of the core's `development::KEYS`, and the updater pair
@@ -67,7 +67,7 @@ development_rule_pack_keys="RWTZoZrRXs0kE+haygvOOKaRDbtDUSc8L5YKr/o+X3VsI5peZv07
 development_updater_keys="dW50cnVzdGVkIGNvbW1lbnQ6IEFnZW50U3dlZXAgdXBkYXRlciBERVZFTE9QTUVOVCBwdWJsaWMga2V5ClJXVE5wUUsyM1R2VkJCSlBEdVB4Z3BZQXl4bnl6RGxhT1FmR2pJSit4OXd2QkJBWG9uT01hci9lCg== RWTNpQK23TvVBBJPDuPxgpYAyxnyzDlaOQfGjIJ+x9wvBBAXonOMar/e"
 
 # The record of the Team ID the daemon's peer check reads, around the Team ID.
-team_id_record_prefix="agentsweep-team-id="
+team_id_record_prefix="agentpatrol-team-id="
 team_id_record_suffix=";"
 
 if [ "$#" -ne 2 ] || [ -z "$1" ] || [ -z "$2" ]; then
@@ -141,12 +141,12 @@ case "$bundle" in
 		echo "cannot mount $bundle" >&2
 		exit 1
 	fi
-	app="$mounted/AgentSweep.app"
+	app="$mounted/AgentPatrol.app"
 	;;
 *.app.tar.gz)
 	mkdir "$work/archive"
 	tar -xzf "$bundle" -C "$work/archive"
-	app="$work/archive/AgentSweep.app"
+	app="$work/archive/AgentPatrol.app"
 	;;
 *)
 	echo "not an app, a DMG or an updater archive: $bundle" >&2
@@ -155,7 +155,7 @@ case "$bundle" in
 esac
 
 if [ ! -d "$app/Contents/MacOS" ]; then
-	echo "no AgentSweep.app with Contents/MacOS in $bundle" >&2
+	echo "no AgentPatrol.app with Contents/MacOS in $bundle" >&2
 	exit 1
 fi
 echo "Checking $app ($mode mode, identity: $identity)"
@@ -187,7 +187,7 @@ check_contents() {
 			fi
 		done
 	fi
-	if [ "$contents_relative" = "Contents/MacOS/agentsweepd" ]; then
+	if [ "$contents_relative" = "Contents/MacOS/agentpatrold" ]; then
 		records="$(LC_ALL=C grep -a -o -- "$team_id_record_prefix[A-Z0-9]*$team_id_record_suffix" "$piece" | LC_ALL=C sort -u)" || true
 		case "$(echo "$records" | grep -c .)" in
 		0)
@@ -277,7 +277,7 @@ while IFS= read -r binary; do
 	for arch in $archs; do
 		check_code "$binary" "$arch" "$relative ($arch)"
 		check_contents "$binary" "$arch" "$relative ($arch)" "$relative"
-		if [ "$relative" = "Contents/MacOS/agentsweepd" ]; then
+		if [ "$relative" = "Contents/MacOS/agentpatrold" ]; then
 			identifier="$(codesign -dvv --arch "$arch" "$binary" 2>&1 | sed -n 's/^Identifier=//p')"
 			if [ "$identifier" != "$daemon_identifier" ]; then
 				fail "$relative ($arch) has the identifier \"$identifier\", not \"$daemon_identifier\""
@@ -290,11 +290,11 @@ while IFS= read -r binary; do
 	done
 done <"$work/machos"
 
-if [ ! -f "$app/Contents/MacOS/agentsweepd" ]; then
-	fail "the bundle carries no daemon at Contents/MacOS/agentsweepd"
+if [ ! -f "$app/Contents/MacOS/agentpatrold" ]; then
+	fail "the bundle carries no daemon at Contents/MacOS/agentpatrold"
 fi
-if [ ! -f "$app/Contents/MacOS/agentsweep" ]; then
-	fail "the bundle carries no CLI at Contents/MacOS/agentsweep"
+if [ ! -f "$app/Contents/MacOS/agentpatrol" ]; then
+	fail "the bundle carries no CLI at Contents/MacOS/agentpatrol"
 fi
 
 if [ "$mode" = "release" ]; then

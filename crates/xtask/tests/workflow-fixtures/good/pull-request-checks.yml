@@ -25,5 +25,5 @@ jobs:
       - name: Use the token every job has
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh api repos/example/agentsweep
+        run: gh api repos/example/agentpatrol
       - uses: ./local-action

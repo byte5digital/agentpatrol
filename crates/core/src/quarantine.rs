@@ -569,7 +569,7 @@ pub(crate) mod disk {
 
         let directory = path.parent().unwrap_or(Path::new("."));
         let name = path.file_name().unwrap_or_default().to_string_lossy();
-        let temporary = directory.join(format!(".{name}.agentsweep"));
+        let temporary = directory.join(format!(".{name}.agentpatrol"));
         {
             let mut file = std::fs::File::create(&temporary)?;
             file.write_all(text.as_bytes())?;

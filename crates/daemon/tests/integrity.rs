@@ -16,22 +16,22 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::Duration;
 
-use agentsweep_core::chain::ChainState;
-use agentsweep_core::envelope::{ChainId, Timestamp};
-use agentsweep_core::eventlog::{Action, Actor, Event, EventLog, EventLogView, EventLogWriter};
-use agentsweep_core::health::Rung;
-use agentsweep_core::integrity::IntegrityRecord;
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::rules::{BUNDLED_RULES, RulePack, RuleSource};
-use agentsweep_core::state::Trigger;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Role, StateEvent, Status};
+use agentpatrol_core::chain::ChainState;
+use agentpatrol_core::envelope::{ChainId, Timestamp};
+use agentpatrol_core::eventlog::{Action, Actor, Event, EventLog, EventLogView, EventLogWriter};
+use agentpatrol_core::health::Rung;
+use agentpatrol_core::integrity::IntegrityRecord;
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::rules::{BUNDLED_RULES, RulePack, RuleSource};
+use agentpatrol_core::state::Trigger;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Role, StateEvent, Status};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -74,7 +74,7 @@ struct Sandbox {
 impl Sandbox {
     fn empty(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-integrity-{purpose}-{}-{}",
+            "agentpatrol-integrity-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -509,15 +509,15 @@ fn neither_answer_nor_the_records_take_a_path() {
         stream
             .set_read_timeout(Some(Duration::from_secs(30)))
             .expect("a timeout");
-        agentsweep_ipc::write_frame(
+        agentpatrol_ipc::write_frame(
             &mut stream,
-            &agentsweep_ipc::Message::Hello(agentsweep_ipc::Hello::of(Role::Cli)).to_value(),
+            &agentpatrol_ipc::Message::Hello(agentpatrol_ipc::Hello::of(Role::Cli)).to_value(),
         )
         .expect("a handshake");
-        agentsweep_ipc::read_frame(&mut stream).expect("a welcome");
-        agentsweep_ipc::write_frame(&mut stream, &request).expect("a request");
+        agentpatrol_ipc::read_frame(&mut stream).expect("a welcome");
+        agentpatrol_ipc::write_frame(&mut stream, &request).expect("a request");
         stream.flush().expect("sent");
-        let answer = agentsweep_ipc::read_frame(&mut stream);
+        let answer = agentpatrol_ipc::read_frame(&mut stream);
         assert!(
             !matches!(answer, Ok(Some(ref value)) if value["type"] == "response"),
             "{request} was answered: {answer:?}"

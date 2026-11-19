@@ -2,7 +2,7 @@
 //!
 //! A tree Item is one directory Claude Code loads as a unit: a skill folder, a
 //! plugin version, a marketplace clone. The manifest, the caps and the choice
-//! of which files reach a Rule are the core's ([`agentsweep_core::item::Tree`]).
+//! of which files reach a Rule are the core's ([`agentpatrol_core::item::Tree`]).
 //! What is here is how this adapter names one, where it follows a symbolic
 //! link, and what it does with a tree that is too large to check fully.
 //!
@@ -13,9 +13,9 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::{Enumeration, Problem, ProblemReason};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope, Tree, TreeCaps};
+use agentpatrol_core::adapter::{Enumeration, Problem, ProblemReason};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope, Tree, TreeCaps};
 
 use crate::document;
 
@@ -46,7 +46,7 @@ impl Placement {
         }
     }
 
-    /// The managed directory: an administrator's, read-only for AgentSweep.
+    /// The managed directory: an administrator's, read-only for AgentPatrol.
     pub fn managed() -> Placement {
         Placement {
             scope: Scope::Managed,

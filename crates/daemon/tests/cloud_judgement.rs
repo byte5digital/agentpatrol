@@ -1,5 +1,5 @@
 //! The `judge` request, end to end (spec section 4.4): the in-bundle
-//! `agentsweep scan <dir>` hands the daemon a redacted Judgement Request for
+//! `agentpatrol scan <dir>` hands the daemon a redacted Judgement Request for
 //! the Claude engine and gets the Verdict back. The daemon answers from the
 //! Verdict cache first, under the cloud caps, through every check, records
 //! the spend and caches the Verdict.
@@ -22,25 +22,25 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::eventlog::{EventLog, EventLogWriter};
-use agentsweep_core::item::{Activation, Item, Kind, Provenance, Scope};
-use agentsweep_core::judgement::{Category, EngineError, JudgementEngine, Prompt, Usage, Verdict};
-use agentsweep_core::judgement_request::{ByteEstimate, Normalisation, RequestBuilder};
-use agentsweep_core::keychain::{ChainKey, ClaudeKeyStore, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::{self, JudgementSettings, Settings, SettingsFile, SettingsWriter};
-use agentsweep_core::spend::{JudgementCap, LocalDate, SpendRecord};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::cloud_caps::Calendar;
-use agentsweep_daemon::due::PowerState;
-use agentsweep_daemon::judgement_queue::{Engines, Opened};
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::judge::{JudgeAnswer, JudgeOutcome, JudgeRequest};
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::Role;
+use agentpatrol_core::eventlog::{EventLog, EventLogWriter};
+use agentpatrol_core::item::{Activation, Item, Kind, Provenance, Scope};
+use agentpatrol_core::judgement::{Category, EngineError, JudgementEngine, Prompt, Usage, Verdict};
+use agentpatrol_core::judgement_request::{ByteEstimate, Normalisation, RequestBuilder};
+use agentpatrol_core::keychain::{ChainKey, ClaudeKeyStore, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::{self, JudgementSettings, Settings, SettingsFile, SettingsWriter};
+use agentpatrol_core::spend::{JudgementCap, LocalDate, SpendRecord};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::cloud_caps::Calendar;
+use agentpatrol_daemon::due::PowerState;
+use agentpatrol_daemon::judgement_queue::{Engines, Opened};
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::judge::{JudgeAnswer, JudgeOutcome, JudgeRequest};
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::Role;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -162,7 +162,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str, engine: settings::JudgementEngine, answer: Arc<Scripted>) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-judge-{purpose}-{}-{}",
+            "agentpatrol-judge-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -297,7 +297,7 @@ fn wait_until(what: &str, mut done: impl FnMut() -> bool) {
 }
 
 /// The redacted request the command line builds for the odd file.
-fn odd_request() -> agentsweep_core::judgement_request::JudgementRequest {
+fn odd_request() -> agentpatrol_core::judgement_request::JudgementRequest {
     let item = Item::file(
         "claude-code",
         Scope::Project(PathBuf::from("/src/demo")),

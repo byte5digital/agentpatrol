@@ -1,4 +1,4 @@
-//! The Baseline: the content hash AgentSweep last accepted for each Item.
+//! The Baseline: the content hash AgentPatrol last accepted for each Item.
 //!
 //! `baseline.jsonl` is the second hash-chained file beside the Event Log: same
 //! record envelope, same Keychain key, same verification routine, daemon-only
@@ -39,9 +39,9 @@ pub enum AcceptedBy {
     Bootstrap,
     /// A Scan ended with no open Threat Finding on the Item.
     CleanScan,
-    /// AgentSweep wrote the content itself: a Quarantine, a Restore, a
+    /// AgentPatrol wrote the content itself: a Quarantine, a Restore, a
     /// re-enforce, a Re-enable, a Gate registration.
-    AgentsweepWrite,
+    AgentpatrolWrite,
     /// The content carries Trust for its kind.
     Trust,
     /// The user said the change was their own doing.
@@ -53,7 +53,7 @@ impl AcceptedBy {
     pub const ALL: [AcceptedBy; 5] = [
         AcceptedBy::Bootstrap,
         AcceptedBy::CleanScan,
-        AcceptedBy::AgentsweepWrite,
+        AcceptedBy::AgentpatrolWrite,
         AcceptedBy::Trust,
         AcceptedBy::Acknowledge,
     ];
@@ -63,7 +63,7 @@ impl AcceptedBy {
         match self {
             AcceptedBy::Bootstrap => "bootstrap",
             AcceptedBy::CleanScan => "clean-scan",
-            AcceptedBy::AgentsweepWrite => "agentsweep-write",
+            AcceptedBy::AgentpatrolWrite => "agentpatrol-write",
             AcceptedBy::Trust => "trust",
             AcceptedBy::Acknowledge => "acknowledge",
         }
@@ -81,7 +81,7 @@ impl AcceptedBy {
     pub fn is_known_action(self) -> bool {
         matches!(
             self,
-            AcceptedBy::AgentsweepWrite | AcceptedBy::Trust | AcceptedBy::Acknowledge
+            AcceptedBy::AgentpatrolWrite | AcceptedBy::Trust | AcceptedBy::Acknowledge
         )
     }
 }
@@ -92,7 +92,7 @@ impl std::fmt::Display for AcceptedBy {
     }
 }
 
-/// Whether the Item was there the last time AgentSweep looked.
+/// Whether the Item was there the last time AgentPatrol looked.
 ///
 /// Disappearance is never a Finding. A record is marked absent and kept, and
 /// an Item that comes back with the accepted hash is `unchanged` again (spec
@@ -117,7 +117,7 @@ impl Presence {
         }
     }
 
-    /// True when the Item was gone the last time AgentSweep looked.
+    /// True when the Item was gone the last time AgentPatrol looked.
     pub fn is_absent(self) -> bool {
         matches!(self, Presence::Absent { .. })
     }
@@ -438,7 +438,7 @@ pub struct BaselineRecord {
     pub item_id: ItemId,
     /// Its Surface kind.
     pub kind: Kind,
-    /// The hash AgentSweep last accepted.
+    /// The hash AgentPatrol last accepted.
     pub accepted_hash: String,
     /// When it was accepted.
     pub accepted_at: Timestamp,
@@ -454,7 +454,7 @@ pub struct BaselineRecord {
     /// When the Item first stopped matching the accepted hash, absent while
     /// the two agree.
     pub first_differed_at: Option<Timestamp>,
-    /// Whether the Item was there the last time AgentSweep looked.
+    /// Whether the Item was there the last time AgentPatrol looked.
     pub state: Presence,
     /// Whether a key in hand can vouch for the record.
     pub origin: Origin,
@@ -549,7 +549,7 @@ impl BaselineRecord {
     /// the accepted one and nothing differs any more.
     ///
     /// A Scan that finds the Item at the hash that was already accepted does
-    /// not accept it again. The moment on the record is when AgentSweep first
+    /// not accept it again. The moment on the record is when AgentPatrol first
     /// took this content, because that is the date a Drift Finding reads back
     /// ("changed since your last Scan on <date>"), and because a record that
     /// moved only its own timestamps is a record not worth writing.
@@ -769,9 +769,9 @@ impl BaselineRecord {
 /// One record of the Baseline chain: an Item, or a stretch of coverage.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BaselineEntry {
-    /// What AgentSweep accepted for one Item.
+    /// What AgentPatrol accepted for one Item.
     Item(Box<BaselineRecord>),
-    /// Which Surface AgentSweep had already looked at.
+    /// Which Surface AgentPatrol had already looked at.
     Coverage(CoverageRecord),
 }
 
@@ -1159,7 +1159,7 @@ mod writer {
             self.writer.append(entry.to_payload())
         }
 
-        /// Appends what AgentSweep accepted for one Item.
+        /// Appends what AgentPatrol accepted for one Item.
         pub fn accept(&mut self, record: &BaselineRecord) -> Result<Envelope, ChainError> {
             self.append(&BaselineEntry::Item(Box::new(record.clone())))
         }
@@ -1502,7 +1502,7 @@ mod tests {
         assert!(taken.last_seen_fields.is_empty());
 
         // Seeing the same content again is not accepting it again: the moment
-        // on the record is when AgentSweep first took this content.
+        // on the record is when AgentPatrol first took this content.
         let again = taken.accepted(
             &second,
             moment("2026-09-24T12:00:00.000Z"),

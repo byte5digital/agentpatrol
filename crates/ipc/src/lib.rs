@@ -1,4 +1,4 @@
-//! The AgentSweep inter-process vocabulary.
+//! The AgentPatrol inter-process vocabulary.
 //!
 //! The daemon owns everything that protects; the application and the in-bundle
 //! command line interface are clients of it (spec section 6.2). What they say
@@ -38,7 +38,7 @@ pub use peer::{Nobody, Peer, PeerCheck, SameUser};
 pub use protocol::{
     ActionReport, AgentSessions, DO_NOT_OPEN_YET, EngineChange, EngineState, FolderFinding,
     FolderScanResult, GateEvent, GateReason, GateRequest, GateTool, GateVerdict, Hello,
-    McpServerRef, Message, NOTHING_RECORDED, Offer, RESTART_AGENTSWEEP, Refusal, Request,
+    McpServerRef, Message, NOTHING_RECORDED, Offer, RESTART_AGENTPATROL, Refusal, Request,
     RequestError, RevealedReceipt, Role, SAFE_TO_OPEN, Sessions, SettingsChange, SettingsState,
     StateEvent, Status, UninstallChoice, UninstallReport, check_version, offers, welcome,
 };
@@ -47,9 +47,9 @@ pub use socket::{Connection, Liveness, SOCKET_NAME, SocketListener, connect, def
 #[cfg(test)]
 mod tests {
     /// One name, one place. The socket is named after the bundle, as every
-    /// machine-readable name in AgentSweep is.
+    /// machine-readable name in AgentPatrol is.
     #[test]
     fn the_socket_is_named_after_the_bundle() {
-        assert!(super::SOCKET_NAME.starts_with(agentsweep_core::BUNDLE_ID));
+        assert!(super::SOCKET_NAME.starts_with(agentpatrol_core::BUNDLE_ID));
     }
 }

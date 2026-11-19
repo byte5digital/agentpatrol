@@ -6,7 +6,7 @@
 
 use std::fs;
 
-use agentsweep_xtask::repo_root;
+use agentpatrol_xtask::repo_root;
 
 fn read(relative: &str) -> String {
     fs::read_to_string(repo_root().join(relative)).expect("the file is in the repository")

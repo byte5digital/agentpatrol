@@ -10,23 +10,23 @@
 //! say, and a test holds the two together, so the label, the program and the
 //! keep-alive rule are written down once.
 
-use agentsweep_core::{BUNDLE_ID, DAEMON_LABEL};
+use agentpatrol_core::{BUNDLE_ID, DAEMON_LABEL};
 
 /// The file name SMAppService is asked for.
-pub const PLIST_NAME: &str = "de.byte5.agentsweep.daemon.plist";
+pub const PLIST_NAME: &str = "de.byte5.agentpatrol.daemon.plist";
 
 /// Where the bundle carries the plist, relative to `Contents`.
-pub const PLIST_IN_CONTENTS: &str = "Library/LaunchAgents/de.byte5.agentsweep.daemon.plist";
+pub const PLIST_IN_CONTENTS: &str = "Library/LaunchAgents/de.byte5.agentpatrol.daemon.plist";
 
 /// The daemon's binary name, which is also its sidecar name.
-pub const DAEMON_BINARY: &str = "agentsweepd";
+pub const DAEMON_BINARY: &str = "agentpatrold";
 
 /// The command line interface's binary name, the second sidecar.
-pub const CLI_BINARY: &str = "agentsweep";
+pub const CLI_BINARY: &str = "agentpatrol";
 
 /// The Apple judgement helper's binary name, the third sidecar: the only way
 /// to Apple's on-device model (spec section 4.4), found beside the daemon.
-pub const APPLE_JUDGE_BINARY: &str = "agentsweep-apple-judge";
+pub const APPLE_JUDGE_BINARY: &str = "agentpatrol-apple-judge";
 
 /// The daemon relative to the bundle: Tauri puts every sidecar in
 /// `Contents/MacOS`, beside the app's own executable.
@@ -97,11 +97,11 @@ mod tests {
 
     #[test]
     fn the_label_is_the_frozen_daemon_label_and_the_file_is_named_after_it() {
-        assert_eq!(DAEMON_LABEL, "de.byte5.agentsweep.daemon");
+        assert_eq!(DAEMON_LABEL, "de.byte5.agentpatrol.daemon");
         assert_eq!(PLIST_NAME, format!("{DAEMON_LABEL}.plist"));
         assert!(PLIST_IN_CONTENTS.ends_with(PLIST_NAME));
         assert!(render().contains(&format!("<string>{DAEMON_LABEL}</string>")));
-        assert!(render().contains("<string>Contents/MacOS/agentsweepd</string>"));
+        assert!(render().contains("<string>Contents/MacOS/agentpatrold</string>"));
     }
 
     /// The bundle carries the plist where SMAppService looks for it, and the
@@ -141,9 +141,9 @@ mod tests {
         assert!(info.contains("<key>LSUIElement</key>\n\t<true/>"), "{info}");
     }
 
-    /// The app's own executable must not be called `agentsweep`: the command
+    /// The app's own executable must not be called `agentpatrol`: the command
     /// line interface is, and both sit in `Contents/MacOS` on a file system
-    /// that does not tell `AgentSweep` from `agentsweep`.
+    /// that does not tell `AgentPatrol` from `agentpatrol`.
     #[test]
     fn the_app_executable_does_not_collide_with_a_sidecar() {
         let config = json("tauri.conf.json");

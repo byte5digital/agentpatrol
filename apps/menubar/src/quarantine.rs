@@ -27,12 +27,12 @@
 
 use std::collections::BTreeSet;
 
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::Actor;
-use agentsweep_core::finding::FindingState;
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::RecordedFinding;
-use agentsweep_ipc::protocol::ActivityLine;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::Actor;
+use agentpatrol_core::finding::FindingState;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::RecordedFinding;
+use agentpatrol_ipc::protocol::ActivityLine;
 use serde_json::{Value, json};
 
 use crate::actions::{Action, Confirm, card_in, offered, stopped_automatically};
@@ -49,7 +49,7 @@ pub const WITHDRAWN: &str = "The rule that stopped this was withdrawn.";
 pub const FIXED_VERSION: &str = "Fixed version available.";
 
 /// What Delete permanently says before it is carried out (spec section 5.1).
-pub const CANNOT_BE_UNDONE: &str = "This cannot be undone. AgentSweep deletes what it kept of \
+pub const CANNOT_BE_UNDONE: &str = "This cannot be undone. AgentPatrol deletes what it kept of \
      it, and it can never be restored.";
 
 /// What the button of Delete permanently and its confirmation say.
@@ -86,8 +86,8 @@ pub struct QuarantineEntry<'a> {
 fn stopped_line(finding: &RecordedFinding) -> String {
     let switched = finding.switched || neutralised_in_place(finding.kind);
     match (stopped_automatically(finding), switched) {
-        (true, false) => "AgentSweep stopped it by itself",
-        (true, true) => "AgentSweep switched it off by itself",
+        (true, false) => "AgentPatrol stopped it by itself",
+        (true, true) => "AgentPatrol switched it off by itself",
         (false, false) => "You stopped it",
         (false, true) => "You switched it off",
     }
@@ -271,8 +271,8 @@ pub fn view(findings: &Findings, activity: &Activity, posture: Posture) -> Value
 mod tests {
     use super::*;
 
-    use agentsweep_core::finding::Category;
-    use agentsweep_core::item::Kind;
+    use agentpatrol_core::finding::Category;
+    use agentpatrol_core::item::Kind;
 
     use crate::findings::tests::recorded;
 
@@ -313,7 +313,7 @@ mod tests {
             .collect()
     }
 
-    /// What AgentSweep took out by itself restores with Trust, what the user
+    /// What AgentPatrol took out by itself restores with Trust, what the user
     /// took out restores without; both say who and when, and both end with
     /// Delete permanently behind its confirmation.
     #[test]
@@ -334,7 +334,7 @@ mod tests {
         assert_eq!(listed.len(), 2);
 
         assert_eq!(listed[0].stopped_by, Some(Actor::Auto));
-        assert_eq!(listed[0].stopped_line, "AgentSweep stopped it by itself");
+        assert_eq!(listed[0].stopped_line, "AgentPatrol stopped it by itself");
         assert_eq!(
             listed[0].stopped_at,
             Timestamp::parse("2026-10-01T09:00:00.000Z")
@@ -380,7 +380,7 @@ mod tests {
         let listed = entries(&findings, &[], Posture::Developer);
         assert_eq!(
             listed[0].stopped_line,
-            "AgentSweep switched it off by itself"
+            "AgentPatrol switched it off by itself"
         );
         assert_eq!(listed[0].stopped_at, None);
         assert_eq!(

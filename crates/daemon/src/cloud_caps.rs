@@ -16,15 +16,15 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use agentsweep_core::eventlog::EventLog;
-use agentsweep_core::judgement::Usage;
-use agentsweep_core::keychain::KeySource;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::JudgementSettings;
-use agentsweep_core::spend::{
+use agentpatrol_core::eventlog::EventLog;
+use agentpatrol_core::judgement::Usage;
+use agentpatrol_core::keychain::KeySource;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::JudgementSettings;
+use agentpatrol_core::spend::{
     CapNotice, JudgementCap, LocalDate, SpendLedger, SpendRecord, price_of,
 };
-use agentsweep_ipc::engine::CloudUse;
+use agentpatrol_ipc::engine::CloudUse;
 
 use crate::log::counted;
 use crate::service::Daemon;

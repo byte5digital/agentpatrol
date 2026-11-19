@@ -27,11 +27,11 @@
 
 use std::sync::Mutex;
 
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::finding::{Category, FindingState};
-use agentsweep_core::scan_pass::ScanKind;
-use agentsweep_core::settings::Posture;
-use agentsweep_ipc::protocol::{StateEvent, Status};
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::finding::{Category, FindingState};
+use agentpatrol_core::scan_pass::ScanKind;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_ipc::protocol::{StateEvent, Status};
 use serde_json::{Value, json};
 
 use crate::asking::Asking;
@@ -61,11 +61,11 @@ pub struct Checked {
 }
 
 impl Checked {
-    /// "AgentSweep checked 42 items."
+    /// "AgentPatrol checked 42 items."
     fn items_line(&self) -> String {
         match self.items {
-            1 => "AgentSweep checked 1 item.".to_string(),
-            n => format!("AgentSweep checked {n} items."),
+            1 => "AgentPatrol checked 1 item.".to_string(),
+            n => format!("AgentPatrol checked {n} items."),
         }
     }
 
@@ -73,18 +73,18 @@ impl Checked {
     fn stopped_line(&self) -> String {
         match self.stopped.len() {
             0 => NOTHING_STOPPED.to_string(),
-            1 => "AgentSweep stopped 1 item:".to_string(),
-            n => format!("AgentSweep stopped {n} items:"),
+            1 => "AgentPatrol stopped 1 item:".to_string(),
+            n => format!("AgentPatrol stopped {n} items:"),
         }
     }
 
     /// The notice that says the result is ready.
     pub fn notice(&self) -> Notice {
         let checked = match (self.items, self.stopped.len()) {
-            (1, 0) => format!("AgentSweep checked 1 item. {NOTHING_STOPPED}"),
-            (n, 0) => format!("AgentSweep checked {n} items. {NOTHING_STOPPED}"),
-            (1, s) => format!("AgentSweep checked 1 item and stopped {s}."),
-            (n, s) => format!("AgentSweep checked {n} items and stopped {s}."),
+            (1, 0) => format!("AgentPatrol checked 1 item. {NOTHING_STOPPED}"),
+            (n, 0) => format!("AgentPatrol checked {n} items. {NOTHING_STOPPED}"),
+            (1, s) => format!("AgentPatrol checked 1 item and stopped {s}."),
+            (n, s) => format!("AgentPatrol checked {n} items and stopped {s}."),
         };
         let body = match self.decide {
             0 => checked,
@@ -294,9 +294,9 @@ pub fn follow(
 mod tests {
     use super::*;
 
-    use agentsweep_core::health::Health;
-    use agentsweep_core::item::Kind;
-    use agentsweep_core::state::{ScanSummary, Trigger};
+    use agentpatrol_core::health::Health;
+    use agentpatrol_core::item::Kind;
+    use agentpatrol_core::state::{ScanSummary, Trigger};
 
     fn moment(text: &str) -> Timestamp {
         Timestamp::parse(text).expect("a readable moment")
@@ -391,9 +391,9 @@ mod tests {
 
         let view = first.to_value();
         assert_eq!(view["title"], FIRST_CHECK_TITLE);
-        assert_eq!(view["items"], "AgentSweep checked 42 items.");
+        assert_eq!(view["items"], "AgentPatrol checked 42 items.");
         assert_eq!(view["baseline"], BASELINE_LINE);
-        assert_eq!(view["stoppedLine"], "AgentSweep stopped 1 item:");
+        assert_eq!(view["stoppedLine"], "AgentPatrol stopped 1 item:");
         assert_eq!(
             view["stopped"][0],
             crate::wording::simple(&stopped).title.as_str()
@@ -428,7 +428,7 @@ mod tests {
             first.to_tell(),
             Some(Notice {
                 title: FIRST_CHECK_TITLE.to_string(),
-                body: "AgentSweep checked 42 items and stopped 1. 1 item needs your decision."
+                body: "AgentPatrol checked 42 items and stopped 1. 1 item needs your decision."
                     .to_string(),
             })
         );
@@ -459,12 +459,12 @@ mod tests {
         status.scan = Some(summary(ScanKind::Full, "2026-10-19T10:00:01.000Z", 1));
         assert!(first.take_status(&status, Posture::Simple));
         let view = first.to_value();
-        assert_eq!(view["items"], "AgentSweep checked 1 item.");
+        assert_eq!(view["items"], "AgentPatrol checked 1 item.");
         assert_eq!(view["stoppedLine"], NOTHING_STOPPED);
         assert_eq!(view["stopped"], json!([]));
         assert_eq!(
             first.to_tell().expect("a notice").body,
-            "AgentSweep checked 1 item. Nothing was stopped."
+            "AgentPatrol checked 1 item. Nothing was stopped."
         );
     }
 
@@ -496,6 +496,6 @@ mod tests {
         let script = include_str!("../ui/first_check.js");
         assert!(script.contains(r#"invoke("first_check")"#));
         assert!(script.contains(r#"invoke("first_check_seen")"#));
-        assert!(script.contains(r#"listen("agentsweep://first-check""#));
+        assert!(script.contains(r#"listen("agentpatrol://first-check""#));
     }
 }

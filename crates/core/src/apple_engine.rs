@@ -503,11 +503,11 @@ mod tests {
             .lines()
             .find(|line| line.starts_with("bundle = "))
             .expect("the CLI has a bundle feature");
-        assert!(bundle.contains("\"agentsweep-core/apple\""), "{bundle}");
+        assert!(bundle.contains("\"agentpatrol-core/apple\""), "{bundle}");
         assert!(cli.contains("default = []"));
         let core_line = cli
             .lines()
-            .find(|line| line.starts_with("agentsweep-core"))
+            .find(|line| line.starts_with("agentpatrol-core"))
             .expect("the CLI names the core");
         assert!(!core_line.contains("apple"), "{core_line}");
 
@@ -515,7 +515,7 @@ mod tests {
         assert!(
             daemon
                 .lines()
-                .any(|line| line.starts_with("agentsweep-core = ") && line.contains("\"apple\""))
+                .any(|line| line.starts_with("agentpatrol-core = ") && line.contains("\"apple\""))
         );
     }
 

@@ -23,7 +23,7 @@ if [ "$#" -ne 4 ]; then
 fi
 bundle="$1" version="$2" arch="$3" out="$4"
 
-archive_in="$bundle/macos/AgentSweep.app.tar.gz"
+archive_in="$bundle/macos/AgentPatrol.app.tar.gz"
 for file in "$archive_in" "$archive_in.sig"; do
 	if [ ! -s "$file" ]; then
 		echo "the bundle has no $file; is createUpdaterArtifacts on and the updater key set?" >&2
@@ -38,8 +38,8 @@ if [ "$#" -ne 1 ] || [ ! -f "$1" ]; then
 fi
 dmg_in="$1"
 
-dmg="AgentSweep_${version}_${arch}.dmg"
-archive="AgentSweep_${version}_${arch}.app.tar.gz"
+dmg="AgentPatrol_${version}_${arch}.dmg"
+archive="AgentPatrol_${version}_${arch}.app.tar.gz"
 mkdir -p "$out"
 cp "$dmg_in" "$out/$dmg"
 cp "$archive_in" "$out/$archive"

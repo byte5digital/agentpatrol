@@ -10,17 +10,17 @@ mod fixture_ollama;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::finding::{FiredHeuristic, MatchRange, Severity};
-use agentsweep_core::item::{Activation, InactiveReason, Item, Kind, Provenance, Scope};
-use agentsweep_core::judgement::{
+use agentpatrol_core::finding::{FiredHeuristic, MatchRange, Severity};
+use agentpatrol_core::item::{Activation, InactiveReason, Item, Kind, Provenance, Scope};
+use agentpatrol_core::judgement::{
     EngineError, JudgementEngine, NoVerdict, Prompt, SYSTEM_PROMPT, Verdict, judge, verdict_schema,
 };
-use agentsweep_core::judgement_request::{JudgementRequest, NoRequest, Normalisation};
-use agentsweep_core::ollama::{
+use agentpatrol_core::judgement_request::{JudgementRequest, NoRequest, Normalisation};
+use agentpatrol_core::ollama::{
     JUDGEMENT_TIMEOUT, KEEP_ALIVE, NUM_CTX, OllamaClient, OllamaEngine, OllamaPresence, Timeouts,
     request_builder,
 };
-use agentsweep_core::settings::OllamaAddress;
+use agentpatrol_core::settings::OllamaAddress;
 use serde_json::{Value, json};
 
 use fixture_ollama::{Behaviour, FixtureOllama, closed_port, tags};
@@ -470,13 +470,13 @@ fn neither_the_prompt_nor_the_content_appears_in_an_engine_error() {
 /// model already pulled into a real Ollama on this Mac, at the default
 /// loopback address. Never part of the automated suite: it is ignored, and it
 /// runs only when a person names the model in
-/// `AGENTSWEEP_HAND_CHECK_OLLAMA_MODEL`. The engine itself reads no
+/// `AGENTPATROL_HAND_CHECK_OLLAMA_MODEL`. The engine itself reads no
 /// environment; only this test does, to learn which model to ask for.
 #[test]
 #[ignore = "a hand check against a real Ollama; see docs/hand-checks.md"]
 fn hand_check_a_pulled_model_judges_a_defanged_item_on_loopback() {
-    let model = std::env::var("AGENTSWEEP_HAND_CHECK_OLLAMA_MODEL")
-        .expect("name the pulled model in AGENTSWEEP_HAND_CHECK_OLLAMA_MODEL");
+    let model = std::env::var("AGENTPATROL_HAND_CHECK_OLLAMA_MODEL")
+        .expect("name the pulled model in AGENTPATROL_HAND_CHECK_OLLAMA_MODEL");
     let client = OllamaClient::new(&OllamaAddress::default());
     println!("presence: {:?}", client.presence());
     let engine = OllamaEngine::for_model(client, &model).expect("the model is pulled");

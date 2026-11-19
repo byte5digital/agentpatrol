@@ -1,4 +1,4 @@
-//! `agentsweep status`: what the daemon found, as a person reads it.
+//! `agentpatrol status`: what the daemon found, as a person reads it.
 //!
 //! This is a client and nothing else. It asks the daemon over its socket and
 //! renders what comes back: one Health sentence by the precedence of spec
@@ -12,16 +12,16 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::finding::FindingState;
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::{RecordedFinding, ScanSummary};
-use agentsweep_ipc::Client;
-use agentsweep_ipc::protocol::{Role, Status, offers};
+use agentpatrol_core::finding::FindingState;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::{RecordedFinding, ScanSummary};
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::protocol::{Role, Status, offers};
 
 /// The line that says the Gate switch is off, in the Developer wording of
 /// spec section 8.10, with the command that switches it on.
 pub const GATE_HOOKS_OFF: &str =
-    "Gate: hooks in Claude Code and Codex are off (agentsweep gate-hooks on).";
+    "Gate: hooks in Claude Code and Codex are off (agentpatrol gate-hooks on).";
 
 /// Asks the daemon and renders the answer.
 ///
@@ -40,14 +40,14 @@ pub fn status(socket: Option<&Path>) -> (String, u8) {
                 crate::actions::UNREACHABLE,
             );
         }
-        Err(error) => return (format!("AgentSweep could not be asked: {error}\n"), 2),
+        Err(error) => return (format!("AgentPatrol could not be asked: {error}\n"), 2),
     };
     match client.status() {
         Ok(status) => {
             let open = status.open().count();
             (render(&status), if open > 0 { 1 } else { 0 })
         }
-        Err(error) => (format!("AgentSweep could not be asked: {error}\n"), 2),
+        Err(error) => (format!("AgentPatrol could not be asked: {error}\n"), 2),
     }
 }
 
@@ -142,7 +142,7 @@ pub fn render(status: &Status) -> String {
             let _ = writeln!(out, "    id {}", finding.id);
             let offered: Vec<&str> = offers(finding).iter().map(|offer| offer.as_str()).collect();
             if !offered.is_empty() {
-                let _ = writeln!(out, "    agentsweep {} <id>", offered.join(" | "));
+                let _ = writeln!(out, "    agentpatrol {} <id>", offered.join(" | "));
             }
         }
     }
@@ -184,7 +184,7 @@ pub fn render(status: &Status) -> String {
             if !finding.fixed_version.is_empty() {
                 let _ = writeln!(
                     out,
-                    "    A fixed version is available: agentsweep re-enable {}",
+                    "    A fixed version is available: agentpatrol re-enable {}",
                     finding.receipt_id
                 );
             }
@@ -219,9 +219,9 @@ pub fn scan_line(scan: &ScanSummary) -> String {
 /// Whether the Rule behind a Finding may act by itself yet.
 fn probation(finding: &RecordedFinding) -> &'static str {
     match finding.status {
-        agentsweep_core::finding::RuleStatus::Probation => "on probation",
-        agentsweep_core::finding::RuleStatus::Stable => "stable",
-        agentsweep_core::finding::RuleStatus::Retired => "retired",
+        agentpatrol_core::finding::RuleStatus::Probation => "on probation",
+        agentpatrol_core::finding::RuleStatus::Stable => "stable",
+        agentpatrol_core::finding::RuleStatus::Retired => "retired",
     }
 }
 
@@ -237,12 +237,14 @@ pub fn count(n: usize, one: &str, many: &str) -> String {
 mod tests {
     use super::*;
 
-    use agentsweep_core::envelope::Timestamp;
-    use agentsweep_core::finding::{Category, FindingId, FindingState, RuleStatus, Severity, Tier};
-    use agentsweep_core::health::{GateLine, GateTrouble, Health, Protection, StateFileHealth};
-    use agentsweep_core::item::{ItemId, Kind};
-    use agentsweep_core::scan_pass::ScanKind;
-    use agentsweep_core::state::Trigger;
+    use agentpatrol_core::envelope::Timestamp;
+    use agentpatrol_core::finding::{
+        Category, FindingId, FindingState, RuleStatus, Severity, Tier,
+    };
+    use agentpatrol_core::health::{GateLine, GateTrouble, Health, Protection, StateFileHealth};
+    use agentpatrol_core::item::{ItemId, Kind};
+    use agentpatrol_core::scan_pass::ScanKind;
+    use agentpatrol_core::state::Trigger;
 
     fn moment(text: &str) -> Timestamp {
         Timestamp::parse(text).expect("a readable moment")
@@ -366,7 +368,7 @@ mod tests {
     /// with their Agent, and Health counts them on the Gate rung.
     #[test]
     fn the_projects_gate_off_are_listed_with_their_agent() {
-        use agentsweep_core::overview::{
+        use agentpatrol_core::overview::{
             AgentRecord, Overview, ProjectAgent, ProjectCheck, ProjectRecord,
         };
         let agent = |agent: &str, gate_off: bool| ProjectAgent {
@@ -448,7 +450,7 @@ mod tests {
     /// Activity at all. The Activity is the window's pane (spec section 8.1).
     #[test]
     fn the_activity_lines_leave_the_printed_status_as_it_was() {
-        use agentsweep_ipc::protocol::ActivityLine;
+        use agentpatrol_ipc::protocol::ActivityLine;
 
         let status = |activity: Vec<ActivityLine>| Status {
             health: Health::running(),
@@ -483,7 +485,7 @@ mod tests {
     fn the_status_says_when_the_rules_were_updated() {
         let mut health = Health::running();
         health.rule_pack = 3;
-        health.rule_pack_origin = agentsweep_core::packs::PackOrigin::Fetched;
+        health.rule_pack_origin = agentpatrol_core::packs::PackOrigin::Fetched;
         health.rules_released_at = "2026-10-01T09:30:00Z".to_string();
         let status = Status {
             health,
@@ -537,7 +539,7 @@ mod tests {
     #[test]
     fn two_open_findings_are_two_things_that_need_your_decision() {
         let mut exposure = finding();
-        exposure.category = agentsweep_core::finding::Category::Exposure;
+        exposure.category = agentpatrol_core::finding::Category::Exposure;
         let mut health = Health::running();
         health.open_threats = 1;
         health.open_exposures = 1;
@@ -615,7 +617,7 @@ mod tests {
             "{rendered}"
         );
         assert!(
-            rendered.contains("agentsweep quarantine | trust <id>"),
+            rendered.contains("agentpatrol quarantine | trust <id>"),
             "{rendered}"
         );
     }
@@ -663,7 +665,7 @@ mod tests {
     #[test]
     fn the_command_reads_protection_off_and_exits_three_when_no_daemon_answers() {
         let nowhere = std::env::temp_dir().join(format!(
-            "agentsweep-status-nobody-{}.sock",
+            "agentpatrol-status-nobody-{}.sock",
             std::process::id()
         ));
         let _ = std::fs::remove_file(&nowhere);

@@ -11,7 +11,7 @@
 //!
 //! The handlers are yielded in the order they are written and never sorted: a
 //! group's position is not part of a hook's identity (spec section 4.6.1), so
-//! reordering has to leave every AgentSweep id where it was. Codex's own state
+//! reordering has to leave every AgentPatrol id where it was. Codex's own state
 //! key is the opposite: it is positional, so the group and handler index travel
 //! with each handler as well.
 //!
@@ -26,8 +26,8 @@
 
 use std::path::Path;
 
-use agentsweep_core::item::{canonical_entry, sha256_hex};
-use agentsweep_core::views::HookView;
+use agentpatrol_core::item::{canonical_entry, sha256_hex};
+use agentpatrol_core::views::HookView;
 use serde_json::{Map, Value, json};
 
 use crate::document::Document;
@@ -130,7 +130,7 @@ pub enum Pin {
     /// interactive session offers to trust it at startup, a headless one skips
     /// it silently.
     Absent,
-    /// The handler is of a kind whose normalised form AgentSweep cannot
+    /// The handler is of a kind whose normalised form AgentPatrol cannot
     /// reproduce, so no comparison is honest.
     Unverifiable,
 }
@@ -321,10 +321,10 @@ mod tests {
     }
 
     /// Spec section 4.6.1: reordering the handlers of one event is not Drift,
-    /// so no position may reach the AgentSweep identity, even though Codex's
+    /// so no position may reach the AgentPatrol identity, even though Codex's
     /// own state key is positional.
     #[test]
-    fn reordering_leaves_every_agentsweep_identity_where_it_was() {
+    fn reordering_leaves_every_agentpatrol_identity_where_it_was() {
         let locators = |value: Value| {
             let mut ids: Vec<String> = handlers(&document(value), "hooks")
                 .iter()

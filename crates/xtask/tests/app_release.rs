@@ -11,7 +11,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use agentsweep_xtask::repo_root;
+use agentpatrol_xtask::repo_root;
 use tempfile::TempDir;
 
 fn script(name: &str) -> PathBuf {
@@ -154,11 +154,11 @@ fn the_gate_passes_the_repository_at_its_own_version() {
 fn bundle(dmgs: &[&str]) -> TempDir {
     let bundle = TempDir::new().expect("a temporary directory");
     write(
-        &bundle.path().join("macos/AgentSweep.app.tar.gz"),
+        &bundle.path().join("macos/AgentPatrol.app.tar.gz"),
         "archive",
     );
     write(
-        &bundle.path().join("macos/AgentSweep.app.tar.gz.sig"),
+        &bundle.path().join("macos/AgentPatrol.app.tar.gz.sig"),
         "signature",
     );
     for dmg in dmgs {
@@ -169,7 +169,7 @@ fn bundle(dmgs: &[&str]) -> TempDir {
 
 #[test]
 fn staging_names_each_asset_for_the_version_and_the_architecture() {
-    let bundle = bundle(&["AgentSweep_0.1.0_universal.dmg"]);
+    let bundle = bundle(&["AgentPatrol_0.1.0_universal.dmg"]);
     let out = TempDir::new().expect("a temporary directory");
     let release = out.path().join("release");
     let output = run(
@@ -184,15 +184,15 @@ fn staging_names_each_asset_for_the_version_and_the_architecture() {
     assert!(output.status.success(), "{}", stderr(&output));
     assert_eq!(
         stdout(&output),
-        "dmg=AgentSweep_0.1.0_universal.dmg\n\
-         archive=AgentSweep_0.1.0_universal.app.tar.gz\n\
-         signature=AgentSweep_0.1.0_universal.app.tar.gz.sig\n"
+        "dmg=AgentPatrol_0.1.0_universal.dmg\n\
+         archive=AgentPatrol_0.1.0_universal.app.tar.gz\n\
+         signature=AgentPatrol_0.1.0_universal.app.tar.gz.sig\n"
     );
     let read = |name: &str| fs::read_to_string(release.join(name)).expect(name);
-    assert_eq!(read("AgentSweep_0.1.0_universal.dmg"), "dmg");
-    assert_eq!(read("AgentSweep_0.1.0_universal.app.tar.gz"), "archive");
+    assert_eq!(read("AgentPatrol_0.1.0_universal.dmg"), "dmg");
+    assert_eq!(read("AgentPatrol_0.1.0_universal.app.tar.gz"), "archive");
     assert_eq!(
-        read("AgentSweep_0.1.0_universal.app.tar.gz.sig"),
+        read("AgentPatrol_0.1.0_universal.app.tar.gz.sig"),
         "signature"
     );
 }
@@ -260,7 +260,7 @@ fn an_unsigned_dmg_is_signed_ad_hoc_and_a_signed_one_left_alone() {
 
 // The updater manifest. `plutil` reads JSON, and the release runs on macOS.
 
-const ARCHIVE_URL: &str = "https://releases.invalid/v0.1.0/AgentSweep_0.1.0_universal.app.tar.gz";
+const ARCHIVE_URL: &str = "https://releases.invalid/v0.1.0/AgentPatrol_0.1.0_universal.app.tar.gz";
 
 fn manifest_fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/updater-manifest-fixtures")

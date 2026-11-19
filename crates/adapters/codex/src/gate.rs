@@ -23,18 +23,18 @@
 //! (spec section 4.6.5).
 //!
 //! **Handler by handler.** Another tool may append its own handler into the
-//! group AgentSweep wrote, so AgentSweep's handler is recognised by the
+//! group AgentPatrol wrote, so AgentPatrol's handler is recognised by the
 //! handler itself, wherever it sits (spec section 7.6). Registering adds a
-//! group only for an event that carries no handler of AgentSweep's under the
-//! Gate's matcher, and pins AgentSweep's handler under the position it
-//! actually has. Removal takes out AgentSweep's handlers and nothing else: a
+//! group only for an event that carries no handler of AgentPatrol's under the
+//! Gate's matcher, and pins AgentPatrol's handler under the position it
+//! actually has. Removal takes out AgentPatrol's handlers and nothing else: a
 //! group goes only when that left it empty, and exactly the records filed
-//! under the keys of AgentSweep's handlers go with them. When a whole group
+//! under the keys of AgentPatrol's handlers go with them. When a whole group
 //! goes, the groups after it in the same event move up and their pins are
-//! filed again under the new position with the same hash. When AgentSweep's
+//! filed again under the new position with the same hash. When AgentPatrol's
 //! handler goes out of a shared group, the other tool's handlers behind it
 //! move forward inside that group; their pins stay under the key they were
-//! reviewed at, because AgentSweep never files trust for a handler that is not
+//! reviewed at, because AgentPatrol never files trust for a handler that is not
 //! its own, and Codex asks the user to review such a handler again.
 //!
 //! Both files go through the compare-and-swap of spec section 5.3 and are
@@ -48,17 +48,17 @@ use std::collections::BTreeSet;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::Enumeration;
-use agentsweep_core::entry_edit::{
+use agentpatrol_core::adapter::Enumeration;
+use agentpatrol_core::entry_edit::{
     EditError, EntryPath, Format as EditFormat, append_json, drop_json_members, drop_toml,
     insert_toml, parses, read_entry,
 };
-use agentsweep_core::gate_registration::{
+use agentpatrol_core::gate_registration::{
     GATE_TIMEOUT_SECONDS, GateCheck, GateCommand, GateEntry, GateError, GateWrite, SurfaceWriter,
     rewrite,
 };
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{ItemId, Kind, Scope, sha256_hex};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{ItemId, Kind, Scope, sha256_hex};
 use serde_json::{Value, json};
 
 use crate::document::{Document, json_of, parse_toml, surface_name};
@@ -111,7 +111,7 @@ pub fn group(matcher: Option<&str>, command: &GateCommand) -> Value {
     }
 }
 
-/// True when `handler`, under `event`, is AgentSweep's own: exactly the
+/// True when `handler`, under `event`, is AgentPatrol's own: exactly the
 /// handler the Gate writes, under one of the Gate's events, whatever group it
 /// sits in and whatever else that group holds.
 fn is_ours(event: &str, handler: &Value, ours: &Value) -> bool {
@@ -119,9 +119,9 @@ fn is_ours(event: &str, handler: &Value, ours: &Value) -> bool {
 }
 
 /// True when `handler`, in `group` under `event`, is a command handler that
-/// carries AgentSweep's arguments and timeout under the matcher the Gate
+/// carries AgentPatrol's arguments and timeout under the matcher the Gate
 /// gives the event, but runs a command line interface at another path. That
-/// is AgentSweep's own entry after the bundle moved, and the registration
+/// is AgentPatrol's own entry after the bundle moved, and the registration
 /// replaces it (the owner's decision of 2026-10-14), whatever else the group
 /// holds.
 fn is_moved(event: &str, group: &Value, handler: &Value, ours: &Value) -> bool {
@@ -165,8 +165,8 @@ struct Dropped {
 /// the pins of the handlers in them are named twice, old key and new, in the
 /// order the groups are written, so that moving the records one after the
 /// other never writes over a record still to be moved. A handler that moves
-/// forward inside its own group because a handler of AgentSweep's ahead of it
-/// went is not named: its pin stays where Codex filed it, since AgentSweep
+/// forward inside its own group because a handler of AgentPatrol's ahead of it
+/// went is not named: its pin stays where Codex filed it, since AgentPatrol
 /// never files trust for a handler that is not its own under a position the
 /// user never reviewed it at.
 fn drop_handlers(
@@ -360,7 +360,7 @@ struct Found {
 }
 
 /// The Gate's handlers in a hooks document: every handler that is exactly
-/// AgentSweep's, under the event and the matcher the Gate gives it, whether
+/// AgentPatrol's, under the event and the matcher the Gate gives it, whether
 /// its group holds it alone or shares it with another tool's handlers.
 fn ours_in(document: &Document, command: &GateCommand) -> Vec<Found> {
     let ours = handler(command);
@@ -430,7 +430,7 @@ fn config_parses(host: &Host, path: &Path) -> Result<(), GateError> {
     })
 }
 
-/// Appends a group for every event that carries no handler of AgentSweep's,
+/// Appends a group for every event that carries no handler of AgentPatrol's,
 /// pins every Gate handler whose pin is not trusted under the position it
 /// has, and names every entry it wrote or pinned.
 pub fn register(
@@ -445,7 +445,7 @@ pub fn register(
 
     // The handlers first: the keys of their pins are counted from where they
     // end up, which is known only once the hooks file is written. A handler
-    // of AgentSweep's under another path goes before anything is appended,
+    // of AgentPatrol's under another path goes before anything is appended,
     // and the groups after one it emptied move up with their pins.
     let mut groups: Vec<Found> = Vec::new();
     let mut dropped = Dropped::default();
@@ -519,7 +519,7 @@ pub fn register(
 }
 
 /// Whether every event carries a Gate handler whose pin Codex would trust and
-/// no handler of AgentSweep's sits under another path, and whether managed
+/// no handler of AgentPatrol's sits under another path, and whether managed
 /// policy or the user's own layer switch hooks off.
 pub fn check(adapter: &Codex, host: &Host, command: &GateCommand) -> GateCheck {
     if let Some(off) = hooks_switched_off(adapter, host) {
@@ -579,7 +579,7 @@ pub fn check(adapter: &Codex, host: &Host, command: &GateCommand) -> GateCheck {
     }
 }
 
-/// Takes away AgentSweep's handlers and the pin records filed under their
+/// Takes away AgentPatrol's handlers and the pin records filed under their
 /// keys, a group only when that left it empty, files the pins of the groups
 /// after an emptied one again under their new position, and names the
 /// entries taken away. Another tool's handler in a shared group stays, and so
@@ -635,13 +635,13 @@ mod tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    use agentsweep_core::adapter::SurfaceAdapter;
-    use agentsweep_core::gate_registration::{WriteError, hash_now};
-    use agentsweep_core::item::{Activation, Shape, canonical_entry};
+    use agentpatrol_core::adapter::SurfaceAdapter;
+    use agentpatrol_core::gate_registration::{WriteError, hash_now};
+    use agentpatrol_core::item::{Activation, Shape, canonical_entry};
 
     /// Where the bundle puts the command line interface. It does not exist on
     /// the machine the test runs on, and nothing runs it.
-    const CLI: &str = "/Applications/AgentSweep.app/Contents/MacOS/agentsweep";
+    const CLI: &str = "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol";
 
     /// The compare and the write, as the daemon's writer does them.
     struct Writer;
@@ -671,7 +671,7 @@ mod tests {
     impl Home {
         fn new() -> Home {
             let root = std::env::temp_dir().join(format!(
-                "agentsweep-codex-gate-{}-{}",
+                "agentpatrol-codex-gate-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
@@ -978,8 +978,8 @@ mod tests {
     #[test]
     fn a_bundle_path_with_a_space_stays_one_word_for_the_shell() {
         for program in [
-            "/Applications/Agent Sweep.app/Contents/MacOS/agentsweep",
-            "/Users/u/Apps/it's here/AgentSweep.app/Contents/MacOS/agentsweep",
+            "/Applications/Agent Patrol.app/Contents/MacOS/agentpatrol",
+            "/Users/u/Apps/it's here/AgentPatrol.app/Contents/MacOS/agentpatrol",
         ] {
             let line = command_line(&GateCommand::at(program));
             assert_eq!(
@@ -990,9 +990,9 @@ mod tests {
         }
         assert_eq!(
             command_line(&GateCommand::at(
-                "/Applications/Agent Sweep.app/Contents/MacOS/agentsweep"
+                "/Applications/Agent Patrol.app/Contents/MacOS/agentpatrol"
             )),
-            "'/Applications/Agent Sweep.app/Contents/MacOS/agentsweep' gate --agent codex"
+            "'/Applications/Agent Patrol.app/Contents/MacOS/agentpatrol' gate --agent codex"
         );
     }
 
@@ -1201,14 +1201,14 @@ mod check_tests {
     use super::*;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    use agentsweep_core::adapter::SurfaceAdapter;
-    use agentsweep_core::gate_registration::{WriteError, hash_now};
-    use agentsweep_core::item::{Activation, Kind};
+    use agentpatrol_core::adapter::SurfaceAdapter;
+    use agentpatrol_core::gate_registration::{WriteError, hash_now};
+    use agentpatrol_core::item::{Activation, Kind};
 
     /// Where the bundle puts the command line interface, and where an older
     /// copy of the bundle put it. Nothing runs either.
-    const CLI: &str = "/Applications/AgentSweep.app/Contents/MacOS/agentsweep";
-    const OLD_CLI: &str = "/Volumes/Old/AgentSweep.app/Contents/MacOS/agentsweep";
+    const CLI: &str = "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol";
+    const OLD_CLI: &str = "/Volumes/Old/AgentPatrol.app/Contents/MacOS/agentpatrol";
 
     struct Writer;
 
@@ -1238,7 +1238,7 @@ mod check_tests {
     impl Machine {
         fn new() -> Machine {
             let root = std::env::temp_dir().join(format!(
-                "agentsweep-codex-gate-check-{}-{}",
+                "agentpatrol-codex-gate-check-{}-{}",
                 std::process::id(),
                 NEXT.fetch_add(1, Ordering::Relaxed)
             ));
@@ -1300,7 +1300,7 @@ mod check_tests {
     }
 
     /// The owner's decision of 2026-10-14 on Codex pin positions: removing
-    /// AgentSweep's group moves the user's group after it one place up, and
+    /// AgentPatrol's group moves the user's group after it one place up, and
     /// its pin goes with it under the new key with the same hash, so Codex
     /// still runs the user's hook.
     #[test]
@@ -1334,7 +1334,7 @@ mod check_tests {
         assert_eq!(users.activation, Activation::Active, "Codex trusts it");
     }
 
-    /// The owner's decision of 2026-10-14: AgentSweep's groups under another
+    /// The owner's decision of 2026-10-14: AgentPatrol's groups under another
     /// path go, with their pins, the user's group behind them keeps its
     /// trust, and the fresh groups are pinned.
     #[test]
@@ -1417,7 +1417,7 @@ mod check_tests {
         (key, hash)
     }
 
-    /// How many of AgentSweep's handlers each event of the hooks file holds.
+    /// How many of AgentPatrol's handlers each event of the hooks file holds.
     fn count_ours(machine: &Machine) -> Vec<(String, usize)> {
         let value = read_hooks(machine);
         let ours = ours();
@@ -1444,11 +1444,11 @@ mod check_tests {
     }
 
     /// The owner's hand check: another tool appended its handler into
-    /// AgentSweep's `UserPromptSubmit` group and Codex's review pinned it
-    /// under its position. Registering again finds AgentSweep's handler in
+    /// AgentPatrol's `UserPromptSubmit` group and Codex's review pinned it
+    /// under its position. Registering again finds AgentPatrol's handler in
     /// the shared group and writes nothing: no second group, no second pin.
     #[test]
-    fn a_shared_group_with_agentsweeps_handler_first_gets_no_second_one() {
+    fn a_shared_group_with_agentpatrols_handler_first_gets_no_second_one() {
         let machine = Machine::new();
         let adapter = Codex::new();
         adapter
@@ -1486,10 +1486,10 @@ mod check_tests {
         assert_eq!(count_ours(&machine), one_each());
     }
 
-    /// AgentSweep's handler behind another tool's in one group is found
+    /// AgentPatrol's handler behind another tool's in one group is found
     /// there, pinned under its own position, and never doubled.
     #[test]
-    fn a_shared_group_with_agentsweeps_handler_second_gets_no_second_one() {
+    fn a_shared_group_with_agentpatrols_handler_second_gets_no_second_one() {
         let machine = Machine::new();
         write_hooks(
             &machine,
@@ -1523,15 +1523,15 @@ mod check_tests {
         );
     }
 
-    /// Removal takes AgentSweep's handler out of a group it shares, with the
+    /// Removal takes AgentPatrol's handler out of a group it shares, with the
     /// pin filed under that handler's position, and leaves the other tool's
     /// handler and the pin Codex filed for it exactly as they were, whichever
-    /// of the two comes first. With AgentSweep's handler first the other
+    /// of the two comes first. With AgentPatrol's handler first the other
     /// tool's handler moves to the front of its group; its pin stays under
-    /// the position it was reviewed at, and AgentSweep files no trust for a
+    /// the position it was reviewed at, and AgentPatrol files no trust for a
     /// handler that is not its own, so Codex asks the user to review it again.
     #[test]
-    fn removal_takes_only_agentsweeps_handler_and_pin_out_of_a_shared_group() {
+    fn removal_takes_only_agentpatrols_handler_and_pin_out_of_a_shared_group() {
         for theirs_first in [false, true] {
             let machine = Machine::new();
             let handlers = match theirs_first {
@@ -1599,10 +1599,10 @@ mod check_tests {
     }
 
     /// The files the owner's hand check left: another tool's handler inside
-    /// AgentSweep's first `UserPromptSubmit` group, the second group and pin
+    /// AgentPatrol's first `UserPromptSubmit` group, the second group and pin
     /// the earlier registration added beside it, and the other tool's own
-    /// `PreToolUse` group after AgentSweep's. Removal leaves nothing of
-    /// AgentSweep's, neither handler nor pin; the other tool's group that
+    /// `PreToolUse` group after AgentPatrol's. Removal leaves nothing of
+    /// AgentPatrol's, neither handler nor pin; the other tool's group that
     /// moved up keeps its trust under its new position, and the pin of the
     /// handler that moved inside the shared group stays where it was.
     #[test]
@@ -1655,7 +1655,7 @@ mod check_tests {
         );
     }
 
-    /// AgentSweep's handler under another path inside a shared group is
+    /// AgentPatrol's handler under another path inside a shared group is
     /// replaced by itself: the handler goes with its pin, the group and the
     /// other tool's handler and pin stay, and the fresh handler comes in a
     /// group of its own.
@@ -1693,7 +1693,7 @@ mod check_tests {
         );
     }
 
-    /// `enabled = false` on the pin of AgentSweep's own entry is mended like
+    /// `enabled = false` on the pin of AgentPatrol's own entry is mended like
     /// any other failure of the pin.
     #[test]
     fn a_pin_switched_off_is_written_again() {

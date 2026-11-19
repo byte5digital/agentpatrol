@@ -1,0 +1,28 @@
+cask "agentpatrol" do
+  version "@VERSION@"
+  sha256 "@SHA256@"
+
+  url "https://github.com/byte5digital/agentpatrol/releases/download/v#{version}/AgentPatrol_#{version}_universal.dmg"
+  name "AgentPatrol"
+  desc "Scans Claude Code and Codex settings and quarantines what a rule proves bad"
+  homepage "https://github.com/byte5digital/agentpatrol"
+
+  auto_updates true
+  depends_on macos: :sonoma
+
+  app "AgentPatrol.app"
+  binary "#{appdir}/AgentPatrol.app/Contents/MacOS/agentpatrol"
+
+  uninstall launchctl: "de.byte5.agentpatrol.daemon",
+            quit:      "de.byte5.agentpatrol"
+
+  zap trash: [
+    "~/Library/Application Support/de.byte5.agentpatrol",
+    "~/Library/Caches/de.byte5.agentpatrol",
+    "~/Library/HTTPStorages/de.byte5.agentpatrol",
+    "~/Library/Logs/AgentPatrol",
+    "~/Library/Preferences/de.byte5.agentpatrol.plist",
+    "~/Library/Saved Application State/de.byte5.agentpatrol.savedState",
+    "~/Library/WebKit/de.byte5.agentpatrol",
+  ]
+end

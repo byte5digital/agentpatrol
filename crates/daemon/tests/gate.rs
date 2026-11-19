@@ -18,20 +18,20 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::finding::Category;
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::state::{StateFile, StateWriter};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::gate::{
+use agentpatrol_core::finding::Category;
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::state::{StateFile, StateWriter};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::gate::{
     GateEvent, GateReason, GateRequest, GateTool, GateVerdict, McpServerRef,
 };
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Hello, Message, Request, Role};
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Hello, Message, Request, Role};
 
 /// Keeps one test's temporary paths apart from another's.
 static NEXT: AtomicU32 = AtomicU32::new(0);
@@ -57,9 +57,9 @@ fn log_directory() -> &'static Path {
     static LOG: OnceLock<PathBuf> = OnceLock::new();
     LOG.get_or_init(|| {
         let directory = Path::new(env!("CARGO_TARGET_TMPDIR"))
-            .join(format!("agentsweep-gate-log-{}", std::process::id()));
+            .join(format!("agentpatrol-gate-log-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&directory);
-        agentsweep_daemon::log::start(Some(&directory)).expect("the daemon log");
+        agentpatrol_daemon::log::start(Some(&directory)).expect("the daemon log");
         directory
     })
 }
@@ -96,7 +96,7 @@ impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         log_directory();
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-gate-{purpose}-{}-{}",
+            "agentpatrol-gate-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -729,7 +729,7 @@ fn the_answer_on_the_wire_carries_only_verdict_count_and_reason() {
     );
     let _daemon = sandbox.start();
 
-    let mut connection = agentsweep_ipc::connect(&sandbox.socket).expect("a connection");
+    let mut connection = agentpatrol_ipc::connect(&sandbox.socket).expect("a connection");
     connection
         .send(&Message::Hello(Hello::of(Role::Cli)))
         .expect("a handshake");
@@ -737,7 +737,7 @@ fn the_answer_on_the_wire_carries_only_verdict_count_and_reason() {
         connection.receive().expect("an answer"),
         Some(Message::Welcome { .. })
     ));
-    let keys_of = |connection: &mut agentsweep_ipc::Connection, request: GateRequest| {
+    let keys_of = |connection: &mut agentpatrol_ipc::Connection, request: GateRequest| {
         connection
             .send(&Message::Request {
                 id: "1".to_string(),

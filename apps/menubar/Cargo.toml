@@ -1,6 +1,6 @@
 [package]
-name = "agentsweep-menubar"
-description = "The AgentSweep menu bar app: a Tauri 2 shell over the daemon, which it registers, supervises and renders the Health of."
+name = "agentpatrol-menubar"
+description = "The AgentPatrol menu bar app: a Tauri 2 shell over the daemon, which it registers, supervises and renders the Health of."
 # The app ships inside the notarized bundle and nowhere else.
 publish = false
 version.workspace = true
@@ -11,11 +11,11 @@ repository.workspace = true
 authors.workspace = true
 
 [lib]
-name = "agentsweep_menubar"
+name = "agentpatrol_menubar"
 path = "src/lib.rs"
 
 [[bin]]
-name = "agentsweep-menubar"
+name = "agentpatrol-menubar"
 path = "src/main.rs"
 
 [build-dependencies]
@@ -27,15 +27,15 @@ tauri-build = { version = "=2.6.3", features = [] }
 # feature only for onboarding screen 4, which asks the Apple judgement helper
 # beside the app whether Apple's on-device model is available before any
 # daemon runs (spec section 4.4); the app never judges an Item.
-agentsweep-core = { workspace = true, features = ["apple"] }
+agentpatrol-core = { workspace = true, features = ["apple"] }
 # The client half of the vocabulary. The app is a peer of the daemon like the
 # in-bundle command line interface, with the role `app`.
-agentsweep-ipc.workspace = true
+agentpatrol-ipc.workspace = true
 # The onboarding Inventory (spec section 6.8): the app calls each Agent
 # adapter's `detect` and `projects` itself, on a confined Host, and never
 # `enumerate`. Nothing else of the adapters is used by the app.
-agentsweep-adapter-claude-code.workspace = true
-agentsweep-adapter-codex.workspace = true
+agentpatrol-adapter-claude-code.workspace = true
+agentpatrol-adapter-codex.workspace = true
 serde_json = "1.0.151"
 # The shell (spec section 6.1): Tauri 2.11.5, the last 2.x, with the tray.
 tauri = { version = "=2.11.5", features = ["tray-icon"] }
@@ -86,6 +86,6 @@ minisign = "0.10.0"
 base64 = "0.22.1"
 # The window's tests run a real daemon in the process, on a temporary home,
 # with the chain key in memory. Test builds only: the app never links it.
-agentsweep-core = { workspace = true, features = ["development-keys"] }
-agentsweep-daemon = { path = "../../crates/daemon" }
+agentpatrol-core = { workspace = true, features = ["development-keys"] }
+agentpatrol-daemon = { path = "../../crates/daemon" }
 tempfile = "3.27.0"

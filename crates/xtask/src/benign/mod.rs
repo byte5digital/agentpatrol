@@ -22,26 +22,26 @@ pub mod plant;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter};
-use agentsweep_core::hits::HitReport;
-use agentsweep_core::host::Host;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::Scanners;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter};
+use agentpatrol_core::hits::HitReport;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::Scanners;
 
 use crate::benign::fetch::{Cache, Fetch, Problem};
 use crate::benign::manifest::{Manifest, Shape, Source};
 use crate::benign::plant::{Content, Ground, Machine};
 
 /// Where the corpus is fetched to and laid out, under the repository root.
-pub const WORK: &str = "target/agentsweep-benign-corpus";
+pub const WORK: &str = "target/agentpatrol-benign-corpus";
 
 /// The environment variable that turns the offline skip off. CI sets it,
 /// because a job that fetched nothing and said nothing would be a green tick
 /// over an unproven Rule Pack.
-pub const REQUIRED: &str = "AGENTSWEEP_CORPUS_REQUIRED";
+pub const REQUIRED: &str = "AGENTPATROL_CORPUS_REQUIRED";
 
 /// What one run of the benign corpus came to.
 #[derive(Debug)]

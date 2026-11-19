@@ -18,7 +18,7 @@ use std::io::Read as _;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
-use agentsweep_core::item::sha256_hex;
+use agentpatrol_core::item::sha256_hex;
 use serde_json::{Value, json};
 
 use crate::benign::manifest::{Agent, Presentation, Source};
@@ -361,7 +361,7 @@ mod tests {
     /// of scope, also when the test fails.
     fn ground(name: &str) -> (tempfile::TempDir, Ground) {
         let root = tempfile::Builder::new()
-            .prefix(&format!("agentsweep-benign-plant-{name}-"))
+            .prefix(&format!("agentpatrol-benign-plant-{name}-"))
             .tempdir()
             .expect("a temporary folder");
         let ground = Ground::fresh(root.path()).expect("a fresh machine");

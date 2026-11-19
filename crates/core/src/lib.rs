@@ -1,4 +1,4 @@
-//! The AgentSweep core.
+//! The AgentPatrol core.
 //!
 //! The core owns the Item model, the Surface Adapter contract, the detection
 //! ladder, the quarantine store, the Event Log, the Baseline and every Finding
@@ -80,18 +80,18 @@ pub mod user_rules;
 pub mod verdicts;
 pub mod views;
 
-/// The machine-readable name of the product. AgentSweep in prose and UI,
-/// `agentsweep` in every name a machine reads.
-pub const NAME: &str = "agentsweep";
+/// The machine-readable name of the product. AgentPatrol in prose and UI,
+/// `agentpatrol` in every name a machine reads.
+pub const NAME: &str = "agentpatrol";
 
 /// The bundle identifier of the application.
-pub const BUNDLE_ID: &str = "de.byte5.agentsweep";
+pub const BUNDLE_ID: &str = "de.byte5.agentpatrol";
 
 /// The launch agent label and signing identifier of the daemon. Frozen: the
 /// Keychain key that protects the Event Log is bound to it.
-pub const DAEMON_LABEL: &str = "de.byte5.agentsweep.daemon";
+pub const DAEMON_LABEL: &str = "de.byte5.agentpatrol.daemon";
 
-/// The version of AgentSweep. Application, daemon and CLI share it; the Rule
+/// The version of AgentPatrol. Application, daemon and CLI share it; the Rule
 /// Pack carries its own version.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

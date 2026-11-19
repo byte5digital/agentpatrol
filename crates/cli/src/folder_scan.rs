@@ -15,20 +15,20 @@ use std::error::Error;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_adapter_codex::Codex;
-use agentsweep_adapter_workspace::Workspace;
-use agentsweep_core::adapter::{Enumeration, SurfaceAdapter};
-use agentsweep_core::finding::{Finding, FiredHeuristic, RuleStatus, Tier};
-use agentsweep_core::heuristics::Band;
-use agentsweep_core::host::Host;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_adapter_codex::Codex;
+use agentpatrol_adapter_workspace::Workspace;
+use agentpatrol_core::adapter::{Enumeration, SurfaceAdapter};
+use agentpatrol_core::finding::{Finding, FiredHeuristic, RuleStatus, Tier};
+use agentpatrol_core::heuristics::Band;
+use agentpatrol_core::host::Host;
 #[cfg(test)]
-use agentsweep_core::item::BaselineState;
-use agentsweep_core::item::TreeCaps;
-use agentsweep_core::judgement::Verdict;
-use agentsweep_core::pack::Manifest;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan::{ScanReport, scan_enumeration};
+use agentpatrol_core::item::BaselineState;
+use agentpatrol_core::item::TreeCaps;
+use agentpatrol_core::judgement::Verdict;
+use agentpatrol_core::pack::Manifest;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan::{ScanReport, scan_enumeration};
 
 use crate::judgement::{self, Judgement};
 
@@ -156,7 +156,7 @@ pub fn render(root: &Path, report: &ScanReport) -> String {
 /// exactly what [`render`] prints.
 pub fn render_with(root: &Path, report: &ScanReport, judgement: &Judgement) -> String {
     let mut out = String::new();
-    let _ = writeln!(out, "AgentSweep scanned {}", root.display());
+    let _ = writeln!(out, "AgentPatrol scanned {}", root.display());
     let _ = writeln!(
         out,
         "{}, {}.",
@@ -353,7 +353,7 @@ fn finding_kind(item_id: &str) -> String {
     while segments.len() > 2 {
         let candidate = segments[segments.len() - 2];
         segments.pop();
-        if let Some(kind) = agentsweep_core::item::Kind::ALL
+        if let Some(kind) = agentpatrol_core::item::Kind::ALL
             .into_iter()
             .find(|kind| kind.id_segment() == candidate)
         {
@@ -376,8 +376,8 @@ mod tests {
     use std::collections::BTreeSet;
     use std::fs;
 
-    use agentsweep_adapter_workspace::testing::TemporaryRepository;
-    use agentsweep_core::finding::Source;
+    use agentpatrol_adapter_workspace::testing::TemporaryRepository;
+    use agentpatrol_core::finding::Source;
 
     use super::*;
 
@@ -397,7 +397,7 @@ mod tests {
     /// also when the test fails.
     fn temporary_root(name: &str) -> tempfile::TempDir {
         tempfile::Builder::new()
-            .prefix(&format!("agentsweep-folder-scan-{name}-"))
+            .prefix(&format!("agentpatrol-folder-scan-{name}-"))
             .tempdir()
             .expect("a temporary folder to scan")
     }
@@ -511,7 +511,7 @@ mod tests {
         assert!(rendered.contains("Nothing was recorded."), "{rendered}");
         // The pass names the Rule Pack it used, which is always the bundled
         // one: the daemon's Folder Scan may use a newer pack in force.
-        let bundled = agentsweep_core::pack::Manifest::bundled().pack_version;
+        let bundled = agentpatrol_core::pack::Manifest::bundled().pack_version;
         assert!(
             rendered.contains(&format!(
                 "Checked with Rule Pack {bundled}, the one bundled with this build."
@@ -528,7 +528,7 @@ mod tests {
         }
     }
 
-    /// Spec section 3.3: a Surface AgentSweep could not read all the way
+    /// Spec section 3.3: a Surface AgentPatrol could not read all the way
     /// through is an informational Exposure Finding, so the answer is "do not
     /// open yet" rather than a silence that reads like an all-clear.
     #[test]
@@ -746,7 +746,7 @@ mod tests {
         let instruction_file = &enumeration.items[0];
         assert_eq!(
             instruction_file.provenance,
-            agentsweep_core::item::Provenance::Repository {
+            agentpatrol_core::item::Provenance::Repository {
                 commit: TemporaryRepository::HEAD_COMMIT.to_string()
             }
         );
@@ -757,7 +757,7 @@ mod tests {
     #[test]
     fn a_repository_is_only_ever_read() {
         let repository = TemporaryRepository::new("cli-read-only");
-        repository.write_config("[core]\n\tfsmonitor = /tmp/agentsweep-should-not-run\n");
+        repository.write_config("[core]\n\tfsmonitor = /tmp/agentpatrol-should-not-run\n");
         repository.write_hook("pre-commit", b"#!/bin/sh\nexit 1\n", true);
 
         let before = listing(repository.root());

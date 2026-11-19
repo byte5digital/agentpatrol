@@ -1,5 +1,5 @@
 # Fixture for as_0580. A server that was not in the user's configuration the
-# last time AgentSweep enumerated it, on a Surface that was already covered.
+# last time AgentPatrol enumerated it, on a Surface that was already covered.
 [item]
 agent = "claude-code"
 kind = "McpServer"

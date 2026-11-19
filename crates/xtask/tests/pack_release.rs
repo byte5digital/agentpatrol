@@ -7,11 +7,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
-use agentsweep_core::pack::{Bands, MANIFEST_FILE, Manifest, PACK_TREES};
-use agentsweep_core::pack_archive::ARCHIVE_FILE;
-use agentsweep_core::pack_signature::{KeyRole, PINNED_KEYS, PinnedKey};
-use agentsweep_xtask::pack_release::{self, SigningKey};
-use agentsweep_xtask::repo_root;
+use agentpatrol_core::pack::{Bands, MANIFEST_FILE, Manifest, PACK_TREES};
+use agentpatrol_core::pack_archive::ARCHIVE_FILE;
+use agentpatrol_core::pack_signature::{KeyRole, PINNED_KEYS, PinnedKey};
+use agentpatrol_xtask::pack_release::{self, SigningKey};
+use agentpatrol_xtask::repo_root;
 
 const RELEASED: &str = "2026-10-14T08:00:00Z";
 
@@ -395,7 +395,7 @@ fn a_password_for_a_key_that_has_none_is_refused_without_quoting_either() {
 // ---------------------------------------------------------------------------
 
 fn xtask(arguments: &[&str], environment: &[(&str, &str)]) -> Output {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_agentsweep-xtask"));
+    let mut command = Command::new(env!("CARGO_BIN_EXE_agentpatrol-xtask"));
     command.args(arguments);
     for (key, _) in pack_release::KEY_VARIABLES {
         command.env_remove(key);
@@ -539,7 +539,7 @@ fn line_of(text: &str, needle: &str) -> usize {
 fn the_workflow_publishes_the_release_before_it_points_the_index_at_it() {
     let text = workflow_text();
     let order = [
-        "cargo build -p agentsweep-xtask --locked",
+        "cargo build -p agentpatrol-xtask --locked",
         "\"${XTASK}\" pack-gate",
         "\"${XTASK}\" corpus",
         "\"${XTASK}\" pack --pack-version",
@@ -594,7 +594,7 @@ fn the_workflow_uploads_exactly_the_three_kinds_of_asset_and_never_makes_the_rel
 /// release step: without `make_latest=false` it fails.
 #[test]
 fn the_workflow_passes_every_hardening_rule_and_the_release_step_is_seen() {
-    use agentsweep_xtask::workflows::{HardeningRule, Workflow};
+    use agentpatrol_xtask::workflows::{HardeningRule, Workflow};
 
     let text = workflow_text();
     let workflow = Workflow::parse("rule-pack-release.yml", &text).expect("it reads");
@@ -633,7 +633,7 @@ fn only_the_signing_step_sees_a_secret_and_the_workspace_is_always_removed() {
         assert!(text.contains(&format!("{key}: ${{{{ secrets.{key} }}}}")));
         assert!(text.contains(&format!("{password}: ${{{{ secrets.{password} }}}}")));
     }
-    assert!(line_of(&text, "cargo build -p agentsweep-xtask --locked") < signing);
+    assert!(line_of(&text, "cargo build -p agentpatrol-xtask --locked") < signing);
     let cleanup = line_of(&text, "if: always()");
     assert!(cleanup > line_of(&text, "refs/heads/feed"));
     assert!(

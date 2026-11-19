@@ -39,5 +39,5 @@ function show(view) {
 // However it closes, the result was seen.
 dialog.addEventListener("close", () => invoke("first_check_seen"));
 
-await listen("agentsweep://first-check", (event) => show(event.payload));
+await listen("agentpatrol://first-check", (event) => show(event.payload));
 show(await invoke("first_check"));

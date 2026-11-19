@@ -17,10 +17,10 @@
 
 use std::path::Path;
 
-use agentsweep_core::adapter::Enumeration;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Invocation, Item, Kind, TreeCaps};
-use agentsweep_core::views::{MarketplaceView, ParsedView, PluginView, SkillView};
+use agentpatrol_core::adapter::Enumeration;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Invocation, Item, Kind, TreeCaps};
+use agentpatrol_core::views::{MarketplaceView, ParsedView, PluginView, SkillView};
 use serde_json::Value;
 
 use crate::tree::{self, Placement};

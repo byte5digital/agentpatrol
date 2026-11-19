@@ -17,13 +17,13 @@
 //! Finding reads is [`crate::wording`]'s; its buttons and their
 //! confirmations are [`crate::actions`]'s.
 
-use agentsweep_core::adapter::{Primitive, eligibility};
-use agentsweep_core::finding::{Category, FindingState, RuleStatus};
-use agentsweep_core::health::Health;
-use agentsweep_core::item::Kind;
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::{RecordedFinding, ScanSummary};
-use agentsweep_ipc::protocol::{InHand, ScanPhase, StateEvent, Status};
+use agentpatrol_core::adapter::{Primitive, eligibility};
+use agentpatrol_core::finding::{Category, FindingState, RuleStatus};
+use agentpatrol_core::health::Health;
+use agentpatrol_core::item::Kind;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::{RecordedFinding, ScanSummary};
+use agentpatrol_ipc::protocol::{InHand, ScanPhase, StateEvent, Status};
 use serde_json::{Value, json};
 
 pub use crate::actions::{Action, trust_confirmation};
@@ -364,10 +364,10 @@ pub fn plain_card(finding: &RecordedFinding) -> Value {
 /// The one fixed note a card carries, where one applies. Placeholder.
 fn note(finding: &RecordedFinding) -> &'static str {
     if finding.item_id.in_scope("managed") {
-        return "This is controlled by whoever administers this Mac, so AgentSweep only flags it.";
+        return "This is controlled by whoever administers this Mac, so AgentPatrol only flags it.";
     }
     if neutralised_in_place(finding.kind) && finding.is_open() {
-        return "AgentSweep never edits this by itself. One click switches off the single line, \
+        return "AgentPatrol never edits this by itself. One click switches off the single line, \
                 and one more switches it back on.";
     }
     if !finding.fixed_version.is_empty() {
@@ -412,11 +412,11 @@ pub fn count(n: usize, one: &str, many: &str) -> String {
 pub(crate) mod tests {
     use super::*;
 
-    use agentsweep_core::envelope::Timestamp;
-    use agentsweep_core::finding::{FindingId, Severity, Tier};
-    use agentsweep_core::item::ItemId;
-    use agentsweep_core::scan_pass::ScanKind;
-    use agentsweep_core::state::Trigger;
+    use agentpatrol_core::envelope::Timestamp;
+    use agentpatrol_core::finding::{FindingId, Severity, Tier};
+    use agentpatrol_core::item::ItemId;
+    use agentpatrol_core::scan_pass::ScanKind;
+    use agentpatrol_core::state::Trigger;
 
     /// A Full Scan's progress with nothing in hand, as the stream carries it.
     pub(crate) fn progress(done: usize, total: usize) -> StateEvent {

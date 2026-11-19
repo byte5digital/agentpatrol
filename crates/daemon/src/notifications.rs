@@ -4,10 +4,10 @@
 //! something to tell. Every Finding change not yet told falls in one of the
 //! four classes or in none, by the Finding's state and never by its Tier:
 //!
-//! - **stopped automatically**: a Finding AgentSweep stopped by itself, with
+//! - **stopped automatically**: a Finding AgentPatrol stopped by itself, with
 //!   whether Agent sessions appeared to be running when it did, as the
 //!   Quarantine's Event Log record says;
-//! - **keeps coming back**: the open Finding of an Item AgentSweep took out
+//! - **keeps coming back**: the open Finding of an Item AgentPatrol took out
 //!   that came back a third time within the hour;
 //! - **needs you**: every other open Threat Finding, whatever raised it: a
 //!   Rule on Probation, a Score in the Suspicious Band, a Drift question, a
@@ -35,15 +35,15 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use agentsweep_core::chain::ChainState;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::{Action, Actor, EventLog, SessionsRunning};
-use agentsweep_core::finding::{Category, FindingState, Source};
-use agentsweep_core::health::Health;
-use agentsweep_core::item::sha256_hex;
-use agentsweep_core::overview::{Overview, ProjectCheck};
-use agentsweep_core::state::{RecordedFinding, State};
-use agentsweep_ipc::notifications::{NotificationClass, Unnotified, WINDOWLESS, item_name};
+use agentpatrol_core::chain::ChainState;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::{Action, Actor, EventLog, SessionsRunning};
+use agentpatrol_core::finding::{Category, FindingState, Source};
+use agentpatrol_core::health::Health;
+use agentpatrol_core::item::sha256_hex;
+use agentpatrol_core::overview::{Overview, ProjectCheck};
+use agentpatrol_core::state::{RecordedFinding, State};
+use agentpatrol_ipc::notifications::{NotificationClass, Unnotified, WINDOWLESS, item_name};
 
 use crate::log::counted;
 use crate::service::Daemon;
@@ -226,7 +226,7 @@ fn told_about(id: String, class: NotificationClass, count: usize) -> Unnotified 
 
 impl Daemon {
     /// Every change the user has not been told about yet, with whether Agent
-    /// sessions appeared to be running for each Item AgentSweep stopped by
+    /// sessions appeared to be running for each Item AgentPatrol stopped by
     /// itself. Writes nothing.
     pub fn unnotified(&self) -> Vec<Unnotified> {
         // What the Quarantine records say about sessions, by Receipt. A log
@@ -328,9 +328,9 @@ impl Daemon {
 mod tests {
     use super::*;
 
-    use agentsweep_core::finding::{Finding, FindingId, RuleStatus, Severity, Standing, Tier};
-    use agentsweep_core::item::{ItemId, Kind, Scope};
-    use agentsweep_core::overview::ProjectRecord;
+    use agentpatrol_core::finding::{Finding, FindingId, RuleStatus, Severity, Standing, Tier};
+    use agentpatrol_core::item::{ItemId, Kind, Scope};
+    use agentpatrol_core::overview::ProjectRecord;
 
     fn moment() -> Timestamp {
         Timestamp::parse("2026-10-16T08:00:00.000Z").expect("a moment")
@@ -444,7 +444,7 @@ mod tests {
         let mut health = healthy();
         health.events = ChainState::Broken {
             sequence: 3,
-            reason: agentsweep_core::chain::BreakReason::MacFailed,
+            reason: agentpatrol_core::chain::BreakReason::MacFailed,
         };
         let mut state = State::empty();
         let changes = unnotified(&state, &health, &|_| SessionsRunning::Unknown);
@@ -457,7 +457,7 @@ mod tests {
 
         health.baseline = ChainState::Broken {
             sequence: 9,
-            reason: agentsweep_core::chain::BreakReason::MacFailed,
+            reason: agentpatrol_core::chain::BreakReason::MacFailed,
         };
         let again = unnotified(&state, &health, &|_| SessionsRunning::Unknown);
         assert_eq!(again[0].id, "records/events@3,baseline@9", "a new break");

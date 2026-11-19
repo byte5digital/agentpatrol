@@ -249,7 +249,7 @@ pub struct RecordedFinding {
     /// 8.4 and 8.5). Additive: a state file or a client from before carries
     /// none of it.
     pub facts: FindingFacts,
-    /// When AgentSweep first saw it.
+    /// When AgentPatrol first saw it.
     pub first_seen: Timestamp,
     /// When the user was told about it, absent when they have not been.
     pub notified_at: Option<Timestamp>,
@@ -427,7 +427,7 @@ pub struct State {
     pub findings: Vec<RecordedFinding>,
     /// The last thirty Scan summaries, oldest first.
     pub scans: Vec<ScanSummary>,
-    /// The protected folder classes AgentSweep has read successfully before,
+    /// The protected folder classes AgentPatrol has read successfully before,
     /// so it never makes the first read into one by itself.
     pub readable_classes: BTreeSet<String>,
     /// When the last Full Scan finished.
@@ -502,13 +502,13 @@ impl Told {
     }
 }
 
-/// A newer Rule Pack that was ignored because it needs a newer AgentSweep.
+/// A newer Rule Pack that was ignored because it needs a newer AgentPatrol.
 /// Its version and minimum engine version are read off its signed manifest.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct IgnoredPack {
     /// The version the pack states.
     pub pack_version: u64,
-    /// The AgentSweep version it asks for.
+    /// The AgentPatrol version it asks for.
     pub minimum_engine_version: String,
 }
 
@@ -529,7 +529,7 @@ pub struct FeedRecord {
     pub last_contact: Option<Timestamp>,
     /// Since when every attempt has failed, absent while the feed answers.
     pub unreachable_since: Option<Timestamp>,
-    /// The newer pack that was ignored because it needs a newer AgentSweep.
+    /// The newer pack that was ignored because it needs a newer AgentPatrol.
     pub ignored: Option<IgnoredPack>,
 }
 
@@ -623,7 +623,7 @@ impl State {
             .count()
     }
 
-    /// When AgentSweep first saw this Finding, if it has seen it before.
+    /// When AgentPatrol first saw this Finding, if it has seen it before.
     pub fn first_seen(&self, id: &FindingId) -> Option<Timestamp> {
         self.findings
             .iter()

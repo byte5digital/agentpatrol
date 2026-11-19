@@ -11,7 +11,7 @@
 //!   everything without asking again** with the Full Disk Access
 //!   instructions and a best-effort link to its pane (spec section 9.7), and
 //!   the `rules.d/` folder with a button to show it in Finder.
-//! - **What AgentSweep does not protect against**: the short paragraph of
+//! - **What AgentPatrol does not protect against**: the short paragraph of
 //!   spec section 2.4 and a link to the full list in the README.
 //!
 //! Every choice moves through the daemon's `settings` request and the pane
@@ -26,9 +26,9 @@
 
 use std::collections::BTreeMap;
 
-use agentsweep_core::health::{Health, SETTINGS_UNREADABLE};
-use agentsweep_core::settings::{ConfigDir, Posture, Settings};
-use agentsweep_ipc::protocol::{SettingsChange, SettingsState};
+use agentpatrol_core::health::{Health, SETTINGS_UNREADABLE};
+use agentpatrol_core::settings::{ConfigDir, Posture, Settings};
+use agentpatrol_ipc::protocol::{SettingsChange, SettingsState};
 use serde_json::{Value, json};
 
 /// The two Detail choices, as onboarding words them (spec section 8.3).
@@ -38,7 +38,7 @@ pub const DETAIL_CHOICES: [(Posture, &str); 2] = [
 ];
 
 /// The one line naming both background requests (spec section 1.1).
-pub const BACKGROUND_DISCLOSURE: &str = "In the background AgentSweep asks GitHub for newer \
+pub const BACKGROUND_DISCLOSURE: &str = "In the background AgentPatrol asks GitHub for newer \
      detection rules and for app updates. Neither request carries anything about you or this \
      Mac, and nothing else leaves it unless you turn on the Claude AI check.";
 
@@ -57,11 +57,11 @@ pub const FULL_DISK_ACCESS_TITLE: &str = "Check everything without asking again"
 
 /// What the Full Disk Access setting says, under its title.
 pub const FULL_DISK_ACCESS_LINES: [&str; 3] = [
-    "Optional. AgentSweep works without it: macOS asks once for each protected place your \
+    "Optional. AgentPatrol works without it: macOS asks once for each protected place your \
      projects are in, such as Documents.",
-    "To let AgentSweep check every project without asking, give it Full Disk Access: open \
+    "To let AgentPatrol check every project without asking, give it Full Disk Access: open \
      System Settings, choose Privacy & Security, then Full Disk Access, and switch on \
-     AgentSweep. If it is not in the list, add it with the + button from your Applications \
+     AgentPatrol. If it is not in the list, add it with the + button from your Applications \
      folder.",
     "You can switch it off there again at any time.",
 ];
@@ -83,7 +83,7 @@ pub const FULL_DISK_ACCESS_PANES: [&str; 3] = [
 ];
 
 /// The heading of the not-protected section, here and in the README.
-pub const NOT_PROTECTED_TITLE: &str = "What AgentSweep does not protect against";
+pub const NOT_PROTECTED_TITLE: &str = "What AgentPatrol does not protect against";
 
 /// The list of spec section 2.4, word for word, as the README carries it.
 pub const NOT_PROTECTED: [&str; 9] = [
@@ -92,7 +92,7 @@ pub const NOT_PROTECTED: [&str; 9] = [
      disk; rug pulls before the first Baseline exists.",
     "Payloads assembled only at runtime from network responses (the fetch pattern is flagged, \
      the payload is invisible).",
-    "Malware already running with the user's privileges, including disabling AgentSweep itself.",
+    "Malware already running with the user's privileges, including disabling AgentPatrol itself.",
     "Admin or MDM-level tampering beyond the read-only checks.",
     "Integrity of the Agent binaries and of the user's general package dependencies (npm, \
      PyPI, Makefiles).",
@@ -119,7 +119,7 @@ pub const NOT_PROTECTED_SHORT: [&str; 9] = [
 /// The README section the paragraph links to: GitHub's anchor for the
 /// heading [`NOT_PROTECTED_TITLE`].
 pub const NOT_PROTECTED_LINK: &str =
-    "https://github.com/byte5digital/agentsweep#what-agentsweep-does-not-protect-against";
+    "https://github.com/byte5digital/agentpatrol#what-agentpatrol-does-not-protect-against";
 
 /// The short paragraph of spec section 2.4 for the Settings pane.
 pub fn not_protected_paragraph() -> String {
@@ -127,7 +127,7 @@ pub fn not_protected_paragraph() -> String {
         .split_last()
         .expect("the list is not empty");
     format!(
-        "AgentSweep checks what coding agents load from disk. It does not protect against \
+        "AgentPatrol checks what coding agents load from disk. It does not protect against \
          {}, or {last}. Some of these may be covered in a future version.",
         rest.join(", ")
     )
@@ -203,7 +203,7 @@ pub fn view(
         },
         "cli": {
             "title": "Install command line tool",
-            "line": "Puts agentsweep in ~/.local/bin so you can use it in a terminal. No \
+            "line": "Puts agentpatrol in ~/.local/bin so you can use it in a terminal. No \
                      administrator password is needed, and no shell profile is changed.",
             "button": "Install command line tool",
         },
@@ -247,7 +247,7 @@ pub fn view(
 /// empty or absent `dir` clears the override. Nothing for anything else, and
 /// nothing for a directory the daemon would refuse, which is said instead.
 pub fn change_of(asked: &Value) -> Result<SettingsChange, String> {
-    let unknown = || "That is not a setting AgentSweep knows.".to_string();
+    let unknown = || "That is not a setting AgentPatrol knows.".to_string();
     let object = asked.as_object().ok_or_else(unknown)?;
     let mut change = SettingsChange::default();
     if let Some(posture) = object.get("posture") {
@@ -290,8 +290,8 @@ pub const RECORDED: &str = "Saved.";
 pub(crate) mod tests {
     use super::*;
 
-    use agentsweep_core::settings::{CloudCaps, JudgementEngine};
-    use agentsweep_ipc::engine::EngineState;
+    use agentpatrol_core::settings::{CloudCaps, JudgementEngine};
+    use agentpatrol_ipc::engine::EngineState;
 
     pub(crate) fn state(posture: Posture, rule_feed: bool, update_check: bool) -> SettingsState {
         SettingsState {
@@ -310,14 +310,14 @@ pub(crate) mod tests {
                 recorded: 0,
                 ollama: None,
                 apple: None,
-                cloud_use: agentsweep_ipc::engine::CloudUse::default(),
+                cloud_use: agentpatrol_ipc::engine::CloudUse::default(),
             },
         }
     }
 
     fn running() -> Health {
         let mut health = Health::unreachable("nobody");
-        health.protection = agentsweep_core::health::Protection::On;
+        health.protection = agentpatrol_core::health::Protection::On;
         health
     }
 
@@ -497,7 +497,7 @@ pub(crate) mod tests {
         let anchor = github_anchor(NOT_PROTECTED_TITLE);
         assert_eq!(
             NOT_PROTECTED_LINK,
-            format!("https://github.com/byte5digital/agentsweep#{anchor}")
+            format!("https://github.com/byte5digital/agentpatrol#{anchor}")
         );
         let section = README
             .split_once(&heading)
@@ -521,11 +521,11 @@ pub(crate) mod tests {
         assert!(!README.contains('\u{2014}'), "the README has an em-dash");
         assert!(!README.to_lowercase().contains("planning"));
         for needle in [
-            "brew install byte5digital/tap/agentsweep",
+            "brew install byte5digital/tap/agentpatrol",
             "DMG",
             "macOS 14",
-            "cargo install agentsweep",
-            "agentsweep scan <dir>",
+            "cargo install agentpatrol",
+            "agentpatrol scan <dir>",
             "cannot show status",
             "arrives with 0.1.0",
             "Exactly three requests",

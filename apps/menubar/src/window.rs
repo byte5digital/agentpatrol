@@ -39,7 +39,7 @@ pub enum Start {
     /// By macOS at login, through the app's login item (spec section 9.5):
     /// into the menu bar with no window.
     AtLogin,
-    /// By the daemon, with [`agentsweep_ipc::WINDOWLESS`], because it has
+    /// By the daemon, with [`agentpatrol_ipc::WINDOWLESS`], because it has
     /// something to tell and no app was running (spec section 6.7): into the
     /// menu bar with no window and no Dock icon, to notify and stay.
     Windowless,
@@ -52,7 +52,7 @@ impl Start {
     pub fn of<I: IntoIterator<Item = S>, S: AsRef<str>>(arguments: I) -> Start {
         match arguments
             .into_iter()
-            .any(|argument| argument.as_ref() == agentsweep_ipc::WINDOWLESS)
+            .any(|argument| argument.as_ref() == agentpatrol_ipc::WINDOWLESS)
         {
             true => Start::Windowless,
             false => Start::Ordinary,

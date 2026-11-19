@@ -32,15 +32,15 @@
 
 use std::path::PathBuf;
 
-use agentsweep_core::adapter::Primitive;
-use agentsweep_core::composite::{Step, carry_out};
-use agentsweep_core::entry_edit::{EntryPath, Format};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Item, Kind, Scope, Shape, canonical_entry, sha256_hex};
-use agentsweep_core::quarantine::{
+use agentpatrol_core::adapter::Primitive;
+use agentpatrol_core::composite::{Step, carry_out};
+use agentpatrol_core::entry_edit::{EntryPath, Format};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Item, Kind, Scope, Shape, canonical_entry, sha256_hex};
+use agentpatrol_core::quarantine::{
     EnforcementError, MoveOutPlan, Receipt, Store, current_hash, move_out_only, settled,
 };
-use agentsweep_core::views::{HookView, ParsedView};
+use agentpatrol_core::views::{HookView, ParsedView};
 use serde_json::Value;
 
 use crate::{
@@ -67,7 +67,7 @@ pub fn enforce(
             host,
             store,
             item,
-            agentsweep_core::item::TreeCaps::default(),
+            agentpatrol_core::item::TreeCaps::default(),
             primitives,
         ),
     }
@@ -77,7 +77,7 @@ pub fn enforce(
 /// and the key path of its `enabled` inside that layer. Absent when the Item
 /// has none, which is what sends it to the row's own primitive.
 ///
-/// An administrator's Item has no switch AgentSweep may flip, and neither
+/// An administrator's Item has no switch AgentPatrol may flip, and neither
 /// does a server written in a hooks file, which Codex never reads a server
 /// from.
 pub(crate) fn switch_of(adapter: &Codex, host: &Host, item: &Item) -> Option<(PathBuf, EntryPath)> {
@@ -160,7 +160,7 @@ fn written_switch(
     at: &EntryPath,
 ) -> Option<(PathBuf, EntryPath)> {
     let text = String::from_utf8(host.read(layer).ok()?).ok()?;
-    let held = agentsweep_core::entry_edit::read_entry(Format::Toml, &text, at)?;
+    let held = agentpatrol_core::entry_edit::read_entry(Format::Toml, &text, at)?;
     held.is_boolean().then(|| (layer.to_path_buf(), at.clone()))
 }
 
@@ -383,7 +383,7 @@ fn at<'a>(value: &'a Value, entry: &EntryPath) -> Option<&'a Value> {
 }
 
 /// The script a hook entry runs, when it sits inside a Surface this scanner
-/// covers and is therefore AgentSweep's to move (spec section 5.2).
+/// covers and is therefore AgentPatrol's to move (spec section 5.2).
 fn hook_script(adapter: &Codex, host: &Host, item: &Item) -> Option<PathBuf> {
     if item.kind != Kind::Hook {
         return None;

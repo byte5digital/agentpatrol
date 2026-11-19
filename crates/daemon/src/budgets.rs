@@ -16,12 +16,12 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::time::Instant;
 
-use agentsweep_core::evaluation::EvaluationCache;
-use agentsweep_core::keychain::MemoryKeySource;
-use agentsweep_core::packs::LoadedPack;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::scan_pass::BACKGROUND_WORKERS;
-use agentsweep_core::state::Trigger;
+use agentpatrol_core::evaluation::EvaluationCache;
+use agentpatrol_core::keychain::MemoryKeySource;
+use agentpatrol_core::packs::LoadedPack;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::scan_pass::BACKGROUND_WORKERS;
+use agentpatrol_core::state::Trigger;
 
 use crate::change_scan::ChangeScan;
 use crate::full_scan::{FullScan, Unwatched};

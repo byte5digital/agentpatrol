@@ -14,7 +14,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: cargo run -p agentsweep-xtask --locked -- pack
+      - run: cargo run -p agentpatrol-xtask --locked -- pack
       - name: Sign the manifest
         env:
           RULE_PACK_KEY: ${{ secrets.RULE_PACK_ACTIVE_KEY }}
@@ -33,4 +33,4 @@ jobs:
           make_latest: false
           files: pack.tar
       - name: Or through the API
-        run: gh api --method POST repos/example/agentsweep/releases -f tag_name="$GITHUB_REF_NAME" -f make_latest=false
+        run: gh api --method POST repos/example/agentpatrol/releases -f tag_name="$GITHUB_REF_NAME" -f make_latest=false

@@ -618,7 +618,7 @@ impl Piece {
 
 /// The marker that stands where content was left out of a windowed request.
 pub fn elision_marker(bytes: usize) -> String {
-    format!("\n[... {bytes} bytes elided by AgentSweep ...]\n")
+    format!("\n[... {bytes} bytes elided by AgentPatrol ...]\n")
 }
 
 /// What one span of the original bytes is replaced with.

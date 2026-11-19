@@ -4,14 +4,14 @@
 //! out of one is named the same way: the file, a `#`, and the key path inside
 //! it. This module is where a file becomes a parsed document or a Problem, and
 //! where a key path becomes the two spellings the contract asks for: the JSON
-//! pointer an [`agentsweep_core::item::ItemId`] carries (spec section 3.3) and
+//! pointer an [`agentpatrol_core::item::ItemId`] carries (spec section 3.3) and
 //! the dotted path a Rule reads as `settings.key_path`.
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::{Problem, ProblemReason};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Kind, Scope};
+use agentpatrol_core::adapter::{Problem, ProblemReason};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Kind, Scope};
 use serde_json::Value;
 
 /// One configuration file, read and parsed.
@@ -74,7 +74,7 @@ impl Document {
 ///
 /// A file that is not there is not a Problem: nobody has to have one. A file
 /// that cannot be read or cannot be parsed is, because Claude Code would have
-/// read it and AgentSweep cannot say what is in it.
+/// read it and AgentPatrol cannot say what is in it.
 pub fn load(
     host: &Host,
     scope: &Scope,

@@ -4,7 +4,7 @@
 //! are read here into the one shape the rest of the adapter works in: a
 //! `serde_json::Value`. That is deliberate. The normalised views a Rule sees
 //! are agent neutral, so an `[mcp_servers.x]` table and a `"mcpServers": {"x":
-//! …}` object have to arrive at [`agentsweep_core::views::McpView`] as the same
+//! …}` object have to arrive at [`agentpatrol_core::views::McpView`] as the same
 //! value, and a hook written as TOML and the same hook written as JSON have to
 //! hash to one identity.
 //!
@@ -15,9 +15,9 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::{Problem, ProblemReason};
-use agentsweep_core::host::Host;
-use agentsweep_core::item::{Kind, Scope};
+use agentpatrol_core::adapter::{Problem, ProblemReason};
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::{Kind, Scope};
 use serde_json::{Map, Value};
 
 /// How a configuration file is written.
@@ -85,7 +85,7 @@ impl Document {
 ///
 /// A file that is not there is not a Problem: nobody has to have one. A file
 /// that cannot be read or cannot be parsed is, because Codex would have read
-/// it and AgentSweep cannot say what is in it.
+/// it and AgentPatrol cannot say what is in it.
 pub fn load(
     host: &Host,
     scope: &Scope,

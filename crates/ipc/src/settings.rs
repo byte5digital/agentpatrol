@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 
 use serde_json::{Map, Value};
 
-use agentsweep_core::settings::{CONFIG_DIRS, POSTURE, Posture, RULE_FEED, UPDATE_CHECK};
+use agentpatrol_core::settings::{CONFIG_DIRS, POSTURE, Posture, RULE_FEED, UPDATE_CHECK};
 
 use crate::engine::EngineState;
 
@@ -160,7 +160,7 @@ impl SettingsState {
 mod tests {
     use super::*;
 
-    use agentsweep_core::settings::{CloudCaps, JudgementEngine};
+    use agentpatrol_core::settings::{CloudCaps, JudgementEngine};
 
     fn an_engine_state() -> EngineState {
         EngineState {

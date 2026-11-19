@@ -14,10 +14,10 @@
 
 use std::path::PathBuf;
 
-use agentsweep_adapter_workspace::command_in_unknown_hidden_home;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::sha256_hex;
-use agentsweep_core::views::{McpView, value_string};
+use agentpatrol_adapter_workspace::command_in_unknown_hidden_home;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::sha256_hex;
+use agentpatrol_core::views::{McpView, value_string};
 use serde_json::Value;
 
 /// The fields of an MCP entry whose values are credentials rather than
@@ -97,7 +97,7 @@ pub fn redacted(entry: &Value) -> String {
             *value = Value::String(hashed(&value_string(value)));
         }
     }
-    String::from_utf8_lossy(&agentsweep_core::item::canonical_entry(&written)).to_string()
+    String::from_utf8_lossy(&agentpatrol_core::item::canonical_entry(&written)).to_string()
 }
 
 /// The excerpt a Finding on a sensitive field shows: the hash of the value and

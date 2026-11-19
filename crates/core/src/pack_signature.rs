@@ -313,7 +313,7 @@ pub mod development {
             None,
             &secret,
             manifest,
-            Some("agentsweep rule pack, development key"),
+            Some("agentpatrol rule pack, development key"),
             None,
         )
         .expect("the development key signs");

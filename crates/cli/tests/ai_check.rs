@@ -1,4 +1,4 @@
-//! The AI check of `agentsweep scan <dir>` (spec section 4.4), run as a
+//! The AI check of `agentpatrol scan <dir>` (spec section 4.4), run as a
 //! person runs it: the binary, a temporary folder with an Item in the
 //! Ambiguous Band, and a temporary home whose settings file chooses the
 //! Judgement Engine.
@@ -21,8 +21,8 @@ use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::settings::{
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::settings::{
     JudgementEngine, JudgementSettings, OllamaAddress, Posture, Settings,
 };
 
@@ -43,7 +43,7 @@ struct Temporary(PathBuf);
 impl Temporary {
     fn new(purpose: &str) -> Temporary {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-ai-{purpose}-{}-{}",
+            "agentpatrol-ai-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -119,7 +119,7 @@ fn ollama_at(address: &str) -> JudgementSettings {
 }
 
 fn scan(folder: &Path, home: &Path, extra: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_agentsweep"))
+    Command::new(env!("CARGO_BIN_EXE_agentpatrol"))
         .arg("scan")
         .arg(folder)
         .args(extra)
@@ -318,7 +318,7 @@ fn without_an_engine_one_line_says_the_ai_check_did_not_run() {
     let printed = text(&output.stdout);
 
     assert!(
-        printed.contains("The AI check did not run: AgentSweep's settings choose no AI engine"),
+        printed.contains("The AI check did not run: AgentPatrol's settings choose no AI engine"),
         "{printed}"
     );
     assert_eq!((listing(folder.path()), listing(home.path())), before);
@@ -347,7 +347,7 @@ mod bundle {
     use std::os::unix::net::UnixListener;
     use std::thread::JoinHandle;
 
-    use agentsweep_ipc::{Message, read_frame, welcome, write_frame};
+    use agentpatrol_ipc::{Message, read_frame, welcome, write_frame};
     use serde_json::{Value, json};
 
     use super::*;

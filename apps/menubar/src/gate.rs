@@ -19,9 +19,9 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use agentsweep_core::health::Health;
-use agentsweep_core::overview::Overview;
-use agentsweep_core::settings::Posture;
+use agentpatrol_core::health::Health;
+use agentpatrol_core::overview::Overview;
+use agentpatrol_core::settings::Posture;
 use serde_json::{Value, json};
 
 use crate::asking::{Asking, refusal};
@@ -38,7 +38,7 @@ pub const SWITCH_LABEL: &str = "Stop the AI from using flagged items";
 pub const SWITCH_LABEL_DEVELOPER: &str = "Gate: hooks in Claude Code and Codex";
 
 /// The switch's fixed subtitle, in both Postures (spec section 8.10).
-pub const SWITCH_SUBTITLE: &str = "AgentSweep adds a small check to Claude Code and Codex that \
+pub const SWITCH_SUBTITLE: &str = "AgentPatrol adds a small check to Claude Code and Codex that \
      refuses a step while something flagged waits for your decision. A project can switch it \
      off, so it is a backup, not the main protection.";
 
@@ -161,8 +161,8 @@ pub fn switch(asking: &Asking, on: bool) -> Result<bool, String> {
 mod tests {
     use super::*;
 
-    use agentsweep_core::health::{GateLine, GateTrouble};
-    use agentsweep_core::overview::{AgentRecord, ProjectAgent, ProjectRecord};
+    use agentpatrol_core::health::{GateLine, GateTrouble};
+    use agentpatrol_core::overview::{AgentRecord, ProjectAgent, ProjectRecord};
 
     fn line(trouble: GateTrouble) -> GateLine {
         GateLine {
@@ -286,7 +286,7 @@ mod tests {
         assert_eq!(simple["label"], "Stop the AI from using flagged items");
         assert_eq!(
             simple["subtitle"],
-            "AgentSweep adds a small check to Claude Code and Codex that refuses a step while \
+            "AgentPatrol adds a small check to Claude Code and Codex that refuses a step while \
              something flagged waits for your decision. A project can switch it off, so it is a \
              backup, not the main protection."
         );

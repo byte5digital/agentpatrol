@@ -1,7 +1,7 @@
 //! The Host: the read-only view of a machine a Surface Adapter is handed.
 //!
 //! An adapter never touches the real home directly (spec section 3.1). It asks
-//! the Host for the home directory, for the config-dir override AgentSweep
+//! the Host for the home directory, for the config-dir override AgentPatrol
 //! holds for its Agent, for the pooled project roots and for file contents.
 //! Tests build a Host over a temporary directory, which is how the suite stays
 //! off the real machine.
@@ -130,8 +130,8 @@ impl Host {
         }
     }
 
-    /// Sets the config-dir override AgentSweep holds for one Agent. Relocation
-    /// is an explicit AgentSweep setting, never followed from an env file or a
+    /// Sets the config-dir override AgentPatrol holds for one Agent. Relocation
+    /// is an explicit AgentPatrol setting, never followed from an env file or a
     /// settings block.
     pub fn with_config_dir(mut self, agent: &str, dir: PathBuf) -> Host {
         self.config_dirs.insert(agent.to_string(), dir);
@@ -225,7 +225,7 @@ impl Host {
         Some(root.join(absolute.trim_start_matches('/')))
     }
 
-    /// The config directory AgentSweep was told to use for this Agent.
+    /// The config directory AgentPatrol was told to use for this Agent.
     pub fn config_dir(&self, agent: &str) -> Option<&Path> {
         self.config_dirs.get(agent).map(PathBuf::as_path)
     }
@@ -527,15 +527,15 @@ mod tests {
     #[test]
     fn a_temporary_directory_is_one_the_user_does_not_live_in() {
         let host = Host::new(
-            PathBuf::from("/var/folders/ab/T/agentsweep-home"),
-            vec![PathBuf::from("/var/folders/ab/T/agentsweep-project")],
+            PathBuf::from("/var/folders/ab/T/agentpatrol-home"),
+            vec![PathBuf::from("/var/folders/ab/T/agentpatrol-project")],
         );
         assert!(host.in_temporary_directory(Path::new("/tmp/.lint/server")));
         assert!(host.in_temporary_directory(Path::new("/private/var/folders/xy/T/x")));
-        assert!(!host.in_temporary_directory(Path::new("/var/folders/ab/T/agentsweep-home/x")));
+        assert!(!host.in_temporary_directory(Path::new("/var/folders/ab/T/agentpatrol-home/x")));
         assert!(
             !host.in_temporary_directory(Path::new(
-                "/var/folders/ab/T/agentsweep-project/.claude/x"
+                "/var/folders/ab/T/agentpatrol-project/.claude/x"
             ))
         );
         assert!(!host.in_temporary_directory(Path::new("/opt/homebrew/bin/node")));
@@ -548,7 +548,7 @@ mod tests {
     #[test]
     fn a_link_resolves_one_level_against_the_directory_it_sits_in() {
         let temporary = tempfile::Builder::new()
-            .prefix("agentsweep-host-link-")
+            .prefix("agentpatrol-host-link-")
             .tempdir()
             .expect("a temporary folder");
         let root = temporary.path().to_path_buf();

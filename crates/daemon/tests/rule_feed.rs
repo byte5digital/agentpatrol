@@ -21,28 +21,28 @@ use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use agentsweep_core::chain::ChainState;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::eventlog::{Action, Actor, EventLog, PackChange};
-use agentsweep_core::finding::{FindingState, RULE_WITHDRAWN_GONE, RULE_WITHDRAWN_STOPPED};
-use agentsweep_core::health::{Health, SETTINGS_UNREADABLE, StateFileHealth};
-use agentsweep_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
-use agentsweep_core::pack::{Bands, MANIFEST_FILE, Manifest, PACK_TREES};
-use agentsweep_core::pack_archive::{self, ARCHIVE_FILE};
-use agentsweep_core::pack_signature::KeyRole;
-use agentsweep_core::pack_signature::development::{sign, sign_with_an_unpinned_key};
-use agentsweep_core::packs::PackOrigin;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::state::{RecordedFinding, Trigger};
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::due::Schedule;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::rule_feed::{Endpoints, FeedTuning, user_agent};
-use agentsweep_daemon::service::{self, Background, Daemon, FeedOutcome};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::Client;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_ipc::protocol::{Offer, Role, StateEvent, Status, offers};
+use agentpatrol_core::chain::ChainState;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::eventlog::{Action, Actor, EventLog, PackChange};
+use agentpatrol_core::finding::{FindingState, RULE_WITHDRAWN_GONE, RULE_WITHDRAWN_STOPPED};
+use agentpatrol_core::health::{Health, SETTINGS_UNREADABLE, StateFileHealth};
+use agentpatrol_core::keychain::{ChainKey, KeyError, KeySource, MemoryKeySource};
+use agentpatrol_core::pack::{Bands, MANIFEST_FILE, Manifest, PACK_TREES};
+use agentpatrol_core::pack_archive::{self, ARCHIVE_FILE};
+use agentpatrol_core::pack_signature::KeyRole;
+use agentpatrol_core::pack_signature::development::{sign, sign_with_an_unpinned_key};
+use agentpatrol_core::packs::PackOrigin;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::state::{RecordedFinding, Trigger};
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::due::Schedule;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::rule_feed::{Endpoints, FeedTuning, user_agent};
+use agentpatrol_daemon::service::{self, Background, Daemon, FeedOutcome};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::Client;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_ipc::protocol::{Offer, Role, StateEvent, Status, offers};
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
 
@@ -431,7 +431,7 @@ struct Sandbox {
 impl Sandbox {
     fn empty(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-feed-{purpose}-{}-{}",
+            "agentpatrol-feed-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -663,7 +663,7 @@ fn the_status_says_rules_updated_on_the_signed_release_date() {
     let bundled = sandbox.status();
     assert_eq!(
         bundled.health.rules_updated(),
-        agentsweep_core::pack::released_day(&Manifest::bundled().released_at)
+        agentpatrol_core::pack::released_day(&Manifest::bundled().released_at)
     );
 
     feed.offer_index(2);
@@ -744,10 +744,10 @@ fn a_lower_version_a_bad_signature_and_a_bad_archive_are_refused() {
     assert!(!sandbox.data().root().join("rules.incoming").exists());
 }
 
-/// A newer pack that needs a newer AgentSweep is ignored, its archive never
+/// A newer pack that needs a newer AgentPatrol is ignored, its archive never
 /// fetched, and Health says so, before and after a restart.
 #[test]
-fn a_pack_that_needs_a_newer_agentsweep_raises_the_health_notice() {
+fn a_pack_that_needs_a_newer_agentpatrol_raises_the_health_notice() {
     let sandbox = Sandbox::with_a_planted_skill("too-new");
     let feed = FeedServer::start();
     feed.offer_index(4);
@@ -773,7 +773,7 @@ fn a_pack_that_needs_a_newer_agentsweep_raises_the_health_notice() {
         // the notice is the rung below them.
         assert_eq!(
             quiet(&health).headline(),
-            "Newer rules need a newer AgentSweep."
+            "Newer rules need a newer AgentPatrol."
         );
     }
     let daemon = sandbox.start(&feed, false);
@@ -1037,7 +1037,7 @@ fn the_fetch_is_one_request_with_no_identifiers_and_none_when_the_toggle_is_off(
         let user = std::env::var("USER").unwrap_or_default();
         let home = sandbox.home.display().to_string();
         let everything = format!("{} {:?}", request.line, request.headers);
-        for identifier in [user.as_str(), home.as_str(), agentsweep_core::BUNDLE_ID] {
+        for identifier in [user.as_str(), home.as_str(), agentpatrol_core::BUNDLE_ID] {
             if !identifier.is_empty() {
                 assert!(
                     !everything.contains(identifier),
@@ -1083,8 +1083,8 @@ fn the_fetch_is_one_request_with_no_identifiers_and_none_when_the_toggle_is_off(
 /// passed; one that leaves it on releases the fetch at once.
 #[test]
 fn the_first_fetch_waits_for_the_settings_hand_over_and_none_when_it_says_off() {
-    use agentsweep_core::settings::Posture;
-    use agentsweep_ipc::protocol::SettingsChange;
+    use agentpatrol_core::settings::Posture;
+    use agentpatrol_ipc::protocol::SettingsChange;
 
     let hold = Duration::from_millis(1_500);
 
@@ -1513,8 +1513,8 @@ fn the_fetch_is_daily_and_a_feed_unreachable_for_thirty_days_raises_the_notice()
 /// half, then read back from the release directory as the feed would serve
 /// it.
 fn signed_by_the_release_step(version: u64) -> Release {
-    use agentsweep_core::pack_signature::development::ACTIVE_SECRET;
-    use agentsweep_xtask::pack_release::{self, SigningKey};
+    use agentpatrol_core::pack_signature::development::ACTIVE_SECRET;
+    use agentpatrol_xtask::pack_release::{self, SigningKey};
 
     let temporary = tempfile::tempdir().expect("a temporary directory");
     let root = temporary.path().join("pack");
@@ -1569,7 +1569,7 @@ fn a_release_signed_by_the_release_workflow_is_accepted_and_a_tampered_one_is_re
     // Filed under the standby key's id, which did not make it.
     let mut posing = signed_by_the_release_step(3);
     posing.signatures[0].0 =
-        agentsweep_core::pack_signature::development::pinned(KeyRole::Standby).key_id();
+        agentpatrol_core::pack_signature::development::pinned(KeyRole::Standby).key_id();
     feed.offer_index(3);
     feed.offer_release(3, &posing);
     assert!(

@@ -58,7 +58,7 @@ pub const EXIT_REPLACED: u8 = 75;
 pub struct Own {
     /// The daemon's own executable.
     pub executable: PathBuf,
-    /// The `.app` directory it sits in, as `Contents/MacOS/agentsweepd`.
+    /// The `.app` directory it sits in, as `Contents/MacOS/agentpatrold`.
     pub bundle: PathBuf,
 }
 
@@ -262,7 +262,7 @@ pub fn watch(
     drop(sender);
 
     let thread = std::thread::Builder::new()
-        .name("agentsweep-bundle-watch".to_string())
+        .name("agentpatrol-bundle-watch".to_string())
         .spawn(move || {
             if own.is_in_a_trash() {
                 then(Change::Gone);
@@ -300,12 +300,12 @@ mod tests {
     use std::time::Instant;
 
     /// A bundle laid out the way the app ships: the daemon at
-    /// `Contents/MacOS/agentsweepd` and a version in `Contents/Info.plist`.
+    /// `Contents/MacOS/agentpatrold` and a version in `Contents/Info.plist`.
     fn bundle_in(folder: &Path, version: &str) -> Own {
-        let bundle = folder.join("AgentSweep.app");
+        let bundle = folder.join("AgentPatrol.app");
         let macos = bundle.join("Contents").join("MacOS");
         fs::create_dir_all(&macos).expect("a bundle");
-        fs::write(macos.join("agentsweepd"), b"the daemon").expect("an executable");
+        fs::write(macos.join("agentpatrold"), b"the daemon").expect("an executable");
         fs::write(
             bundle.join("Contents").join("Info.plist"),
             format!(
@@ -313,26 +313,26 @@ mod tests {
             ),
         )
         .expect("an Info.plist");
-        Own::of(&macos.join("agentsweepd")).expect("a daemon inside a bundle")
+        Own::of(&macos.join("agentpatrold")).expect("a daemon inside a bundle")
     }
 
     #[test]
     fn only_a_daemon_inside_an_app_bundle_has_a_bundle_to_watch() {
         let own = Own::of(Path::new(
-            "/Applications/AgentSweep.app/Contents/MacOS/agentsweepd",
+            "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrold",
         ))
         .expect("a bundle");
-        assert_eq!(own.bundle, PathBuf::from("/Applications/AgentSweep.app"));
+        assert_eq!(own.bundle, PathBuf::from("/Applications/AgentPatrol.app"));
         assert_eq!(
             own.info_plist(),
-            PathBuf::from("/Applications/AgentSweep.app/Contents/Info.plist")
+            PathBuf::from("/Applications/AgentPatrol.app/Contents/Info.plist")
         );
-        assert_eq!(Own::of(Path::new("/repo/target/debug/agentsweepd")), None);
+        assert_eq!(Own::of(Path::new("/repo/target/debug/agentpatrold")), None);
         assert_eq!(
-            Own::of(Path::new("/x/AgentSweep/Contents/MacOS/agentsweepd")),
+            Own::of(Path::new("/x/AgentPatrol/Contents/MacOS/agentpatrold")),
             None
         );
-        assert_eq!(Own::of(Path::new("agentsweepd")), None);
+        assert_eq!(Own::of(Path::new("agentpatrold")), None);
     }
 
     #[test]
@@ -354,7 +354,7 @@ mod tests {
         let staging = tempfile::tempdir_in(folder.path()).expect("a staging directory");
         bundle_in(staging.path(), "0.1.0");
         fs::rename(&own.bundle, folder.path().join("old.app")).expect("the old bundle moved");
-        fs::rename(staging.path().join("AgentSweep.app"), &own.bundle).expect("the new one in");
+        fs::rename(staging.path().join("AgentPatrol.app"), &own.bundle).expect("the new one in");
 
         assert_eq!(judge(&started, &own.snapshot()), Change::Replaced);
     }
@@ -365,7 +365,7 @@ mod tests {
         let folder = tempfile::tempdir().expect("a temporary directory");
         let own = bundle_in(folder.path(), "0.1.0");
         let started = own.snapshot();
-        let fresh = own.executable.with_file_name("agentsweepd.new");
+        let fresh = own.executable.with_file_name("agentpatrold.new");
         fs::write(&fresh, b"the new daemon").expect("a new executable");
         fs::rename(&fresh, &own.executable).expect("the new executable in place");
         assert_eq!(judge(&started, &own.snapshot()), Change::Replaced);
@@ -392,7 +392,7 @@ mod tests {
         let started = own.snapshot();
         let trash = folder.path().join(".Trash");
         fs::create_dir_all(&trash).expect("a trash");
-        fs::rename(&own.bundle, trash.join("AgentSweep.app")).expect("the bundle trashed");
+        fs::rename(&own.bundle, trash.join("AgentPatrol.app")).expect("the bundle trashed");
         assert_eq!(judge(&started, &own.snapshot()), Change::Gone);
     }
 
@@ -456,7 +456,7 @@ mod tests {
         let started = own.snapshot();
         let trash = folder.path().join(".Trash");
         fs::create_dir_all(&trash).expect("a trash");
-        fs::rename(&own.bundle, trash.join("AgentSweep.app")).expect("the bundle trashed");
+        fs::rename(&own.bundle, trash.join("AgentPatrol.app")).expect("the bundle trashed");
 
         let settled = settle(
             judge(&started, &own.snapshot()),
@@ -473,7 +473,7 @@ mod tests {
     #[test]
     fn the_last_look_changes_only_gone() {
         let folder = tempfile::tempdir().expect("a temporary directory");
-        let missing = folder.path().join("AgentSweep.app");
+        let missing = folder.path().join("AgentPatrol.app");
         assert_eq!(at_exit(Change::Replaced, &missing), Change::Replaced);
         assert_eq!(Change::Replaced.exit_status(), Some(75));
         assert_eq!(at_exit(Change::Same, &missing), Change::Same);
@@ -486,24 +486,24 @@ mod tests {
     #[test]
     fn a_bundle_inside_a_trash_folder_is_in_the_trash() {
         for trashed in [
-            "/Users/someone/.Trash/AgentSweep.app",
-            "/Users/someone/.Trash/AgentSweep 12.50.04.app",
-            "/Volumes/Disk/.Trashes/501/AgentSweep.app",
-            "/Volumes/Disk/.Trashes/501/Folder/AgentSweep.app",
+            "/Users/someone/.Trash/AgentPatrol.app",
+            "/Users/someone/.Trash/AgentPatrol 12.50.04.app",
+            "/Volumes/Disk/.Trashes/501/AgentPatrol.app",
+            "/Volumes/Disk/.Trashes/501/Folder/AgentPatrol.app",
         ] {
             assert!(in_a_trash(Path::new(trashed)), "{trashed}");
         }
         for kept in [
-            "/Applications/AgentSweep.app",
-            "/Users/someone/Applications/AgentSweep.app",
-            "/Users/someone/Trash/AgentSweep.app",
-            "/Users/someone/.Trashcan/AgentSweep.app",
+            "/Applications/AgentPatrol.app",
+            "/Users/someone/Applications/AgentPatrol.app",
+            "/Users/someone/Trash/AgentPatrol.app",
+            "/Users/someone/.Trashcan/AgentPatrol.app",
             "/Users/someone/.Trash.app",
         ] {
             assert!(!in_a_trash(Path::new(kept)), "{kept}");
         }
         let own = Own::of(Path::new(
-            "/Users/someone/.Trash/AgentSweep 12.50.04.app/Contents/MacOS/agentsweepd",
+            "/Users/someone/.Trash/AgentPatrol 12.50.04.app/Contents/MacOS/agentpatrold",
         ))
         .expect("a bundle");
         assert!(own.is_in_a_trash());

@@ -15,8 +15,8 @@
 //! the Gate lines read otherwise in the Developer Posture (spec section
 //! 6.6).
 
-use agentsweep_core::health::{Health, Rung};
-use agentsweep_core::settings::Posture;
+use agentpatrol_core::health::{Health, Rung};
+use agentpatrol_core::settings::Posture;
 use serde_json::{Value, json};
 
 use crate::banner::{self, Banner, Daemon};
@@ -189,7 +189,7 @@ impl View {
     pub fn updating() -> View {
         View {
             orb: Orb::Updating,
-            sentence: "AgentSweep is updating.".to_string(),
+            sentence: "AgentPatrol is updating.".to_string(),
             developer_sentence: None,
             last_check: None,
             protection_off: false,
@@ -227,7 +227,7 @@ impl View {
     pub fn registered_again(stale: &Stale) -> View {
         View {
             orb: Orb::Updating,
-            sentence: "AgentSweep registered its background item again.".to_string(),
+            sentence: "AgentPatrol registered its background item again.".to_string(),
             developer_sentence: None,
             last_check: None,
             protection_off: false,
@@ -328,8 +328,8 @@ impl View {
 mod tests {
     use super::*;
 
-    use agentsweep_core::chain::{BreakReason, ChainState};
-    use agentsweep_core::envelope::Timestamp;
+    use agentpatrol_core::chain::{BreakReason, ChainState};
+    use agentpatrol_core::envelope::Timestamp;
 
     use crate::glyph::Mark;
 
@@ -426,7 +426,7 @@ mod tests {
         for why in [
             Off::NeedsApproval,
             Off::Unreachable("no daemon answered".to_string()),
-            Off::Refused("AgentSweep answers only its own signed programs".to_string()),
+            Off::Refused("AgentPatrol answers only its own signed programs".to_string()),
         ] {
             let view = View::off(&why);
             assert_eq!(view.orb, Orb::Off);
@@ -484,7 +484,7 @@ mod tests {
     }
 
     /// The popover shows an integrity state as one line pointing to the
-    /// window, with no integrity action, in either Posture; Open AgentSweep
+    /// window, with no integrity action, in either Posture; Open AgentPatrol
     /// stays offered beside it.
     #[test]
     fn the_popover_shows_no_integrity_actions() {
@@ -512,12 +512,12 @@ mod tests {
                 let value = view.to_value(posture);
                 assert_eq!(
                     value["banner"]["title"],
-                    "Something needs a look. Open AgentSweep."
+                    "Something needs a look. Open AgentPatrol."
                 );
                 assert_eq!(value["banner"]["buttons"], json!([]), "{value}");
                 assert_eq!(value["banner"]["body"], "", "{value}");
                 assert!(value["banner"]["developer"].is_null(), "{value}");
-                assert_eq!(value["protectionOff"], false, "Open AgentSweep stays");
+                assert_eq!(value["protectionOff"], false, "Open AgentPatrol stays");
                 let text = value.to_string();
                 for command in commands {
                     assert!(!text.contains(command), "{command} in {text}");
@@ -534,14 +534,14 @@ mod tests {
         assert!(!view.login_items);
     }
 
-    /// An app older than its daemon shows one line, "AgentSweep was
+    /// An app older than its daemon shows one line, "AgentPatrol was
     /// updated. Reopen it.", with **Reopen** and nothing else to press:
     /// this app can ask that daemon nothing.
     #[test]
     fn an_older_app_shows_the_reopen_line_with_reopen() {
         let view = View::reopen("0.1.0", "0.2.0");
         assert_eq!(view.orb, Orb::Updating);
-        assert_eq!(view.sentence, "AgentSweep was updated. Reopen it.");
+        assert_eq!(view.sentence, "AgentPatrol was updated. Reopen it.");
         assert!(view.protection_off, "nothing to ask a daemon that refuses");
         assert!(!view.login_items);
         for posture in [Posture::Simple, Posture::Developer] {
@@ -549,7 +549,7 @@ mod tests {
             assert_eq!(value["sentence"], Value::Null, "the banner replaces it");
             assert_eq!(
                 value["banner"]["title"],
-                "AgentSweep was updated. Reopen it."
+                "AgentPatrol was updated. Reopen it."
             );
             assert_eq!(value["banner"]["body"], "");
             assert_eq!(value["banner"]["buttons"][0]["label"], "Reopen");
@@ -591,9 +591,12 @@ mod tests {
             ),
             (
                 View::of(&tampered),
-                "Something needs a look. Open AgentSweep.",
+                "Something needs a look. Open AgentPatrol.",
             ),
-            (View::of(&reset), "Something needs a look. Open AgentSweep."),
+            (
+                View::of(&reset),
+                "Something needs a look. Open AgentPatrol.",
+            ),
         ];
         for (view, title) in views {
             for posture in [Posture::Simple, Posture::Developer] {
@@ -674,14 +677,14 @@ mod tests {
         for word in ["finding", "quarantine", "restore", "trust"] {
             assert!(!page.to_lowercase().contains(word), "the page names {word}");
         }
-        assert!(!script.contains("agentsweep://findings"));
+        assert!(!script.contains("agentpatrol://findings"));
         assert!(!script.contains("count"), "no count of Items");
         let listened: Vec<&str> = script
             .lines()
             .filter_map(|line| line.split("listen(\"").nth(1))
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(listened, ["agentsweep://view"]);
+        assert_eq!(listened, ["agentpatrol://view"]);
     }
 
     /// A Full Scan shows "Checking…" over its bar: as the sentence when
@@ -752,7 +755,7 @@ mod tests {
     /// wording of each Posture.
     #[test]
     fn the_gate_rung_reads_in_the_wording_of_each_posture() {
-        use agentsweep_core::health::{GateLine, GateTrouble};
+        use agentpatrol_core::health::{GateLine, GateTrouble};
 
         let mut health = Health::running();
         health.projects_gate_off = 2;

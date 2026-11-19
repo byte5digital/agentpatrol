@@ -3,7 +3,7 @@
 //! Codex writes an MCP server as `[mcp_servers.<name>]` in TOML, Claude Code
 //! writes one as an object under `mcpServers` in JSON, and one Rule has to
 //! cover both (spec section 3.3). So the table is converted here into the
-//! agent-neutral shape [`agentsweep_core::views::McpView`] is written against,
+//! agent-neutral shape [`agentpatrol_core::views::McpView`] is written against,
 //! and the view does the rest.
 //!
 //! What the Item carries as content is the table as it was written, not the
@@ -18,10 +18,10 @@
 
 use std::path::{Path, PathBuf};
 
-use agentsweep_adapter_workspace::command_in_unknown_hidden_home;
-use agentsweep_core::host::Host;
-use agentsweep_core::item::sha256_hex;
-use agentsweep_core::views::{McpView, value_string};
+use agentpatrol_adapter_workspace::command_in_unknown_hidden_home;
+use agentpatrol_core::host::Host;
+use agentpatrol_core::item::sha256_hex;
+use agentpatrol_core::views::{McpView, value_string};
 use serde_json::{Map, Value, json};
 
 /// The fields of a Codex MCP table whose values are credentials rather than
@@ -39,7 +39,7 @@ const SENSITIVE_FIELDS: [&str; 2] = ["env", "http_headers"];
 ///
 /// `env_http_headers` maps a header to the environment variable that fills it,
 /// so it travels as a header whose value is that reference. It is the
-/// difference between a header AgentSweep can see the credential of and one it
+/// difference between a header AgentPatrol can see the credential of and one it
 /// cannot, and writing the reference keeps the two apart.
 pub fn shared_shape(table: &Value) -> Value {
     let mut shape = Map::new();
@@ -152,7 +152,7 @@ pub fn redacted(table: &Value) -> String {
             *value = Value::String(hashed(&value_string(value)));
         }
     }
-    String::from_utf8_lossy(&agentsweep_core::item::canonical_entry(&written)).to_string()
+    String::from_utf8_lossy(&agentpatrol_core::item::canonical_entry(&written)).to_string()
 }
 
 /// The excerpt a Finding on a sensitive field shows: the hash of the value and

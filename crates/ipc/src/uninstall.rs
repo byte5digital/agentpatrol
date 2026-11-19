@@ -2,7 +2,7 @@
 //! which carries the user's choice about what is in Quarantine and nothing
 //! else, and what the daemon answers it with.
 //!
-//! The Settings flow and the in-bundle `agentsweep uninstall` both send it,
+//! The Settings flow and the in-bundle `agentpatrol uninstall` both send it,
 //! with the same choice and the same default, [`UninstallChoice::Keep`], so
 //! removing the app never silently loses a quarantined Item. The daemon takes
 //! the Gate's entries and the Codex pin away from every Agent first, on every
@@ -16,7 +16,7 @@ use serde_json::{Map, Value};
 
 use crate::protocol::ActionReport;
 
-/// What happens to what is in Quarantine when AgentSweep is removed.
+/// What happens to what is in Quarantine when AgentPatrol is removed.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum UninstallChoice {
     /// **Restore all N quarantined items**: every Receipt replayed as a
@@ -27,7 +27,7 @@ pub enum UninstallChoice {
     /// the data directory stay as they are, so a reinstall resumes them.
     #[default]
     Keep,
-    /// **Delete everything**: everything AgentSweep made goes, the data
+    /// **Delete everything**: everything AgentPatrol made goes, the data
     /// directory with the quarantined payloads, the Keychain items, the log
     /// directory, the caches and the app's preferences.
     DeleteEverything,
@@ -131,7 +131,7 @@ impl UninstallReport {
             && self
                 .restored
                 .iter()
-                .all(|report| report.result == agentsweep_core::eventlog::Outcome::Ok)
+                .all(|report| report.result == agentpatrol_core::eventlog::Outcome::Ok)
     }
 }
 

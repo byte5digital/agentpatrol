@@ -12,9 +12,9 @@
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
-use agentsweep_core::quarantine::Conflict;
-use agentsweep_ipc::protocol::{ActionReport, RevealedReceipt, Role};
-use agentsweep_ipc::{Client, ClientError};
+use agentpatrol_core::quarantine::Conflict;
+use agentpatrol_ipc::protocol::{ActionReport, RevealedReceipt, Role};
+use agentpatrol_ipc::{Client, ClientError};
 
 /// The exit code of an action that was carried out.
 pub const DONE: u8 = 0;
@@ -109,7 +109,7 @@ pub fn parse(command: &str, arguments: &[String]) -> Result<Invocation, String> 
         let [target] = positional.as_slice() else {
             return Err(format!(
                 "`{command}` takes one id: a Finding id, an Item id or a Receipt id, as \
-                 `agentsweep status` prints them"
+                 `agentpatrol status` prints them"
             ));
         };
         let target = target.clone();
@@ -153,7 +153,7 @@ pub fn run(invocation: &Invocation) -> (String, u8) {
     match answered {
         Ok(report) => {
             let code = match report.result {
-                agentsweep_core::eventlog::Outcome::Failed => NOT_DONE,
+                agentpatrol_core::eventlog::Outcome::Failed => NOT_DONE,
                 _ => DONE,
             };
             (render_report(&report), code)
@@ -177,7 +177,7 @@ fn unanswered(error: &ClientError) -> (String, u8) {
             NOT_DONE,
         ),
         other => (
-            format!("AgentSweep could not be asked: {other}\n"),
+            format!("AgentPatrol could not be asked: {other}\n"),
             NOT_DONE,
         ),
     }
@@ -256,10 +256,10 @@ pub fn render_receipts(receipts: &[RevealedReceipt]) -> String {
 mod tests {
     use super::*;
 
-    use agentsweep_core::envelope::Timestamp;
-    use agentsweep_core::eventlog::{Actor, Outcome, Primitive, ReceiptStep, SessionsRunning};
-    use agentsweep_core::item::{ItemId, Kind};
-    use agentsweep_ipc::protocol::{AgentSessions, Sessions};
+    use agentpatrol_core::envelope::Timestamp;
+    use agentpatrol_core::eventlog::{Actor, Outcome, Primitive, ReceiptStep, SessionsRunning};
+    use agentpatrol_core::item::{ItemId, Kind};
+    use agentpatrol_ipc::protocol::{AgentSessions, Sessions};
 
     fn words(line: &[&str]) -> Vec<String> {
         line.iter().map(|word| word.to_string()).collect()
@@ -373,7 +373,7 @@ mod tests {
     #[test]
     fn no_daemon_is_protection_off_and_nothing_done() {
         let nowhere = std::env::temp_dir().join(format!(
-            "agentsweep-actions-nobody-{}.sock",
+            "agentpatrol-actions-nobody-{}.sock",
             std::process::id()
         ));
         let _ = std::fs::remove_file(&nowhere);

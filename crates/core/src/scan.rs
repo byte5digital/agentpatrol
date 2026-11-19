@@ -4,7 +4,7 @@
 //! built once per worker thread: a scanner owns a WebAssembly store, so it is
 //! neither cheap to create nor shareable between threads. The engine is built
 //! with the `pulley` feature, which runs the compiled rules in Wasmtime's
-//! interpreter instead of its just-in-time compiler, so AgentSweep needs no JIT
+//! interpreter instead of its just-in-time compiler, so AgentPatrol needs no JIT
 //! entitlement under the hardened runtime (ADR 0004).
 //!
 //! Before every scan the core defines every view global of the rule contract,

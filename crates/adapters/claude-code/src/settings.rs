@@ -254,7 +254,7 @@ pub static PLAIN_NAMES: &[(&str, &str)] = &[
 /// What the key at a dotted path does, in plain words, or none for a key
 /// this adapter does not describe.
 pub fn plain_name(key_path: &str) -> Option<&'static str> {
-    agentsweep_core::finding_facts::setting_plain_name(PLAIN_NAMES, key_path)
+    agentpatrol_core::finding_facts::setting_plain_name(PLAIN_NAMES, key_path)
 }
 
 /// One settings key found in one document.
@@ -343,7 +343,7 @@ pub fn is_executing_or_redirecting(key_path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use agentsweep_core::item::Kind;
+    use agentpatrol_core::item::Kind;
     use serde_json::json;
 
     /// Every declared key, and every key a Rule or Heuristic of the bundled

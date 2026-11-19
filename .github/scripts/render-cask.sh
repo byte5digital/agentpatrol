@@ -20,7 +20,7 @@ if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
 fi
 version="$1"
 dmg="$2"
-template="${3:-$(cd "$(dirname "$0")/.." && pwd)/cask/agentsweep.rb.template}"
+template="${3:-$(cd "$(dirname "$0")/.." && pwd)/cask/agentpatrol.rb.template}"
 
 refuse() {
 	echo "$1" >&2

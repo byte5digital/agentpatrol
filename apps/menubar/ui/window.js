@@ -1328,7 +1328,7 @@ $("settings-uninstall")
       if (choice === null) {
         return;
       }
-      const lines = await invoke("uninstall_agentsweep", { asked: { choice } });
+      const lines = await invoke("uninstall_agentpatrol", { asked: { choice } });
       answer.replaceChildren(...lines.map((line) => el("p", "muted", line)));
     } catch (why) {
       answer.replaceChildren(el("p", "muted", String(why)));
@@ -1576,11 +1576,11 @@ $("scan-folder").addEventListener("click", () =>
   }),
 );
 
-await listen("agentsweep://findings", (event) => render(event.payload));
-await listen("agentsweep://folder", (event) => renderFolder(event.payload));
-await listen("agentsweep://activity-at", (event) => showActivityAt(event.payload));
+await listen("agentpatrol://findings", (event) => render(event.payload));
+await listen("agentpatrol://folder", (event) => renderFolder(event.payload));
+await listen("agentpatrol://activity-at", (event) => showActivityAt(event.payload));
 // A click on a notification brought the app to the front: the window turns
 // to Needs your decision.
-await listen("agentsweep://pane", (event) => select(event.payload));
+await listen("agentpatrol://pane", (event) => select(event.payload));
 renderFolder(await invoke("folder"));
 render(await invoke("findings"));

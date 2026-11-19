@@ -20,22 +20,22 @@ use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use agentsweep_core::finding::FindingState;
-use agentsweep_core::keychain::MemoryKeySource;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::quarantine::Conflict;
-use agentsweep_core::state::RecordedFinding;
-use agentsweep_daemon::Tuning;
-use agentsweep_daemon::options::{KeySourceChoice, LogChoice, Options};
-use agentsweep_daemon::service::{self, Background, Daemon};
-use agentsweep_daemon::watcher::Timings;
-use agentsweep_ipc::peer::SameUser;
-use agentsweep_menubar::asking::{ActionRequest, Asking, MOVED_TO_QUARANTINE};
-use agentsweep_menubar::frame::Frame;
-use agentsweep_menubar::link::Socket;
-use agentsweep_menubar::permission;
-use agentsweep_menubar::presses::Presses;
-use agentsweep_menubar::supervision::{self, ServiceState, Services};
+use agentpatrol_core::finding::FindingState;
+use agentpatrol_core::keychain::MemoryKeySource;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::quarantine::Conflict;
+use agentpatrol_core::state::RecordedFinding;
+use agentpatrol_daemon::Tuning;
+use agentpatrol_daemon::options::{KeySourceChoice, LogChoice, Options};
+use agentpatrol_daemon::service::{self, Background, Daemon};
+use agentpatrol_daemon::watcher::Timings;
+use agentpatrol_ipc::peer::SameUser;
+use agentpatrol_menubar::asking::{ActionRequest, Asking, MOVED_TO_QUARANTINE};
+use agentpatrol_menubar::frame::Frame;
+use agentpatrol_menubar::link::Socket;
+use agentpatrol_menubar::permission;
+use agentpatrol_menubar::presses::Presses;
+use agentpatrol_menubar::supervision::{self, ServiceState, Services};
 use serde_json::Value;
 
 static NEXT: AtomicU32 = AtomicU32::new(0);
@@ -65,7 +65,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-presses-{purpose}-{}-{}",
+            "agentpatrol-presses-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -425,7 +425,7 @@ fn a_start_it_delivered_twice_starts_the_daemon_once() {
         .map(supervision::started_line)
     });
     assert_eq!(services.started.load(Ordering::SeqCst), 1, "started once");
-    assert_eq!(answers[0], Ok("AgentSweep is running."));
+    assert_eq!(answers[0], Ok("AgentPatrol is running."));
     assert!(answers.iter().all(|answer| answer == &answers[0]));
 }
 
@@ -510,11 +510,13 @@ fn a_reopen_delivered_twice_starts_the_new_app_once() {
     let started = AtomicUsize::new(0);
     let presses = Presses::default();
     let answers = delivered_twice(&presses, || {
-        agentsweep_menubar::updater::reopen(
-            std::path::Path::new("/Applications/AgentSweep.app/Contents/MacOS/agentsweep-menubar"),
+        agentpatrol_menubar::updater::reopen(
+            std::path::Path::new(
+                "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol-menubar",
+            ),
             |arguments| {
                 assert_eq!(arguments[0], "-n");
-                assert_eq!(arguments[1], "/Applications/AgentSweep.app");
+                assert_eq!(arguments[1], "/Applications/AgentPatrol.app");
                 started.fetch_add(1, Ordering::SeqCst);
                 true
             },

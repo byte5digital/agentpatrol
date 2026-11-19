@@ -237,7 +237,7 @@ pub static PLAIN_NAMES: &[(&str, &str)] = &[
 /// What the key at a dotted path does, in plain words, or none for a key
 /// this adapter does not describe.
 pub fn plain_name(key_path: &str) -> Option<&'static str> {
-    agentsweep_core::finding_facts::setting_plain_name(PLAIN_NAMES, key_path)
+    agentpatrol_core::finding_facts::setting_plain_name(PLAIN_NAMES, key_path)
 }
 
 /// One config key found in one document.

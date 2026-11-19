@@ -32,7 +32,7 @@ pub struct QuarantineEntry {
     pub content_hash: String,
     /// When it was taken out.
     pub quarantined_at: Timestamp,
-    /// Whether AgentSweep or the user did it.
+    /// Whether AgentPatrol or the user did it.
     pub actor: Actor,
     /// The Tier behind the Finding.
     pub tier: Option<Tier>,
@@ -68,7 +68,7 @@ pub struct QuarantineEntry {
 /// The window reappearances are counted over (spec section 5.3).
 pub const REAPPEARANCE_WINDOW_MS: i64 = 60 * 60 * 1000;
 
-/// How many reappearances within [`REAPPEARANCE_WINDOW_MS`] make AgentSweep
+/// How many reappearances within [`REAPPEARANCE_WINDOW_MS`] make AgentPatrol
 /// stop taking an Item out again and raise the "keeps coming back" Finding.
 pub const REAPPEARANCES_TOLERATED: usize = 3;
 
@@ -84,7 +84,7 @@ impl QuarantineEntry {
     }
 
     /// True when one more reappearance at `at` is the third within an hour,
-    /// which AgentSweep answers with the "keeps coming back" Finding instead
+    /// which AgentPatrol answers with the "keeps coming back" Finding instead
     /// of taking the Item out again (spec section 5.3).
     ///
     /// Every earlier reappearance within the hour was taken out again and left
@@ -311,7 +311,7 @@ pub struct TrustRecord {
     pub granted_on: Option<ItemId>,
     /// When it was granted.
     pub granted_at: Timestamp,
-    /// Whether AgentSweep's own Restore or the user granted it.
+    /// Whether AgentPatrol's own Restore or the user granted it.
     pub actor: Actor,
     /// False when the record it was built from belongs to a key generation no
     /// key in hand can verify.
@@ -389,7 +389,7 @@ impl TrustTable {
 /// no time window after an Agent session and no guess at the writing process.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum KnownAction {
-    /// AgentSweep wrote the content itself: a Quarantine, a Restore, a
+    /// AgentPatrol wrote the content itself: a Quarantine, a Restore, a
     /// re-enforce, a Re-enable or a Gate registration.
     Write,
     /// The user said the change was their own doing.
@@ -400,7 +400,7 @@ impl KnownAction {
     /// What the Baseline records as having moved the accepted hash.
     pub fn accepted_by(self) -> crate::baseline::AcceptedBy {
         match self {
-            KnownAction::Write => crate::baseline::AcceptedBy::AgentsweepWrite,
+            KnownAction::Write => crate::baseline::AcceptedBy::AgentpatrolWrite,
             KnownAction::Acknowledge => crate::baseline::AcceptedBy::Acknowledge,
         }
     }
@@ -415,17 +415,17 @@ pub struct StandsBehind {
     pub event: String,
 }
 
-/// The changes AgentSweep already knows the reason for, rebuilt from the Event
+/// The changes AgentPatrol already knows the reason for, rebuilt from the Event
 /// Log.
 ///
-/// A Scan applies these before the Rules run, so content AgentSweep wrote
+/// A Scan applies these before the Rules run, so content AgentPatrol wrote
 /// itself or the user acknowledged reads `unchanged` and never raises the "was
 /// that you?" question (spec section 4.6.3). Trust is the third known action
 /// and lives in [`TrustTable`], because it is bound to a content hash and a
 /// kind rather than to one Item.
 ///
 /// An action is remembered by the content hash it names, never by the path it
-/// touched: knowing that AgentSweep once wrote a file is not knowing that the
+/// touched: knowing that AgentPatrol once wrote a file is not knowing that the
 /// bytes there now are the ones it wrote. A write that moved another Item as
 /// well, such as the settings entry a native disable flips, names that Item
 /// and the hash it left there, so the collateral is a known action too.
@@ -501,12 +501,12 @@ impl KnownActions {
         }
     }
 
-    /// True when this content of this Item is a Gate entry AgentSweep
+    /// True when this content of this Item is a Gate entry AgentPatrol
     /// registered itself and has not taken away since (spec section 7.6).
     ///
     /// The entry is known by the content hash its `gate-registered` event
     /// names, never by its look: an entry someone else wrote, or one of
-    /// AgentSweep's that was edited, is not one.
+    /// AgentPatrol's that was edited, is not one.
     pub fn is_gate_entry(&self, item_id: &ItemId, content_hash: &str) -> bool {
         self.gate_entries
             .contains(&(item_id.clone(), content_hash.to_string()))
@@ -831,10 +831,10 @@ mod tests {
         );
     }
 
-    /// ADR 0007's closed list: AgentSweep's own writes and the user's
+    /// ADR 0007's closed list: AgentPatrol's own writes and the user's
     /// Acknowledge, and nothing else.
     #[test]
-    fn only_agentsweeps_own_writes_and_an_acknowledge_are_known_actions() {
+    fn only_agentpatrols_own_writes_and_an_acknowledge_are_known_actions() {
         let hash = "b".repeat(64);
         let events = recorded(vec![
             Event::new(Action::Quarantine, Actor::Auto).about(&item("leak"), Kind::Skill, &hash),

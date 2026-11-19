@@ -1,5 +1,5 @@
 # Fixture for as_0581. A skill that was not in the user's own folder the last
-# time AgentSweep looked. Skill is not one of 0580's four kinds, so the
+# time AgentPatrol looked. Skill is not one of 0580's four kinds, so the
 # appearance is carried here at weight 1.
 [item]
 agent = "claude-code"

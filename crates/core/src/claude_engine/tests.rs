@@ -362,7 +362,7 @@ fn the_body_carries_the_redacted_request_and_nothing_about_the_machine_or_the_us
     for private in [HOME, USER, "/Users/", KEY] {
         assert!(!body.contains(private), "{private} left the machine");
     }
-    // AgentSweep and its version are named in the User-Agent, not the body.
+    // AgentPatrol and its version are named in the User-Agent, not the body.
     assert!(!body.contains(&user_agent()));
     assert!(
         !body.contains(crate::NAME),
@@ -698,7 +698,7 @@ fn neither_build_of_the_cli_links_the_claude_engine() {
     assert!(
         daemon
             .lines()
-            .any(|line| line.starts_with("agentsweep-core = ")
+            .any(|line| line.starts_with("agentpatrol-core = ")
                 && line.contains("features = [")
                 && line.contains("\"daemon\""))
     );
@@ -713,7 +713,7 @@ fn neither_build_of_the_cli_links_the_claude_engine() {
 #[ignore = "calls the real Claude API with the owner's own key"]
 fn a_live_call_answers_with_a_verdict_and_its_usage() {
     let keys = Arc::new(crate::keychain::LoginKeychainClaudeKey::named(
-        "de.byte5.agentsweep.daemon.test",
+        "de.byte5.agentpatrol.daemon.test",
         "claude-api-key-test",
     ));
     let engine = ClaudeEngine::new(crate::settings::DEFAULT_CLAUDE_MODEL, keys);

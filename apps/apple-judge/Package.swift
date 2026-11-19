@@ -1,6 +1,6 @@
 // swift-tools-version:6.0
 //
-// The helper that is AgentSweep's only way to reach Apple's on-device model
+// The helper that is AgentPatrol's only way to reach Apple's on-device model
 // (spec section 4.4). It builds with the Command Line Tools alone: the schema
 // is a `DynamicGenerationSchema`, so no Xcode macro plugin is needed.
 //
@@ -12,10 +12,10 @@
 import PackageDescription
 
 let package = Package(
-    name: "agentsweep-apple-judge",
+    name: "agentpatrol-apple-judge",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "agentsweep-apple-judge", targets: ["agentsweep-apple-judge"])
+        .executable(name: "agentpatrol-apple-judge", targets: ["agentpatrol-apple-judge"])
     ],
     targets: [
         .target(
@@ -25,7 +25,7 @@ let package = Package(
             ]
         ),
         .executableTarget(
-            name: "agentsweep-apple-judge",
+            name: "agentpatrol-apple-judge",
             dependencies: ["AppleJudge"]
         ),
         .testTarget(

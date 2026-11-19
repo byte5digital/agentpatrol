@@ -1,6 +1,6 @@
 //! The one request that hands the daemon a Judgement Request, and its answer.
 //!
-//! `agentsweep scan <dir>` runs the Folder Scan in its own process and asks a
+//! `agentpatrol scan <dir>` runs the Folder Scan in its own process and asks a
 //! local Judgement Engine there. The Claude engine it never asks itself: the
 //! key never leaves the daemon and the Claude client is the daemon's alone
 //! (spec section 4.4), so the in-bundle command line interface hands each
@@ -16,9 +16,9 @@
 
 use std::fmt;
 
-use agentsweep_core::judgement::{Category, Verdict};
-use agentsweep_core::judgement_request::JudgementRequest;
-use agentsweep_core::spend::JudgementCap;
+use agentpatrol_core::judgement::{Category, Verdict};
+use agentpatrol_core::judgement_request::JudgementRequest;
+use agentpatrol_core::spend::JudgementCap;
 use serde_json::{Map, Value};
 
 /// One Judgement Request the daemon is asked to put to the Claude engine.

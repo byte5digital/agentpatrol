@@ -6,7 +6,7 @@
 //! Activation with the reason it is inactive, its Provenance. Beside those
 //! stand facts the daemon alone knows: who took a stopped Item out, which
 //! decides whether Restore also grants Trust (spec section 5.4), whether the
-//! Rule that stopped it was withdrawn, and the case that kept AgentSweep from
+//! Rule that stopped it was withdrawn, and the case that kept AgentPatrol from
 //! acting by itself. Every fired Heuristic is one line with its own `plain`
 //! sentence and a match excerpt that is redacted wherever the match can land
 //! on a sensitive value (spec section 3.3).
@@ -27,8 +27,8 @@ use crate::pack::Bands;
 /// evidence to read, not content to reproduce.
 pub const EXCERPT_CHARS: usize = 120;
 
-/// Why AgentSweep did not act by itself on a Finding: one case per fixed note
-/// of spec section 8.4. A Finding AgentSweep would quarantine by itself, a
+/// Why AgentPatrol did not act by itself on a Finding: one case per fixed note
+/// of spec section 8.4. A Finding AgentPatrol would quarantine by itself, a
 /// Drift question and a Problem carry none.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WhyNothingHappened {
@@ -39,9 +39,9 @@ pub enum WhyNothingHappened {
     /// The kind is never quarantined automatically: repository metadata and
     /// env files are switched off one line at a time, by hand.
     NeverAuto,
-    /// AgentSweep took it out three times in the last hour and it came back.
+    /// AgentPatrol took it out three times in the last hour and it came back.
     KeepsComingBack,
-    /// The Item is in the Managed Scope, read-only for AgentSweep.
+    /// The Item is in the Managed Scope, read-only for AgentPatrol.
     Managed,
     /// It is the user's own setup, not an attack, and never moved.
     Exposure,
@@ -78,7 +78,7 @@ impl WhyNothingHappened {
     }
 
     /// The case behind one Finding about an Item of this kind and Scope, or
-    /// none when AgentSweep would act by itself or the Finding has wording of
+    /// none when AgentPatrol would act by itself or the Finding has wording of
     /// its own.
     ///
     /// Where more than one case fits, the one that would hold even if the
@@ -168,7 +168,7 @@ impl HeuristicLine {
 /// What a client needs about a Finding beyond the Finding itself.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct FindingFacts {
-    /// Who took a stopped Item out: AgentSweep by itself or the user. Absent
+    /// Who took a stopped Item out: AgentPatrol by itself or the user. Absent
     /// unless the Finding is stopped.
     pub actor: Option<Actor>,
     /// The Item's Scope as a Rule reads it: `managed`, `user` or `project`.
@@ -182,7 +182,7 @@ pub struct FindingFacts {
     pub inactive_reason: String,
     /// The Item's Provenance class, empty where the Item was not at hand.
     pub provenance: String,
-    /// Why AgentSweep did not act by itself, absent when it would have.
+    /// Why AgentPatrol did not act by itself, absent when it would have.
     pub why_nothing_happened: Option<WhyNothingHappened>,
     /// Every fired Threat Heuristic, one line each: the evidence of a `score`
     /// Finding and the "Also noticed" lines under a Probation Rule Finding.

@@ -2,7 +2,7 @@
 //!
 //! The daemon registers the Gate with Claude Code by appending its three hook
 //! groups to the user settings file, records one `gate-registered` event per
-//! entry, and the next Full Scan reads the three Hook Items as AgentSweep's
+//! entry, and the next Full Scan reads the three Hook Items as AgentPatrol's
 //! own write: `unchanged`, with no Finding of any Tier and no Drift (spec
 //! sections 4.6.4, 7.2 and 7.6). Every test runs against a temporary home and
 //! a temporary data directory with the chain key held in the process; nothing
@@ -11,20 +11,20 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use agentsweep_adapter_claude_code::ClaudeCode;
-use agentsweep_core::baseline::{AcceptedBy, Baseline};
-use agentsweep_core::eventlog::{Action, EventLog};
-use agentsweep_core::finding::Source;
-use agentsweep_core::gate_registration::{GateCheck, GateCommand, GateEntry};
-use agentsweep_core::item::Kind;
-use agentsweep_core::keychain::MemoryKeySource;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::state::Trigger;
-use agentsweep_daemon::full_scan::{self, ScanRun, Unwatched};
-use agentsweep_daemon::gate;
-use agentsweep_daemon::machine::Machine;
+use agentpatrol_adapter_claude_code::ClaudeCode;
+use agentpatrol_core::baseline::{AcceptedBy, Baseline};
+use agentpatrol_core::eventlog::{Action, EventLog};
+use agentpatrol_core::finding::Source;
+use agentpatrol_core::gate_registration::{GateCheck, GateCommand, GateEntry};
+use agentpatrol_core::item::Kind;
+use agentpatrol_core::keychain::MemoryKeySource;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::state::Trigger;
+use agentpatrol_daemon::full_scan::{self, ScanRun, Unwatched};
+use agentpatrol_daemon::gate;
+use agentpatrol_daemon::machine::Machine;
 
-use agentsweep_core::adapter::SurfaceAdapter;
+use agentpatrol_core::adapter::SurfaceAdapter;
 
 /// Keeps one test's temporary paths apart from another's.
 static NEXT: AtomicU32 = AtomicU32::new(0);
@@ -32,7 +32,7 @@ static NEXT: AtomicU32 = AtomicU32::new(0);
 /// Where the bundle puts the command line interface. Nothing runs it, and it
 /// sits outside every temporary directory so no Rule reads it as a command
 /// planted in one.
-const CLI: &str = "/Applications/AgentSweep.app/Contents/MacOS/agentsweep";
+const CLI: &str = "/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol";
 
 /// A user settings file with another key and a hook group of the user's own.
 const USERS_OWN: &str = r#"{
@@ -63,7 +63,7 @@ struct Sandbox {
 impl Sandbox {
     fn new(purpose: &str) -> Sandbox {
         let root = std::env::temp_dir().join(format!(
-            "agentsweep-gate-registration-{purpose}-{}-{}",
+            "agentpatrol-gate-registration-{purpose}-{}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -194,11 +194,11 @@ fn expected_events(
         .collect()
 }
 
-/// Spec sections 4.6.4 and 7.6: the registration is AgentSweep's own write,
+/// Spec sections 4.6.4 and 7.6: the registration is AgentPatrol's own write,
 /// so the Full Scan after it reads the three Hook Items `unchanged`, raises
 /// no Finding of any Tier on them and no Drift anywhere.
 #[test]
-fn a_full_scan_after_registration_accepts_the_three_hook_items_as_agentsweeps_write() {
+fn a_full_scan_after_registration_accepts_the_three_hook_items_as_agentpatrols_write() {
     let sandbox = Sandbox::new("accepted");
     // The first Full Scan covers the user settings file, so a Hook Item that
     // appears after it is `added` unless a known action stands behind it.
@@ -254,7 +254,7 @@ fn a_full_scan_after_registration_accepts_the_three_hook_items_as_agentsweeps_wr
         assert_eq!(record.kind, Kind::Hook);
         assert_eq!(record.accepted_hash, entry.content_hash, "unchanged");
         assert_eq!(record.last_seen_hash, entry.content_hash);
-        assert_eq!(record.accepted_by, AcceptedBy::AgentsweepWrite);
+        assert_eq!(record.accepted_by, AcceptedBy::AgentpatrolWrite);
     }
 
     // Registering again finds every entry in place: nothing is written and
@@ -276,7 +276,7 @@ fn the_same_entries_without_the_event_are_drift() {
     ClaudeCode::new()
         .register_gate(
             &sandbox.machine().host(Vec::new()),
-            &agentsweep_core::gate_registration::AtomicWriter,
+            &agentpatrol_core::gate_registration::AtomicWriter,
             &GateCommand::at(CLI),
         )
         .expect("written without a record");

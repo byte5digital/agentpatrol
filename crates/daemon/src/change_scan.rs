@@ -7,29 +7,29 @@
 //!
 //! Two things happen besides. The roots are pooled again, because the batch may
 //! have touched an Agent's own project registry and a project that has just
-//! been trusted is a Surface AgentSweep has never looked at. Such a root is
+//! been trusted is a Surface AgentPatrol has never looked at. Such a root is
 //! enumerated whole and bootstrapped silently: its coverage is written by this
 //! Scan, so every Item in it reads `none` and none of them is Drift (spec
 //! section 6.4). And the enumeration is kept to what the batch could possibly
 //! be about: the pooled roots a changed path falls inside, plus the roots that
 //! have just appeared. The user's own Scope is always read, because that is
-//! where most of what AgentSweep protects lives and an adapter enumerates it
+//! where most of what AgentPatrol protects lives and an adapter enumerates it
 //! whole or not at all.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use agentsweep_core::adapter::Descriptor;
-use agentsweep_core::envelope::Timestamp;
-use agentsweep_core::evaluation::Evaluations;
-use agentsweep_core::finding::Finding;
-use agentsweep_core::item::{ItemId, Scope};
-use agentsweep_core::keychain::KeySource;
-use agentsweep_core::pack::Manifest;
-use agentsweep_core::paths::DataDirectory;
-use agentsweep_core::rules::RulePack;
-use agentsweep_core::scan_pass::ScanKind;
-use agentsweep_core::state::Trigger;
+use agentpatrol_core::adapter::Descriptor;
+use agentpatrol_core::envelope::Timestamp;
+use agentpatrol_core::evaluation::Evaluations;
+use agentpatrol_core::finding::Finding;
+use agentpatrol_core::item::{ItemId, Scope};
+use agentpatrol_core::keychain::KeySource;
+use agentpatrol_core::pack::Manifest;
+use agentpatrol_core::paths::DataDirectory;
+use agentpatrol_core::rules::RulePack;
+use agentpatrol_core::scan_pass::ScanKind;
+use agentpatrol_core::state::Trigger;
 
 use crate::actions::Acting;
 use crate::full_scan::{Covering, Judgement, ScanError, ScanRun, Unwatched, pool, survey};
@@ -61,7 +61,7 @@ pub struct ChangeScan<'a> {
     /// The Tier outcomes this daemon already has.
     pub cache: &'a dyn Evaluations,
     /// The active Judgement Engine, None while AI Judgement is off.
-    pub judge: Option<&'a agentsweep_core::judged::Judge>,
+    pub judge: Option<&'a agentpatrol_core::judged::Judge>,
     /// How many worker threads run the Tiers.
     pub workers: usize,
     /// Whether the Scan may act by itself, as a Full Scan may.
@@ -177,7 +177,7 @@ impl ChangeScan<'_> {
             looked_at: judged.looked_at,
             // A Change Scan never saw enough to recompute the watch roots, and
             // says so by declaring none.
-            watch_roots: agentsweep_core::adapter::WatchRoots::default(),
+            watch_roots: agentpatrol_core::adapter::WatchRoots::default(),
             roots: inventory.roots,
             withheld: Vec::new(),
             agents: Vec::new(),
@@ -192,7 +192,7 @@ impl ChangeScan<'_> {
             // A Change Scan never detected every Agent nor read every root, so
             // it speaks only for the Ambiguous Items among the ones it looked
             // at.
-            overview: agentsweep_core::overview::Overview {
+            overview: agentpatrol_core::overview::Overview {
                 ambiguous: judged.ambiguous,
                 checked: judged.checked,
                 ..Default::default()

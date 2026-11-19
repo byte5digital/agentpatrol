@@ -1,4 +1,4 @@
-//! The daemon's signing identifier is frozen as `de.byte5.agentsweep.daemon`,
+//! The daemon's signing identifier is frozen as `de.byte5.agentpatrol.daemon`,
 //! because the Keychain key behind the Event Log is bound to it (spec section
 //! 9.1). The daemon binary carries an Info.plist in its `__TEXT,__info_plist`
 //! section whose bundle identifier is the frozen one, so a signature made
@@ -12,7 +12,7 @@ use std::process::Command;
 const EMBEDDED_PLIST: &[u8] = include_bytes!("../Info.plist");
 
 fn daemon_binary() -> &'static Path {
-    Path::new(env!("CARGO_BIN_EXE_agentsweepd"))
+    Path::new(env!("CARGO_BIN_EXE_agentpatrold"))
 }
 
 #[test]
@@ -20,7 +20,7 @@ fn the_embedded_info_plist_names_the_frozen_identifier() {
     let plist = std::str::from_utf8(EMBEDDED_PLIST).expect("a UTF-8 plist");
     let expected = format!(
         "<key>CFBundleIdentifier</key>\n\t<string>{}</string>",
-        agentsweep_core::DAEMON_LABEL
+        agentpatrol_core::DAEMON_LABEL
     );
     assert!(plist.contains(&expected), "the plist names {expected}");
 }
@@ -41,7 +41,7 @@ fn the_daemon_binary_carries_the_info_plist() {
 #[test]
 fn signing_the_daemon_without_an_identifier_yields_the_frozen_one() {
     let dir = tempfile::tempdir().expect("a temporary directory");
-    let copy = dir.path().join("agentsweepd");
+    let copy = dir.path().join("agentpatrold");
     fs::copy(daemon_binary(), &copy).expect("a copy of the daemon binary");
 
     // What Tauri runs on each sidecar: an ad hoc identity here, no `-i`.
@@ -62,5 +62,5 @@ fn signing_the_daemon_without_an_identifier_yields_the_frozen_one() {
         .lines()
         .find_map(|line| line.strip_prefix("Identifier="))
         .expect("an Identifier line");
-    assert_eq!(identifier, agentsweep_core::DAEMON_LABEL);
+    assert_eq!(identifier, agentpatrol_core::DAEMON_LABEL);
 }

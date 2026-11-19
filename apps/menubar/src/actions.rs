@@ -17,12 +17,12 @@
 //! running, asks for a restart and, on Project Scope, says git will show the
 //! change (spec section 8.5, the owner's decision of 2026-10-14 for ticket 73).
 
-use agentsweep_core::eventlog::{Actor, SessionsRunning};
-use agentsweep_core::finding::Category;
-use agentsweep_core::item::ItemId;
-use agentsweep_core::settings::Posture;
-use agentsweep_core::state::RecordedFinding;
-use agentsweep_ipc::protocol::{Offer, Sessions, offers};
+use agentpatrol_core::eventlog::{Actor, SessionsRunning};
+use agentpatrol_core::finding::Category;
+use agentpatrol_core::item::ItemId;
+use agentpatrol_core::settings::Posture;
+use agentpatrol_core::state::RecordedFinding;
+use agentpatrol_ipc::protocol::{Offer, Sessions, offers};
 use serde_json::{Value, json};
 
 use crate::findings::{card, neutralised_in_place};
@@ -35,7 +35,7 @@ pub enum Confirm {
     /// Trust this version, or keep an Exposure as it is: explains hash-bound
     /// Trust ([`trust_confirmation`]).
     Trust,
-    /// The Restore of what AgentSweep took out by itself, which trusts this
+    /// The Restore of what AgentPatrol took out by itself, which trusts this
     /// exact version ([`restore_confirmation`]).
     RestoreAndTrust,
     /// Delete permanently, which cannot be undone
@@ -95,7 +95,7 @@ fn drift_question(finding: &RecordedFinding) -> bool {
     finding.source == "drift"
 }
 
-/// True when AgentSweep took the stopped Item out by itself, so its Restore
+/// True when AgentPatrol took the stopped Item out by itself, so its Restore
 /// trusts this exact version (spec section 5.4). A Finding that names no
 /// actor, as one from a state file written before the actor was sent, reads
 /// as the user's own Quarantine, which restores without Trust.
@@ -114,10 +114,10 @@ pub fn stopped_automatically(finding: &RecordedFinding) -> bool {
 ///   shows it with the others.
 /// - **Yes, that was me** on a Drift question only; a Finding carrying Drift
 ///   as context offers no Acknowledge, because the daemon offers none.
-/// - On a stopped Item, **Restore and trust this version** when AgentSweep
+/// - On a stopped Item, **Restore and trust this version** when AgentPatrol
 ///   took it out and **Restore** when the user did; **Switch the line back
 ///   on** and **Switch it back on** for the never-auto kinds and the switched
-///   Items. A switched Item AgentSweep switched off by itself still asks the
+///   Items. A switched Item AgentPatrol switched off by itself still asks the
 ///   restore-and-trust confirmation, since its Restore trusts it too.
 /// - **Re-enable** on a stopped plugin with a clean newer version, and the
 ///   one-click fix of Exposures 0018 and 0019.
@@ -208,16 +208,16 @@ fn confirmation(question: String, lines: Vec<String>, ok: &str) -> Value {
 }
 
 /// What Trust says about itself, on a Threat.
-pub const TRUST_EXPLAINED: &str = "Trust is bound to this exact version. AgentSweep stops \
+pub const TRUST_EXPLAINED: &str = "Trust is bound to this exact version. AgentPatrol stops \
      flagging it, and checks it again as soon as anything in it changes.";
 
 /// What keeping an Exposure as it is says about itself.
-pub const KEEP_EXPLAINED: &str = "This is bound to this exact version. AgentSweep stops \
+pub const KEEP_EXPLAINED: &str = "This is bound to this exact version. AgentPatrol stops \
      pointing it out, and asks again as soon as anything in it changes.";
 
 /// What the restore-and-trust confirmation says about the Trust it grants.
 pub const ONLY_THIS_VERSION: &str = "Only this exact version is trusted. If it changes in any \
-     way, AgentSweep checks it again.";
+     way, AgentPatrol checks it again.";
 
 /// The Trust confirmation: **Trust this version** explains hash-bound Trust,
 /// and on an Exposure it reads **Keep it as it is**.
@@ -248,7 +248,7 @@ fn why_stopped(finding: &RecordedFinding) -> String {
 
 /// The restore-and-trust confirmation: only this exact version is trusted,
 /// and why the Item was stopped, quoted. Asked only where the Restore trusts,
-/// which is what AgentSweep took out by itself; null otherwise.
+/// which is what AgentPatrol took out by itself; null otherwise.
 pub fn restore_confirmation(finding: &RecordedFinding) -> Value {
     if !stopped_automatically(finding) {
         return Value::Null;
@@ -264,7 +264,7 @@ pub fn restore_confirmation(finding: &RecordedFinding) -> Value {
         ),
         vec![
             format!(
-                "AgentSweep stopped it because: \"{}\"",
+                "AgentPatrol stopped it because: \"{}\"",
                 why_stopped(finding)
             ),
             ONLY_THIS_VERSION.to_string(),
@@ -313,7 +313,7 @@ fn joined(names: &[String], last: &str) -> String {
 /// or a process id, and the generic wording where detection is unavailable
 /// (the owner's decision of 2026-10-14 for ticket 73).
 pub fn sessions_sentence(sessions: &Sessions) -> String {
-    let named = |wanted: SessionsRunning| -> Vec<&agentsweep_ipc::protocol::AgentSessions> {
+    let named = |wanted: SessionsRunning| -> Vec<&agentpatrol_ipc::protocol::AgentSessions> {
         sessions
             .agents
             .iter()
@@ -354,9 +354,9 @@ pub fn sessions_sentence(sessions: &Sessions) -> String {
                 .map(|one| agent_name(&one.agent).to_string())
                 .collect();
             match names.is_empty() {
-                true => "AgentSweep could not tell whether a coding agent is running.".to_string(),
+                true => "AgentPatrol could not tell whether a coding agent is running.".to_string(),
                 false => format!(
-                    "AgentSweep could not tell whether {} is running.",
+                    "AgentPatrol could not tell whether {} is running.",
                     joined(&names, "or")
                 ),
             }
@@ -403,9 +403,9 @@ pub fn after_quarantine(item_id: &ItemId, sessions: &Sessions) -> Vec<String> {
 mod tests {
     use super::*;
 
-    use agentsweep_core::finding::FindingState;
-    use agentsweep_core::item::Kind;
-    use agentsweep_ipc::protocol::AgentSessions;
+    use agentpatrol_core::finding::FindingState;
+    use agentpatrol_core::item::Kind;
+    use agentpatrol_ipc::protocol::AgentSessions;
 
     use crate::findings::tests::recorded;
 
@@ -472,7 +472,7 @@ mod tests {
             assert_eq!(trust.target, threat.id.as_str());
         }
         let mut ai = open(SKILL, Kind::Skill, "score 9", Category::Threat);
-        ai.tier = agentsweep_core::finding::Tier::AiJudgement;
+        ai.tier = agentpatrol_core::finding::Tier::AiJudgement;
         assert_eq!(buttons(&ai, Posture::Simple)[0].1, "Quarantine");
     }
 
@@ -577,7 +577,7 @@ mod tests {
             vec![("restore", "Switch it back on", false)]
         );
         assert_eq!(offered(&off, Posture::Simple)[0].confirm, None);
-        // Switched off by AgentSweep, it still trusts on the way back.
+        // Switched off by AgentPatrol, it still trusts on the way back.
         off.facts.actor = Some(Actor::Auto);
         let back = offered(&off, Posture::Simple).remove(0);
         assert_eq!(back.label, "Switch it back on");
@@ -659,7 +659,7 @@ mod tests {
     /// settings entry still offer their one-click fix (spec section 8.5).
     #[test]
     fn every_exposure_offers_its_how_to_and_never_quarantine() {
-        let pack = agentsweep_core::rules::RulePack::bundled().expect("the bundled pack");
+        let pack = agentpatrol_core::rules::RulePack::bundled().expect("the bundled pack");
         let exposures: Vec<_> = pack
             .metas()
             .filter(|meta| meta.category == Category::Exposure)
@@ -728,7 +728,7 @@ mod tests {
             json!({
                 "question": "Trust this version of the skill 'setup'?",
                 "lines": [
-                    "Trust is bound to this exact version. AgentSweep stops flagging it, and \
+                    "Trust is bound to this exact version. AgentPatrol stops flagging it, and \
                      checks it again as soon as anything in it changes."
                 ],
                 "ok": "Trust this version",
@@ -745,7 +745,7 @@ mod tests {
             json!({
                 "question": "Keep the setting 'sandbox' as it is?",
                 "lines": [
-                    "This is bound to this exact version. AgentSweep stops pointing it out, and \
+                    "This is bound to this exact version. AgentPatrol stops pointing it out, and \
                      asks again as soon as anything in it changes."
                 ],
                 "ok": "Keep it as it is",
@@ -765,9 +765,9 @@ mod tests {
             json!({
                 "question": "Restore the skill 'setup' and trust this version?",
                 "lines": [
-                    "AgentSweep stopped it because: \"It downloads a script from the internet \
+                    "AgentPatrol stopped it because: \"It downloads a script from the internet \
                      and runs it straight away.\"",
-                    "Only this exact version is trusted. If it changes in any way, AgentSweep \
+                    "Only this exact version is trusted. If it changes in any way, AgentPatrol \
                      checks it again."
                 ],
                 "ok": "Restore and trust this version",
@@ -779,7 +779,7 @@ mod tests {
         );
     }
 
-    /// A stopped Item in the list carries its Restore and, where AgentSweep
+    /// A stopped Item in the list carries its Restore and, where AgentPatrol
     /// took it out, the restore-and-trust confirmation.
     #[test]
     fn a_stopped_item_in_the_list_carries_its_restore() {
@@ -846,12 +846,12 @@ mod tests {
         );
         assert_eq!(
             sessions_sentence(&Sessions::unknown()),
-            "AgentSweep could not tell whether a coding agent is running."
+            "AgentPatrol could not tell whether a coding agent is running."
         );
         let codex = Sessions::of(vec![agent("codex", SessionsRunning::Unknown, 0)]);
         assert_eq!(
             sessions_sentence(&codex),
-            "AgentSweep could not tell whether Codex is running."
+            "AgentPatrol could not tell whether Codex is running."
         );
     }
 
@@ -897,7 +897,7 @@ mod tests {
         assert_eq!(
             after_quarantine(&env.item_id, &Sessions::unknown()),
             vec![
-                "AgentSweep could not tell whether a coding agent is running.",
+                "AgentPatrol could not tell whether a coding agent is running.",
                 "If it is open, restart it so it picks up the change.",
                 PROJECT_LINE,
             ]
