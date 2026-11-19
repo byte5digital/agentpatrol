@@ -38,7 +38,7 @@ jobs:
   build:
     name: Build, lint and test
     # macOS 14 is the minimum the product supports, so it is what CI builds on.
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -226,7 +226,7 @@ jobs:
     name: Benign corpus
     # The corpus is scanned the way the Surface Adapters see it, and the adapters
     # are the macOS ones, so it runs where the product runs.
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

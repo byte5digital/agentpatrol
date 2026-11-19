@@ -28,7 +28,7 @@ jobs:
     name: Build, sign, verify and publish the Rule Pack
     # The corpus runner reads Fixtures through the macOS Surface Adapters, so
     # the pack is proven where the product runs, as in CI.
-    runs-on: macos-14
+    runs-on: macos-15
     environment:
       name: release
     permissions:
