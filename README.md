@@ -8,7 +8,7 @@ It runs quietly in the menu bar, checks again whenever something changes and onc
 
 ## Install
 
-AgentPatrol needs macOS 14 (Sonoma) or later and runs on Apple silicon and Intel Macs.
+AgentPatrol needs macOS 15 (Sequoia) or later and runs on Apple silicon and Intel Macs.
 
 **With Homebrew** (arrives with 0.1.0):
 

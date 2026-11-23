@@ -8,7 +8,7 @@ cask "agentpatrol" do
   homepage "https://github.com/byte5digital/agentpatrol"
 
   auto_updates true
-  depends_on macos: :sonoma
+  depends_on macos: :sequoia
 
   app "AgentPatrol.app"
   binary "#{appdir}/AgentPatrol.app/Contents/MacOS/agentpatrol"

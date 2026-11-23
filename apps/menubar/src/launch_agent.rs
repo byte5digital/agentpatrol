@@ -114,7 +114,7 @@ mod tests {
             config["bundle"]["macOS"]["files"][PLIST_IN_CONTENTS],
             format!("LaunchAgents/{PLIST_NAME}")
         );
-        assert_eq!(config["bundle"]["macOS"]["minimumSystemVersion"], "14.0");
+        assert_eq!(config["bundle"]["macOS"]["minimumSystemVersion"], "15.0");
 
         let bundle = json("tauri.bundle.conf.json");
         let sidecars: Vec<&str> = bundle["bundle"]["externalBin"]

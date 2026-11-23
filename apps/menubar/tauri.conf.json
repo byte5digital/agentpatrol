@@ -61,7 +61,7 @@
       "icons/icon.png"
     ],
     "macOS": {
-      "minimumSystemVersion": "14.0",
+      "minimumSystemVersion": "15.0",
       "files": {
         "Library/LaunchAgents/de.byte5.agentpatrol.daemon.plist": "LaunchAgents/de.byte5.agentpatrol.daemon.plist"
       }

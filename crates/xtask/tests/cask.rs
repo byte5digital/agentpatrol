@@ -245,7 +245,7 @@ fn the_cask_has_exactly_the_stanzas_the_ticket_lists() {
         ]
     );
     assert!(cask.contains("\n  auto_updates true\n"));
-    assert!(cask.contains("\n  depends_on macos: :sonoma\n"));
+    assert!(cask.contains("\n  depends_on macos: :sequoia\n"));
     assert!(cask.contains("\n  app \"AgentPatrol.app\"\n"));
     // The in-bundle CLI, the Tauri sidecar named `agentpatrol` (ADR 0008).
     assert!(cask.contains("\n  binary \"#{appdir}/AgentPatrol.app/Contents/MacOS/agentpatrol\"\n"));

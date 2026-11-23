@@ -37,7 +37,7 @@ jobs:
 
   build:
     name: Build, lint and test
-    # macOS 14 is the minimum the product supports, so it is what CI builds on.
+    # macOS 15 is the minimum the product supports, so it is what CI builds on.
     runs-on: macos-15
     steps:
       - name: Check out
@@ -103,7 +103,7 @@ jobs:
         run: cargo install --locked cargo-auditable
 
       # The Apple judgement helper is Swift against Foundation Models, which
-      # needs a macOS 26 SDK to build; its own minimum stays macOS 14. Its
+      # needs a macOS 26 SDK to build; its own minimum stays macOS 15. Its
       # tests never reach the model, so they pass on a runner without Apple
       # Intelligence.
       - name: Test the Apple judgement helper
@@ -155,7 +155,7 @@ jobs:
           test -x "$app/Contents/MacOS/agentpatrol"
           test -x "$app/Contents/MacOS/agentpatrol-apple-judge"
           plutil -lint "$app/Contents/Library/LaunchAgents/de.byte5.agentpatrol.daemon.plist"
-          test "$(plutil -extract LSMinimumSystemVersion raw "$app/Contents/Info.plist")" = "14.0"
+          test "$(plutil -extract LSMinimumSystemVersion raw "$app/Contents/Info.plist")" = "15.0"
           test "$(plutil -extract LSUIElement raw "$app/Contents/Info.plist")" = "true"
           # The updater archive and its signature (spec section 9.4).
           test -s "$app.tar.gz"

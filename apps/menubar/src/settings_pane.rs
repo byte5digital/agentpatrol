@@ -523,7 +523,7 @@ pub(crate) mod tests {
         for needle in [
             "brew install byte5digital/tap/agentpatrol",
             "DMG",
-            "macOS 14",
+            "macOS 15",
             "cargo install agentpatrol",
             "agentpatrol scan <dir>",
             "cannot show status",

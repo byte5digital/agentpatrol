@@ -95,12 +95,12 @@ done
 # The Apple judgement helper (spec section 4.4) is a Swift package, built with
 # swiftc from the Command Line Tools for the same triples and joined the same
 # way. It needs an SDK with Foundation Models (macOS 26 or later); its minimum
-# stays macOS 14, where it answers that the model is unavailable.
+# stays macOS 15, where it answers that the model is unavailable.
 apple_judge="agentpatrol-apple-judge"
 build_apple_judge() {
   case "$1" in
-    aarch64-apple-darwin) swift_triple="arm64-apple-macosx14.0" ;;
-    x86_64-apple-darwin) swift_triple="x86_64-apple-macosx14.0" ;;
+    aarch64-apple-darwin) swift_triple="arm64-apple-macosx15.0" ;;
+    x86_64-apple-darwin) swift_triple="x86_64-apple-macosx15.0" ;;
     *)
       echo "build-sidecars.sh: no Swift triple for $1" >&2
       exit 2

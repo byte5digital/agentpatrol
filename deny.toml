@@ -6,7 +6,7 @@
 # licence compatible with Apache-2.0, and does it come from crates.io.
 
 [graph]
-# macOS 14 and later, universal binary. The core is portable, so the other
+# macOS 15 and later, universal binary. The core is portable, so the other
 # targets return with the integration layer for Windows and Linux.
 targets = [
     "aarch64-apple-darwin",
