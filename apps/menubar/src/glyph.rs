@@ -4,7 +4,7 @@
 //! It is drawn here rather than shipped as image files, so the three states
 //! cannot drift apart and nothing needs a drawing program. It is a template
 //! image: black on transparent, which macOS tints for a light or a dark menu
-//! bar. Placeholder art.
+//! bar.
 
 use crate::popover::Orb;
 
