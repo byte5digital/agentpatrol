@@ -5,7 +5,7 @@
 //!   one is selected: the engine the daemon answered with. An engine outside
 //!   the eval bar is not shown in the Simple Posture, and the AI check is
 //!   not shown there at all while no engine can be chosen; the Developer
-//!   Posture shows every engine, an untested one with a warning.
+//!   Posture shows every engine, one not within the bar with a warning.
 //! - **The Ollama confirmation** names the model the daemon reports and
 //!   says Ollama is asked on this Mac only.
 //! - **The Claude consent screen**: a what / to whom / when / cost table with
@@ -25,7 +25,8 @@
 //! that touches the Keychain; the app never calls an engine.
 
 use agentpatrol_core::apple::AppleAvailability;
-use agentpatrol_core::eval_bar::{self, Passing};
+use agentpatrol_core::eval_bar::{self, Row};
+use agentpatrol_core::judgement::PROMPT_VERSION;
 use agentpatrol_core::keychain::ClaudeKey;
 use agentpatrol_core::ollama::OllamaPresence;
 use agentpatrol_core::settings::{
@@ -38,24 +39,22 @@ use serde_json::{Value, json};
 
 use crate::asking::{Asking, refusal};
 
-/// Where an engine stands against the eval bar of spec section 4.4.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Bar {
-    /// Within the bar, and Off.
-    Within,
-    /// Not tested, or tested and outside the bar.
-    Untested,
-}
+/// Where an engine stands against the eval bar of spec section 4.4: within
+/// it, outside it, or not measured. Off counts as within.
+pub use agentpatrol_core::eval_bar::Standing as Bar;
 
-/// Where `engine` stands against the eval bar the core holds, with the
-/// model the daemon's answer names for it: the macOS version for Apple, the
-/// Ollama model, the Claude model in use.
+/// Where `engine` stands against the eval bar, as the daemon's engine
+/// answer names it; Off is always within.
 pub fn bar_of(state: &EngineState, engine: JudgementEngine) -> Bar {
-    bar_in(eval_bar::PASSING, state, engine)
+    state.eval_bar.of(engine).unwrap_or(Bar::Within)
 }
 
-/// [`bar_of`] against `table`.
-pub fn bar_in(table: &[Passing], state: &EngineState, engine: JudgementEngine) -> Bar {
+/// Where `engine` stands against the eval bar `table`, with the model
+/// `state` names for it: the macOS version for Apple, the Ollama model, the
+/// Claude model in use; Off is always within. Onboarding reads the table
+/// itself, because the Ollama model it offers is not yet in the settings
+/// the daemon's answer reads.
+pub fn bar_in(table: &[Row], state: &EngineState, engine: JudgementEngine) -> Bar {
     let model = match engine {
         JudgementEngine::Off => return Bar::Within,
         JudgementEngine::Apple => match &state.apple {
@@ -65,10 +64,7 @@ pub fn bar_in(table: &[Passing], state: &EngineState, engine: JudgementEngine) -
         JudgementEngine::Ollama => ollama_model(state).unwrap_or_default(),
         JudgementEngine::Claude => state.claude_model_in_use.clone(),
     };
-    match eval_bar::passes_in(table, engine, &model) {
-        true => Bar::Within,
-        false => Bar::Untested,
-    }
+    eval_bar::standing_in(table, PROMPT_VERSION, engine, &model)
 }
 
 /// What the Simple Posture says the AI check is.
@@ -106,7 +102,8 @@ pub const CARDS: [(JudgementEngine, &str, &str); 4] = [
     ),
 ];
 
-/// The one warning on an engine outside the bar in the Developer Posture.
+/// The one warning on an engine outside the bar or not measured, in the
+/// Developer Posture.
 pub const UNTESTED: &str = "Not tested yet. It may flag safe items.";
 
 /// The heading of the consent screen.
@@ -213,7 +210,7 @@ fn card(
         JudgementEngine::Claude | JudgementEngine::Off => None,
     };
     // The Simple Posture never shows an untested engine (see [`cards`]).
-    let warning = (developer && reason.is_none() && bar == Bar::Untested).then_some(UNTESTED);
+    let warning = (developer && reason.is_none() && bar != Bar::Within).then_some(UNTESTED);
     let ask = match engine {
         JudgementEngine::Ollama => "ollama",
         JudgementEngine::Claude => "claude",
@@ -596,7 +593,7 @@ mod tests {
 
     use agentpatrol_core::ollama::OllamaModel;
     use agentpatrol_core::spend::{CapNotice, JudgementCap};
-    use agentpatrol_ipc::engine::CloudUse;
+    use agentpatrol_ipc::engine::{CloudUse, EvalBar};
 
     fn state(engine: JudgementEngine) -> EngineState {
         EngineState {
@@ -611,6 +608,7 @@ mod tests {
             ollama: None,
             apple: None,
             cloud_use: CloudUse::default(),
+            eval_bar: EvalBar::default(),
         }
     }
 
@@ -678,15 +676,16 @@ mod tests {
         assert_eq!(cards[3]["enabled"], true);
     }
 
-    /// Spec section 4.4: an engine outside the eval bar stays off in the
-    /// Simple Posture, which does not show it at all; the Developer Posture
-    /// shows it, enabled, with one warning line.
+    /// Spec section 4.4: an engine outside the eval bar, or not measured,
+    /// stays off in the Simple Posture, which does not show it at all; the
+    /// Developer Posture shows it, enabled, with one warning line.
     #[test]
     fn an_untested_engine_is_hidden_in_simple_and_warned_in_developer() {
         let mut answer = state(JudgementEngine::Off);
         answer.ollama = running_ollama(&[("qwen3:8b", true)]);
         let bar = |engine: JudgementEngine| match engine {
-            JudgementEngine::Ollama | JudgementEngine::Apple => Bar::Untested,
+            JudgementEngine::Ollama => Bar::Outside,
+            JudgementEngine::Apple => Bar::NotMeasured,
             _ => Bar::Within,
         };
 
@@ -708,55 +707,92 @@ mod tests {
 
     /// While no engine can be chosen in the Simple Posture, the AI check is
     /// not shown there at all, which hides its tab; the Developer Posture
-    /// shows it with every engine.
+    /// shows it with every engine, each warned.
     #[test]
     fn simple_shows_no_ai_check_while_no_engine_passes() {
-        let answer = state(JudgementEngine::Off);
-        let untested = |engine: JudgementEngine| match engine {
-            JudgementEngine::Off => Bar::Within,
-            _ => Bar::Untested,
+        let mut answer = state(JudgementEngine::Off);
+        answer.ollama = running_ollama(&[("qwen3:8b", true)]);
+        answer.eval_bar = EvalBar {
+            apple: Bar::Outside,
+            ollama: Bar::NotMeasured,
+            claude: Bar::Outside,
         };
+        let bar = |engine| bar_of(&answer, engine);
         assert_eq!(
-            view(Some(&answer), Posture::Simple, true, &untested),
+            view(Some(&answer), Posture::Simple, true, &bar),
             Value::Null
         );
-        let developer = view(Some(&answer), Posture::Developer, true, &untested);
-        assert_eq!(developer["cards"].as_array().expect("cards").len(), 4);
-        // The bar the core holds has no row yet: no engine passes.
+        let developer = view(Some(&answer), Posture::Developer, true, &bar);
+        let cards = developer["cards"].as_array().expect("cards");
+        assert_eq!(cards.len(), 4);
+        for engine in ["apple", "ollama", "claude"] {
+            assert_eq!(by_engine(cards, engine)["warning"], UNTESTED, "{engine}");
+        }
+        assert_eq!(by_engine(cards, "off")["warning"], Value::Null);
+    }
+
+    /// The bar is the one the daemon's engine answer names for each engine,
+    /// within, outside or not measured; Off is always within. An answer from
+    /// a daemon from before the bar names none, which reads as not measured.
+    #[test]
+    fn the_bar_is_read_from_the_engine_answer() {
+        let mut answer = state(JudgementEngine::Off);
         for engine in [
             JudgementEngine::Apple,
             JudgementEngine::Ollama,
             JudgementEngine::Claude,
         ] {
-            assert_eq!(bar_of(&answer, engine), Bar::Untested);
+            assert_eq!(bar_of(&answer, engine), Bar::NotMeasured, "{engine}");
         }
         assert_eq!(bar_of(&answer, JudgementEngine::Off), Bar::Within);
-        assert_eq!(
-            view(Some(&answer), Posture::Simple, true, &|engine| bar_of(
-                &answer, engine
-            )),
-            Value::Null
-        );
+        answer.eval_bar = EvalBar {
+            apple: Bar::Outside,
+            ollama: Bar::Within,
+            claude: Bar::NotMeasured,
+        };
+        assert_eq!(bar_of(&answer, JudgementEngine::Apple), Bar::Outside);
+        assert_eq!(bar_of(&answer, JudgementEngine::Ollama), Bar::Within);
+        assert_eq!(bar_of(&answer, JudgementEngine::Claude), Bar::NotMeasured);
+        let bar = |engine| bar_of(&answer, engine);
+        let simple = view(Some(&answer), Posture::Simple, true, &bar);
+        let engines: Vec<_> = simple["cards"]
+            .as_array()
+            .expect("cards")
+            .iter()
+            .map(|card| card["engine"].clone())
+            .collect();
+        assert_eq!(engines, ["ollama", "off"]);
     }
 
-    /// The bar reads each engine's model from the daemon's answer: the macOS
-    /// version for Apple, the Ollama model, the Claude model in use.
+    /// Onboarding's bar reads each engine's model from the daemon's answer
+    /// against a table: the macOS version for Apple, the Ollama model, the
+    /// Claude model in use.
     #[test]
     fn the_bar_reads_the_model_of_each_engine() {
-        const TABLE: &[Passing] = &[
-            Passing {
+        const TABLE: &[Row] = &[
+            Row {
                 engine: JudgementEngine::Apple,
                 model: "26",
+                prompt_version: PROMPT_VERSION,
+                standing: Bar::Within,
             },
-            Passing {
+            Row {
                 engine: JudgementEngine::Ollama,
                 model: "qwen3:8b",
+                prompt_version: PROMPT_VERSION,
+                standing: Bar::Within,
+            },
+            Row {
+                engine: JudgementEngine::Claude,
+                model: "claude-sonnet-5",
+                prompt_version: PROMPT_VERSION,
+                standing: Bar::Outside,
             },
         ];
         let mut answer = state(JudgementEngine::Off);
         assert_eq!(
             bar_in(TABLE, &answer, JudgementEngine::Apple),
-            Bar::Untested,
+            Bar::NotMeasured,
             "Apple's version unknown"
         );
         answer.apple = Some(AppleAvailability::Available {
@@ -768,12 +804,12 @@ mod tests {
         assert_eq!(bar_in(TABLE, &answer, JudgementEngine::Ollama), Bar::Within);
         assert_eq!(
             bar_in(TABLE, &answer, JudgementEngine::Claude),
-            Bar::Untested
+            Bar::Outside
         );
         answer.ollama_model = "gemma3:4b".to_string();
         assert_eq!(
             bar_in(TABLE, &answer, JudgementEngine::Ollama),
-            Bar::Untested
+            Bar::NotMeasured
         );
     }
 

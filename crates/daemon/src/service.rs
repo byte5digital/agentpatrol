@@ -364,6 +364,10 @@ pub struct Daemon {
     /// The Apple judgement helper the answer to an `engine` request asks,
     /// absent when none is asked.
     pub(crate) apple_helper: Option<PathBuf>,
+    /// The macOS version the Apple helper named at its last check, absent
+    /// until a check found Apple's model available. The engine state reads
+    /// Apple's standing against the eval bar from it.
+    pub(crate) apple_version: Mutex<Option<String>>,
     /// Held while a fetch runs, so two never run at once.
     fetching: Mutex<()>,
     /// A change of the Rule Pack in force that is still to be recorded. It is
@@ -620,6 +624,7 @@ impl Daemon {
             feed,
             detect_ollama,
             apple_helper,
+            apple_version: Mutex::new(None),
             fetching: Mutex::new(()),
             pack_change: Mutex::new(None),
             activity: Mutex::new(crate::activity::Kept::default()),

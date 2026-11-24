@@ -38,6 +38,7 @@ use agentpatrol_daemon::watcher::Timings;
 use agentpatrol_ipc::notifications::NotificationClass;
 use agentpatrol_ipc::peer::SameUser;
 use agentpatrol_ipc::preview::PreviewOutcome;
+use agentpatrol_ipc::protocol::SettingsChange;
 use agentpatrol_menubar::ai_check;
 use agentpatrol_menubar::asking::Asking;
 use agentpatrol_menubar::frame::Frame;
@@ -79,7 +80,7 @@ impl Sandbox {
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
         let _ = std::fs::remove_file(&socket);
-        // Every engine is outside the eval bar until the eval records a row,
+        // No engine is within the eval bar,
         // so the AI check is chosen in the Developer Posture.
         let settings = Settings {
             posture: Posture::Developer,
@@ -178,6 +179,37 @@ fn card(frame: &Frame, engine: &str) -> Value {
         .find(|card| card["engine"] == engine)
         .cloned()
         .expect("a card")
+}
+
+/// The pane reads each engine's standing against the eval bar from the
+/// daemon's answer, and no engine is within it: in the Developer Posture
+/// every engine card that can be chosen carries the one warning, and in the
+/// Simple Posture the AI check is not shown at all, which hides its tab.
+#[test]
+fn the_pane_reads_the_bar_from_the_daemon_and_simple_shows_no_ai_check() {
+    use agentpatrol_core::eval_bar::Standing;
+
+    let sandbox = Sandbox::new("bar");
+    let _daemon = sandbox.start();
+    let asking = sandbox.asking();
+    let mut frame = loaded(&asking);
+    let state = asking.engine().expect("the engine state");
+    assert_eq!(state.eval_bar.claude, Standing::Outside);
+    assert_eq!(state.eval_bar.ollama, Standing::NotMeasured);
+    assert_eq!(state.eval_bar.apple, Standing::NotMeasured);
+    frame.engine(&state);
+    assert_eq!(card(&frame, "claude")["warning"], ai_check::UNTESTED);
+    assert_eq!(card(&frame, "off")["warning"], Value::Null);
+
+    let settings = asking
+        .change_settings(&SettingsChange {
+            posture: Some(Posture::Simple),
+            ..SettingsChange::default()
+        })
+        .expect("the Posture moves");
+    frame.settings(&settings);
+    assert_eq!(frame.posture(), Posture::Simple);
+    assert_eq!(frame.to_value()["settings"]["aiCheck"], Value::Null);
 }
 
 /// "I agree, turn it on" hands the key to the daemon once and turns the

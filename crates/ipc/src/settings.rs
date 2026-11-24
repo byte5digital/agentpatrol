@@ -175,6 +175,7 @@ mod tests {
             ollama: None,
             apple: None,
             cloud_use: crate::engine::CloudUse::default(),
+            eval_bar: crate::engine::EvalBar::default(),
         }
     }
 

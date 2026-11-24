@@ -29,14 +29,14 @@ use agentpatrol_core::settings::{
     CLAUDE_MODEL, ChoiceRefused, JudgementEngine, JudgementSettings, OLLAMA_MODEL, OllamaAddress,
     Posture, SettingsFile, SettingsWriter, model_id,
 };
-use agentpatrol_ipc::protocol::{EngineChange, EngineState, RequestError};
+use agentpatrol_ipc::protocol::{EngineChange, EngineState, EvalBar, RequestError};
 
 use crate::options::KeySourceChoice;
 use crate::service::Daemon;
 use crate::stores::open_the_event_log;
 
-/// Why an engine outside the eval bar is not switched on in the Simple
-/// Posture, as the app shows it.
+/// Why an engine not within the eval bar, outside it or not measured, is not
+/// switched on in the Simple Posture, as the app shows it.
 pub const NOT_TESTED: &str = "this AI check is not tested yet, so it stays off in the simple view";
 
 /// The store the Claude API key is kept in, by where the chain key comes from:
@@ -176,7 +176,41 @@ impl Daemon {
             ollama: None,
             apple: None,
             cloud_use: self.cloud_use_of(judgement),
+            eval_bar: self.eval_bar_of(judgement),
         }
+    }
+
+    /// Where each engine stands against the eval bar, with the model the
+    /// daemon knows for it: the macOS version the Apple helper named at its
+    /// last check, the Ollama model chosen, the Claude model in use. Apple
+    /// with no version known is not measured.
+    fn eval_bar_of(&self, judgement: &JudgementSettings) -> EvalBar {
+        let apple_version = self
+            .apple_version
+            .lock()
+            .expect("the Apple version is not poisoned")
+            .clone()
+            .unwrap_or_default();
+        EvalBar {
+            apple: eval_bar::standing(JudgementEngine::Apple, &apple_version),
+            ollama: eval_bar::standing(JudgementEngine::Ollama, &judgement.ollama_model),
+            claude: eval_bar::standing(JudgementEngine::Claude, judgement.claude_model_in_use()),
+        }
+    }
+
+    /// Asks the Apple helper its check and keeps the macOS version it names
+    /// when Apple's model is available, forgetting it when it is not.
+    fn check_apple(&self, helper: &std::path::Path) -> AppleAvailability {
+        let availability = AppleHelper::at(helper).check();
+        let version = match &availability {
+            AppleAvailability::Available { model_version, .. } => Some(model_version.clone()),
+            AppleAvailability::Unavailable { .. } => None,
+        };
+        *self
+            .apple_version
+            .lock()
+            .expect("the Apple version is not poisoned") = version;
+        availability
     }
 
     /// The AI Judgement choices as they stand.
@@ -218,7 +252,8 @@ impl Daemon {
             state.ollama = Some(OllamaClient::new(&address).presence());
         }
         if let Some(helper) = &self.apple_helper {
-            state.apple = Some(AppleHelper::at(helper).check());
+            state.apple = Some(self.check_apple(helper));
+            state.eval_bar = self.eval_bar_of(&self.judgement());
         }
         Ok(state)
     }
@@ -347,11 +382,11 @@ impl Daemon {
     /// Whether `judgement` may stand under `posture`: anything in the
     /// Developer Posture, only an engine within the eval bar in the Simple
     /// one. Apple's model is the macOS version its helper names, asked only
-    /// when the bar holds an Apple row.
+    /// when the bar holds an Apple row within it.
     fn admits(&self, posture: Posture, judgement: &JudgementSettings) -> bool {
         eval_bar::admits(posture, judgement, || {
             let helper = self.apple_helper.as_ref()?;
-            match AppleHelper::at(helper).check() {
+            match self.check_apple(helper) {
                 AppleAvailability::Available { model_version, .. } => Some(model_version),
                 AppleAvailability::Unavailable { .. } => None,
             }

@@ -593,9 +593,9 @@ mod tests {
         assert_eq!(code, 0);
     }
 
-    /// The Simple Posture asks no engine outside the eval bar, which until
-    /// the eval records a row is every engine; the Developer Posture asks
-    /// any.
+    /// The Simple Posture asks no engine that is not within the eval bar,
+    /// which while no engine passes is every engine; the Developer Posture
+    /// asks any.
     #[test]
     fn simple_asks_no_untested_engine_and_developer_any() {
         let mut settings = Settings::default();

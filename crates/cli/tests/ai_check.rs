@@ -292,8 +292,8 @@ fn no_ai_shows_no_verdict_and_asks_nothing() {
     assert_eq!((listing(folder.path()), listing(home.path())), before);
 }
 
-/// In the Simple Posture an engine outside the eval bar, which until the
-/// eval records a row is every engine, is not asked: the AI check did not
+/// In the Simple Posture an engine not within the eval bar, which while no
+/// engine passes is every engine, is not asked: the AI check did not
 /// run, and nothing reaches Ollama.
 #[test]
 fn simple_asks_no_untested_engine() {

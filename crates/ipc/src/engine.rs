@@ -9,6 +9,7 @@
 use serde_json::{Map, Value};
 
 use agentpatrol_core::apple::AppleAvailability;
+use agentpatrol_core::eval_bar::Standing;
 use agentpatrol_core::ollama::{OllamaModel, OllamaPresence};
 use agentpatrol_core::settings::{
     CLAUDE_MODEL, CLOUD_CENTS_PER_MONTH, CLOUD_ITEMS_PER_DAY, CLOUD_ITEMS_PER_SCAN, CloudCaps,
@@ -28,6 +29,68 @@ const OLLAMA: &str = "ollama";
 const APPLE: &str = "apple";
 /// The field what the caps count and the cap notice are named under.
 const CLOUD_USE: &str = "cloud_use";
+/// The field each engine's standing against the eval bar is named under.
+const EVAL_BAR: &str = "eval_bar";
+
+/// Where each engine stands against the eval bar of spec section 4.4, read
+/// from the table in the core with the model the daemon knows for it: the
+/// macOS version for Apple, the Ollama model, the Claude model in use. A
+/// daemon from before the bar sends none, which reads as not measured.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct EvalBar {
+    /// Apple on-device.
+    pub apple: Standing,
+    /// Ollama, with the Ollama model chosen.
+    pub ollama: Standing,
+    /// The Claude API, with the Claude model in use.
+    pub claude: Standing,
+}
+
+impl Default for EvalBar {
+    fn default() -> EvalBar {
+        EvalBar {
+            apple: Standing::NotMeasured,
+            ollama: Standing::NotMeasured,
+            claude: Standing::NotMeasured,
+        }
+    }
+}
+
+impl EvalBar {
+    /// The standing of `engine`; none for off, which is never measured.
+    pub fn of(&self, engine: JudgementEngine) -> Option<Standing> {
+        match engine {
+            JudgementEngine::Off => None,
+            JudgementEngine::Apple => Some(self.apple),
+            JudgementEngine::Ollama => Some(self.ollama),
+            JudgementEngine::Claude => Some(self.claude),
+        }
+    }
+
+    fn to_value(self) -> Value {
+        let mut map = Map::new();
+        for engine in [
+            JudgementEngine::Apple,
+            JudgementEngine::Ollama,
+            JudgementEngine::Claude,
+        ] {
+            if let Some(standing) = self.of(engine) {
+                map.insert(engine.as_str().to_string(), Value::from(standing.as_str()));
+            }
+        }
+        Value::Object(map)
+    }
+
+    fn from_value(value: &Value) -> Option<EvalBar> {
+        let standing =
+            |engine: JudgementEngine| Standing::parse(value.get(engine.as_str())?.as_str()?);
+        Some(EvalBar {
+            apple: standing(JudgementEngine::Apple)?,
+            ollama: standing(JudgementEngine::Ollama)?,
+            claude: standing(JudgementEngine::Claude)?,
+        })
+    }
+}
 
 /// Where the cloud caps stand (spec section 4.4): what the counters rebuilt
 /// from the Event Log hold for today and this month, whether the Claude model
@@ -204,6 +267,9 @@ pub struct EngineState {
     /// Where the cloud caps stand. A daemon from before them sends none,
     /// which reads as nothing counted.
     pub cloud_use: CloudUse,
+    /// Where each engine stands against the eval bar. A daemon from before
+    /// the bar sends none, which reads as not measured.
+    pub eval_bar: EvalBar,
 }
 
 impl EngineState {
@@ -239,6 +305,7 @@ impl EngineState {
             map.insert(APPLE.to_string(), availability_value(availability));
         }
         map.insert(CLOUD_USE.to_string(), self.cloud_use.to_value());
+        map.insert(EVAL_BAR.to_string(), self.eval_bar.to_value());
         Value::Object(map)
     }
 
@@ -272,6 +339,10 @@ impl EngineState {
             cloud_use: match value.get(CLOUD_USE) {
                 None | Some(Value::Null) => CloudUse::default(),
                 Some(cloud_use) => CloudUse::from_value(cloud_use)?,
+            },
+            eval_bar: match value.get(EVAL_BAR) {
+                None | Some(Value::Null) => EvalBar::default(),
+                Some(bar) => EvalBar::from_value(bar)?,
             },
         })
     }
@@ -411,6 +482,7 @@ mod tests {
             ollama: None,
             apple: None,
             cloud_use: CloudUse::default(),
+            eval_bar: EvalBar::default(),
         };
         let value = state.to_value();
         assert_eq!(EngineState::from_value(&value), Some(state));
@@ -439,6 +511,7 @@ mod tests {
                 ollama: None,
                 apple: None,
                 cloud_use: CloudUse::default(),
+                eval_bar: EvalBar::default(),
             }
             .to_value(),
         )
@@ -481,6 +554,7 @@ mod tests {
             ollama: Some(OllamaPresence::Absent),
             apple: None,
             cloud_use: CloudUse::default(),
+            eval_bar: EvalBar::default(),
         };
         assert_eq!(
             EngineState::from_value(&state.to_value()),
@@ -520,6 +594,7 @@ mod tests {
                 context_size: Some(4096),
             }),
             cloud_use: CloudUse::default(),
+            eval_bar: EvalBar::default(),
         };
         assert_eq!(
             EngineState::from_value(&state.to_value()),
@@ -532,5 +607,57 @@ mod tests {
         assert_eq!(value["apple"]["available"], false);
         assert_eq!(value["apple"]["reason"], "apple_intelligence_not_enabled");
         assert_eq!(EngineState::from_value(&value), Some(state));
+    }
+
+    /// Spec section 4.4: the engine state names each engine's standing
+    /// against the eval bar; one from a daemon from before the bar reads as
+    /// not measured, and a standing there is not is not read.
+    #[test]
+    fn the_engine_state_carries_each_engine_s_standing_and_an_older_one_reads_as_not_measured() {
+        let state = EngineState {
+            engine: JudgementEngine::Off,
+            ollama_address: "127.0.0.1:11434".to_string(),
+            ollama_model: "gemma3:27b".to_string(),
+            claude_model: String::new(),
+            claude_model_in_use: "claude-sonnet-5".to_string(),
+            caps: CloudCaps::default(),
+            claude_key_ending: None,
+            recorded: 0,
+            ollama: None,
+            apple: None,
+            cloud_use: CloudUse::default(),
+            eval_bar: EvalBar {
+                apple: Standing::Outside,
+                ollama: Standing::Within,
+                claude: Standing::NotMeasured,
+            },
+        };
+        let value = state.to_value();
+        assert_eq!(
+            value["eval_bar"],
+            serde_json::json!({"apple": "outside", "ollama": "within", "claude": "not-measured"})
+        );
+        assert_eq!(EngineState::from_value(&value), Some(state.clone()));
+        assert_eq!(state.eval_bar.of(JudgementEngine::Off), None);
+        assert_eq!(
+            state.eval_bar.of(JudgementEngine::Ollama),
+            Some(Standing::Within)
+        );
+
+        let mut older = value.clone();
+        older.as_object_mut().expect("an object").remove("eval_bar");
+        let read = EngineState::from_value(&older).expect("a state");
+        assert_eq!(read.eval_bar, EvalBar::default());
+        for engine in [
+            JudgementEngine::Apple,
+            JudgementEngine::Ollama,
+            JudgementEngine::Claude,
+        ] {
+            assert_eq!(read.eval_bar.of(engine), Some(Standing::NotMeasured));
+        }
+
+        let mut unknown = value;
+        unknown["eval_bar"]["claude"] = serde_json::json!("passing");
+        assert_eq!(EngineState::from_value(&unknown), None);
     }
 }
