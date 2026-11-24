@@ -636,6 +636,58 @@ Section 13 (the command line tool, Full Disk Access, Your own rules and the full
 
 Seams in the suite: `settings_pane::tests` and `gate::tests` in the app, its `settings` integration tests, and the `window_layout` tests (every pane scrolls, the tabs reach every setting).
 
+## 25. The AI Judgement eval, one engine at a time
+
+The eval of spec section 4.4 asks one real Judgement Engine about every Item of three sets and writes a report; none of it runs in the automated suite, which asks only a fake engine. It needs no hand install and nothing of AgentPatrol runs: the eval harness builds each Judgement Request as the daemon does and lays everything out in one temporary directory it removes again. It fetches the benign corpus from its pinned manifest, so it needs the network; the variable below makes an offline run fail instead of skipping the benign set. Run it from the repository root, write the report outside the repository, and never commit it.
+
+Run each engine once per release that changes the prompt (a new `prompt_version`), and Apple once per new major macOS version. Then:
+
+- [ ] The report's second line names the engine, the model and the `prompt_version` the binary carries.
+- [ ] The benign set was asked: the report shows its gated line, not a skip.
+- [ ] A dated section in the evaluations document holds the report's figures, and nothing of the corpus beyond the set sizes.
+- [ ] The table in the core holds one row for the engine, model and `prompt_version`: within the bar only when the report's shipping bar line says it passes, else outside. Its tests and the daemon's `engine` tests pass.
+
+### Apple on-device
+
+It needs macOS 26 on Apple silicon with Apple Intelligence switched on and its model downloaded, and the Apple judgement helper of a test bundle (section "Build a test bundle").
+
+```sh
+AGENTPATROL_CORPUS_REQUIRED=1 cargo run -p agentpatrol-xtask --locked -- judgement-eval --engine apple \
+  --apple-helper target/debug/bundle/macos/AgentPatrol.app/Contents/MacOS/agentpatrol-apple-judge \
+  --report "$TMPDIR/eval-apple.md"
+```
+
+- [ ] The model is the full macOS version and build number as `sw_vers` shows them. The row names the major version alone.
+
+### Ollama on this Mac
+
+It needs Ollama running at 127.0.0.1 port 11434 with the model already pulled by the person running the check; AgentPatrol never pulls a model and never starts Ollama. Run one eval per model the onboarding suggestion may pick.
+
+```sh
+ollama list
+AGENTPATROL_CORPUS_REQUIRED=1 cargo run -p agentpatrol-xtask --locked -- judgement-eval --engine ollama \
+  --model gemma3:27b --report "$TMPDIR/eval-ollama-gemma3-27b.md"
+```
+
+- [ ] The model is the tag with the digest `ollama list` shows. The row names the tag alone.
+- [ ] The report's token estimate line is copied into the dated section: how many counts were above the estimate of three bytes a token, and the highest as a share of its estimate.
+
+### Claude over the internet
+
+It spends the owner's own Claude API credit, one request per Item, so it needs a paid key. The key goes in through a hidden prompt in your own terminal and standard input, never through a file, an argument or the shell history; `printf` is a shell builtin, so the key never shows in the process list.
+
+```sh
+printf 'Claude API key: '; read -rs key; echo
+printf '%s' "$key" | AGENTPATROL_CORPUS_REQUIRED=1 cargo run -p agentpatrol-xtask --locked -- judgement-eval \
+  --engine claude --model claude-sonnet-5 --key-stdin --report "$TMPDIR/eval-claude.md"
+unset key
+```
+
+- [ ] The model is `claude-sonnet-5`, and the Console's usage page shows the requests on it.
+- [ ] Neither the report nor the terminal output holds any part of the key. Revoke the key in the Anthropic console if it was made for this check.
+
+Seams in the suite: the `judgement_eval` tests of the xtask (the three sets against a fake engine, the bar and its floor of thirty, the report's lines, nothing written outside the report), `eval_bar::tests` in the core (a row per engine and model, Apple per major version, a `prompt_version` with no row not measured for every engine) and the daemon's `engine` tests (each engine's standing in the engine answer).
+
 ## Dogfooding: one day with the app
 
 The minimal app left these questions open for spec section 8. Each now points at the ticket that settled it; the one still open is for the owner's day with an installed bundle.
@@ -730,7 +782,7 @@ Run on the draft, on the signed bundle the draft carries. Items marked **(checke
 9. **The Developer ID certificate's expiry date checked.** Check: extract the leaf certificate from the draft's app and read its date: `codesign -d --extract-certificates=<folder>/cert /Applications/AgentPatrol.app`, then `openssl x509 -inform DER -in <folder>/cert0 -noout -subject -enddate`. It must match the date under Dates that run out (2027-02-01 for the current certificate). If the date is near, renew as described there before the next release.
 10. **The budgets of spec section 6.10 met; the tree cap raises "too large to check fully".** Check: measure the budgets with the release build of the tagged commit as the Measurements document describes (idle CPU 0 %, idle memory under 100 MB read five minutes after a Scan, Change Scan under 1 s, warm Full Scan under 10 s, cold Full Scan under 60 s on the author's machine, single-file scan under 200 ms) and add a dated section there. For the tree cap, make a temporary folder holding a project skill of more than 10,000 files (`mkdir -p <folder>/.claude/skills/big`, a `SKILL.md` and 10,001 empty files beside it) and run `/Applications/AgentPatrol.app/Contents/MacOS/agentpatrol scan <folder>`: the skill carries the Problem "too large to check fully" among its Findings and is never reported clear. If a Full Scan of a realistic machine exceeds 10 s or a single-file scan exceeds 200 ms: the fallback rule of spec section 9.1, `allow-unsigned-executable-memory` on the daemon and the CLI only. For the other budgets and for the tree cap the specification fixes no consequence; the draft is not published.
 11. **The Gate live tests.** The `Skill` tool's `tool_input` keys (`skill`, `args`) on the current Claude Code, the ordering of `UserPromptExpansion` blocking against a skill's inline `!` commands, and the Codex pin on the current Codex. Check: section 16 above, on the installed draft. If one of them fails, its fixed consequence is the one section 16 names: a different key means the one field the Gate's command line reads is changed; an inline command that runs first is noted in the Gate's subtitle and the Gate stays; a Codex pin that no longer matches falls back to Codex's own hook review with the Health line "could not be added", and the `[hooks.state]` recipe is checked again against that Codex version. The results settle three facts of spec section 12 per release: write the Claude Code version, the keys seen, "touched" or "not touched", and the Codex version with whether the pin matched under Record of runs.
-12. **The T3 eval gate of spec section 4.4 reported per engine; an engine over 2 % false malicious ships disabled in the Simple Posture.** Check: the eval harness (`cargo run -p agentpatrol-xtask --locked -- judgement-eval`, one run per engine and model) writes a report per engine; the dated result belongs in the evaluations document with the eval runs of milestone 8, and the table in the binary that the daemon's engine answer reads holds one row per measured engine. If an engine misses the bar: it ships disabled in the Simple Posture, and the daemon refuses to switch it on while the Posture is Simple; the Developer Posture may enable it with a warning. Neither the evaluations document nor that table exists yet, and until they land the daemon's engine answer reports no bar, so the app treats every engine as within it. Item 12 cannot pass before then.
+12. **The T3 eval gate of spec section 4.4 reported per engine; an engine over 2 % false malicious ships disabled in the Simple Posture.** Check: section 25 above, the eval harness run once per engine and model, writes a report per engine; the dated result goes into the evaluations document, and the table in the core that the daemon's engine answer reads holds one row per measured engine, model and `prompt_version`, within the bar or outside it. The engine answer reports each engine within, outside or not measured, and the app reads it. If an engine misses the bar: it ships disabled in the Simple Posture, and the daemon refuses to switch it on while the Posture is Simple; the Developer Posture may enable it with a warning. The runs of 2026-11-24 under prompt version 2 left every engine outside the bar, so a release carrying that prompt version ships every engine disabled in the Simple Posture; a release with a new prompt version needs the runs again, or ships every engine not measured.
 13. **Every `deny.toml` exception re-read when Tauri or yara-x moved since the last release.** Check: compare the locked versions of `tauri` and `yara-x` at the previous release's tag and at this one (`git show <tag>:Cargo.lock` and look for each name), and if either moved, read every exception in `deny.toml` with its reason; `cargo deny check` warns about an exception it no longer meets. If a reason no longer holds: the exception goes.
 14. **(checker) `TEAM_ID` in the daemon's peer check filled with byte5's Team ID, so a release daemon admits the signed app and CLI** (ADR 0008). Check: the checker reads the record `agentpatrol-team-id=3SUCH58XL7;` off the daemon's bytes in each architecture and compares it with the Team ID the identity names. If it fails: the workflow stops before a draft exists, since a daemon without byte5's Team ID in its peer check would refuse the signed app and CLI.
 15. **(checker) The daemon carries its frozen identifier `de.byte5.agentpatrol.daemon` from the Info.plist embedded in its `__TEXT,__info_plist` section, so Tauri's own signing yields it.** Check: CI checks the identifier in each architecture of every build, the checker confirms it on the app, the DMG and the updater archive, and item 3 checks the release. Nothing is re-signed after Tauri. If it fails: the specification fixes no other consequence; the draft is not published, because the Keychain key is bound to that identifier.
