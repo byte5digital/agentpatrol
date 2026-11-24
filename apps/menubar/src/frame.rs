@@ -328,7 +328,7 @@ impl Frame {
             !self.health.protection.is_off(),
             &|engine| match &state {
                 Some(state) => ai_check::bar_of(state, engine),
-                None => ai_check::Bar::Within,
+                None => ai_check::Bar::NotMeasured,
             },
         );
         pane
@@ -681,6 +681,7 @@ mod tests {
                 ollama: None,
                 apple: None,
                 cloud_use: agentpatrol_ipc::engine::CloudUse::default(),
+                eval_bar: agentpatrol_ipc::engine::EvalBar::default(),
             },
         }
     }

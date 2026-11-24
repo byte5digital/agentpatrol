@@ -33,7 +33,7 @@
 
 use agentpatrol_core::apple::AppleAvailability;
 use agentpatrol_core::envelope::Timestamp;
-use agentpatrol_core::eval_bar::{self, Passing};
+use agentpatrol_core::eval_bar::{self, Row};
 use agentpatrol_core::judgement::{EngineSuggestion, suggested_engine};
 use agentpatrol_core::keychain::ClaudeKey;
 use agentpatrol_core::location::LocationClass;
@@ -239,6 +239,7 @@ pub fn unanswered() -> EngineState {
         ollama: None,
         apple: None,
         cloud_use: CloudUse::default(),
+        eval_bar: agentpatrol_ipc::engine::EvalBar::default(),
     }
 }
 
@@ -266,7 +267,7 @@ pub struct Answers {
 #[derive(Clone, Debug)]
 pub struct Wizard {
     screen: Screen,
-    bar: &'static [Passing],
+    bar: &'static [Row],
     inventory: Inventory,
     posture: Posture,
     look: Option<EngineState>,
@@ -281,11 +282,12 @@ impl Wizard {
     /// simple** is chosen until the user chooses otherwise, and both
     /// background requests are on, as their defaults are.
     pub fn new(inventory: Inventory) -> Wizard {
-        Wizard::under(inventory, eval_bar::PASSING)
+        Wizard::under(inventory, eval_bar::MEASURED)
     }
 
-    /// The same under the eval bar `bar`: the engines that passed it.
-    pub fn under(inventory: Inventory, bar: &'static [Passing]) -> Wizard {
+    /// The same under the eval bar `bar`: every measured engine with its
+    /// standing.
+    pub fn under(inventory: Inventory, bar: &'static [Row]) -> Wizard {
         Wizard {
             screen: Screen::Welcome,
             bar,
@@ -309,7 +311,7 @@ impl Wizard {
     pub fn screens(&self) -> Vec<Screen> {
         Screen::ALL
             .into_iter()
-            .filter(|screen| *screen != Screen::AiCheck || !self.bar.is_empty())
+            .filter(|screen| *screen != Screen::AiCheck || eval_bar::any_passes_in(self.bar))
             .collect()
     }
 
@@ -774,6 +776,8 @@ mod tests {
     use std::cell::RefCell;
     use std::io;
 
+    use agentpatrol_core::eval_bar::Standing;
+    use agentpatrol_core::judgement::PROMPT_VERSION;
     use agentpatrol_core::ollama::OllamaModel;
 
     use crate::inventory::{Found, OWN_LISTS};
@@ -841,22 +845,30 @@ mod tests {
 
     /// An eval bar every engine of these tests passes, as it will once
     /// the eval records its rows.
-    const TESTED: &[Passing] = &[
-        Passing {
+    const TESTED: &[Row] = &[
+        Row {
             engine: JudgementEngine::Apple,
             model: "26",
+            prompt_version: PROMPT_VERSION,
+            standing: Standing::Within,
         },
-        Passing {
+        Row {
             engine: JudgementEngine::Ollama,
             model: "qwen3:4b",
+            prompt_version: PROMPT_VERSION,
+            standing: Standing::Within,
         },
-        Passing {
+        Row {
             engine: JudgementEngine::Ollama,
             model: "qwen3:8b",
+            prompt_version: PROMPT_VERSION,
+            standing: Standing::Within,
         },
-        Passing {
+        Row {
             engine: JudgementEngine::Claude,
             model: "claude-sonnet-5",
+            prompt_version: PROMPT_VERSION,
+            standing: Standing::Within,
         },
     ];
 
@@ -908,9 +920,28 @@ mod tests {
 
     /// While no engine passed the eval bar, the wizard has no AI screen:
     /// screen 3 leads to Keep watching in the background, the steps count
-    /// four, and AI Judgement is handed over off.
+    /// four, and AI Judgement is handed over off. Rows outside the bar, or
+    /// within it under an older prompt version, add no screen.
     #[test]
     fn no_ai_screen_while_no_engine_passes() {
+        const NONE_WITHIN: &[Row] = &[
+            Row {
+                engine: JudgementEngine::Claude,
+                model: "claude-sonnet-5",
+                prompt_version: PROMPT_VERSION,
+                standing: Standing::Outside,
+            },
+            Row {
+                engine: JudgementEngine::Ollama,
+                model: "qwen3:8b",
+                prompt_version: "1",
+                standing: Standing::Within,
+            },
+        ];
+        assert_eq!(
+            Wizard::under(inventory(), NONE_WITHIN).screens(),
+            Wizard::new(inventory()).screens()
+        );
         let mut wizard = Wizard::new(inventory());
         assert_eq!(
             wizard.screens(),
@@ -942,9 +973,11 @@ mod tests {
     /// Posture offers an untested engine with one warning line.
     #[test]
     fn screen_four_offers_only_tested_engines_in_simple() {
-        const APPLE_ONLY: &[Passing] = &[Passing {
+        const APPLE_ONLY: &[Row] = &[Row {
             engine: JudgementEngine::Apple,
             model: "26",
+            prompt_version: PROMPT_VERSION,
+            standing: Standing::Within,
         }];
         let mut wizard = Wizard::under(inventory(), APPLE_ONLY);
         while wizard.screen() != Screen::AiCheck {

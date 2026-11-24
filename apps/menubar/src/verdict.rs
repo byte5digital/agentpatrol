@@ -343,6 +343,7 @@ mod tests {
                 ollama: None,
                 apple: None,
                 cloud_use: CloudUse::default(),
+                eval_bar: agentpatrol_ipc::engine::EvalBar::default(),
             },
         }
     }

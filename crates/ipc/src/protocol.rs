@@ -36,7 +36,7 @@ use agentpatrol_core::settings::{JUDGEMENT_ENGINE, JudgementEngine};
 use agentpatrol_core::spend::{CapNotice, JudgementCap};
 use agentpatrol_core::state::{IgnoredPack, RecordedFinding, ScanSummary, Trigger};
 
-pub use crate::engine::{EngineChange, EngineState};
+pub use crate::engine::{EngineChange, EngineState, EvalBar};
 pub use crate::gate::{GateEvent, GateReason, GateRequest, GateTool, GateVerdict, McpServerRef};
 pub use crate::judge::{JudgeAnswer, JudgeOutcome, JudgeRequest};
 pub use crate::preview::{PreviewOutcome, RequestPreview};
@@ -2307,6 +2307,7 @@ mod tests {
                     ollama: None,
                     apple: None,
                     cloud_use: crate::engine::CloudUse::default(),
+                    eval_bar: crate::engine::EvalBar::default(),
                 },
             }),
         }));

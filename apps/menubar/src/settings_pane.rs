@@ -311,6 +311,7 @@ pub(crate) mod tests {
                 ollama: None,
                 apple: None,
                 cloud_use: agentpatrol_ipc::engine::CloudUse::default(),
+                eval_bar: agentpatrol_ipc::engine::EvalBar::default(),
             },
         }
     }

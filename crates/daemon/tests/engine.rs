@@ -250,9 +250,10 @@ fn posture(client: &mut Client, posture: Posture) {
         .expect("the Posture moves");
 }
 
-/// In the Simple Posture the daemon refuses every engine outside the eval
-/// bar, which until the eval records a row is every engine, with a plain
-/// error; nothing is written and nothing is recorded.
+/// In the Simple Posture the daemon refuses every engine not within the eval
+/// bar, which while no engine passes is every engine, measured and outside
+/// the bar or not measured, with a plain error; nothing is written and
+/// nothing is recorded.
 #[test]
 fn an_untested_engine_is_refused_in_the_simple_posture() {
     let sandbox = Sandbox::new("untested-simple");
@@ -266,6 +267,11 @@ fn an_untested_engine_is_refused_in_the_simple_posture() {
         EngineChange {
             engine: Some(JudgementEngine::Ollama),
             ollama_model: Some("qwen3:8b".to_string()),
+            ..EngineChange::default()
+        },
+        EngineChange {
+            engine: Some(JudgementEngine::Ollama),
+            ollama_model: Some("gemma3:27b".to_string()),
             ..EngineChange::default()
         },
         engine(JudgementEngine::Claude),
@@ -546,6 +552,115 @@ fn the_engine_state_names_apple_s_availability_and_its_reason() {
         None,
         "asking the helper writes nothing"
     );
+}
+
+/// The engine state names each engine's standing against the eval bar, read
+/// from the table in the core with the model the daemon knows for it: the
+/// macOS version the Apple helper named at its last check, the Ollama model
+/// without its digest, the Claude model in use. Every measured engine is
+/// outside the bar; a model, or a major macOS version, with no row is not
+/// measured. The settings state carries the same standings.
+#[cfg(unix)]
+#[test]
+fn the_engine_state_names_each_engine_s_standing_against_the_eval_bar() {
+    use agentpatrol_core::eval_bar::Standing;
+    use agentpatrol_ipc::protocol::EvalBar;
+    use std::os::unix::fs::PermissionsExt;
+
+    let sandbox = Sandbox::new("eval-bar");
+    let fake = sandbox.root.join("agentpatrol-apple-judge");
+    let answer = sandbox.root.join("check");
+    let script = format!("#!/bin/sh\ncat > /dev/null\ncat \"{}\"\n", answer.display());
+    std::fs::write(&fake, script).expect("the fake helper is written");
+    std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755))
+        .expect("the fake helper is executable");
+    let apple_on = |version: &str| {
+        std::fs::write(
+            &answer,
+            format!(r#"{{"available":true,"context_size":4096,"model_version":"{version}"}}"#),
+        )
+        .expect("the check answer is written");
+    };
+    apple_on("26.6.2 (25G83)");
+
+    let _daemon = sandbox.start_tuned(
+        Arc::new(SameUser),
+        Tuning {
+            apple_helper: Some(fake.clone()),
+            ..Tuning::default()
+        },
+    );
+    let mut client = sandbox.client();
+    let bar = |apple, ollama, claude| EvalBar {
+        apple,
+        ollama,
+        claude,
+    };
+    assert_eq!(
+        client.engine().expect("the engine state").eval_bar,
+        bar(Standing::Outside, Standing::NotMeasured, Standing::Outside),
+        "no Ollama model is chosen yet"
+    );
+    assert_eq!(
+        client.settings().expect("the settings").engine.eval_bar,
+        bar(Standing::Outside, Standing::NotMeasured, Standing::Outside),
+        "the settings state names the macOS version of the last check"
+    );
+
+    posture(&mut client, Posture::Developer);
+    let state = client
+        .change_engine(EngineChange {
+            ollama_model: Some("gemma3:27b@a418f5838eaf".to_string()),
+            claude_model: Some("claude-custom".to_string()),
+            ..EngineChange::default()
+        })
+        .expect("the models are taken");
+    assert_eq!(
+        state.eval_bar,
+        bar(Standing::Outside, Standing::Outside, Standing::NotMeasured)
+    );
+    let state = client
+        .change_engine(EngineChange {
+            ollama_model: Some("qwen3:8b".to_string()),
+            claude_model: Some(String::new()),
+            ..EngineChange::default()
+        })
+        .expect("the models are taken");
+    assert_eq!(
+        state.eval_bar,
+        bar(Standing::Outside, Standing::NotMeasured, Standing::Outside)
+    );
+
+    apple_on("27.0 (26A1)");
+    assert_eq!(
+        client.engine().expect("the engine state").eval_bar.apple,
+        Standing::NotMeasured,
+        "a new major macOS version is not measured"
+    );
+    std::fs::write(
+        &answer,
+        r#"{"available":false,"reason":"apple_intelligence_not_enabled","model_version":"26.6.2 (25G83)"}"#,
+    )
+    .expect("the check answer is written");
+    assert_eq!(
+        client.engine().expect("the engine state").eval_bar.apple,
+        Standing::NotMeasured,
+        "an Apple model that cannot judge here names no version"
+    );
+}
+
+/// Without an Apple helper the daemon knows no macOS version, so Apple is
+/// not measured; the other engines stand as their models do.
+#[test]
+fn without_an_apple_helper_apple_is_not_measured() {
+    use agentpatrol_core::eval_bar::Standing;
+
+    let sandbox = Sandbox::new("eval-bar-no-helper");
+    let _daemon = sandbox.start();
+    let state = sandbox.client().engine().expect("the engine state");
+    assert_eq!(state.eval_bar.apple, Standing::NotMeasured);
+    assert_eq!(state.eval_bar.ollama, Standing::NotMeasured);
+    assert_eq!(state.eval_bar.claude, Standing::Outside);
 }
 
 /// A non-loopback address, or a host name that is not `localhost`, is
