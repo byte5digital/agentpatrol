@@ -63,10 +63,11 @@ pub struct Row {
     pub standing: Standing,
 }
 
-/// Every measured engine and model, with its standing. The eval runs of
-/// 2026-11-24 (docs/evaluations.md) left every engine outside the bar: the
-/// benign corpus holds fewer than thirty Items in the Ambiguous Band, so no
-/// engine can pass yet.
+/// Every measured engine and model, with its standing, from the eval runs of
+/// 2026-11-24 (docs/evaluations.md). Apple and Ollama are outside the bar.
+/// Claude called no benign Item malicious; the benign corpus holds 29 Items
+/// in the Ambiguous Band, one short of the floor of thirty, and the owner
+/// accepted it as within the bar all the same.
 pub const MEASURED: &[Row] = &[
     Row {
         engine: JudgementEngine::Apple,
@@ -84,7 +85,7 @@ pub const MEASURED: &[Row] = &[
         engine: JudgementEngine::Claude,
         model: "claude-sonnet-5",
         prompt_version: "2",
-        standing: Standing::Outside,
+        standing: Standing::Within,
     },
 ];
 
@@ -224,16 +225,20 @@ mod tests {
     ];
 
     /// The eval runs of 2026-11-24 measured one row per engine under
-    /// prompt version 2, and every one of them is outside the bar.
+    /// prompt version 2: Apple and Ollama are outside the bar, Claude within
+    /// it by the owner's decision.
     #[test]
-    fn every_measured_engine_is_outside_the_bar() {
+    fn the_measured_rows_stand_as_the_eval_runs_left_them() {
         assert_eq!(
             PROMPT_VERSION, "2",
             "a new prompt version needs new eval runs"
         );
-        assert!(!any_passes());
+        assert!(any_passes());
         for engine in JudgementEngine::ALL {
-            assert!(!has_passing_rows_in(MEASURED, engine));
+            assert_eq!(
+                has_passing_rows_in(MEASURED, engine),
+                engine == JudgementEngine::Claude
+            );
         }
         assert_eq!(
             standing(JudgementEngine::Apple, "26.6.2 (25G83)"),
@@ -260,7 +265,7 @@ mod tests {
         );
         assert_eq!(
             standing(JudgementEngine::Claude, "claude-sonnet-5"),
-            Standing::Outside
+            Standing::Within
         );
         assert_eq!(
             standing(JudgementEngine::Claude, "claude-custom"),
@@ -269,7 +274,10 @@ mod tests {
         for engine in JudgementEngine::ALL {
             assert!(!passes(engine, "26.6.2 (25G83)"));
             assert!(!passes(engine, "gemma3:27b"));
-            assert!(!passes(engine, "claude-sonnet-5"));
+            assert_eq!(
+                passes(engine, "claude-sonnet-5"),
+                engine == JudgementEngine::Claude
+            );
         }
     }
 
@@ -374,6 +382,6 @@ mod tests {
         assert!(!admits(Posture::Simple, &apple, never));
         assert!(admits(Posture::Developer, &apple, never));
         let claude = with(JudgementEngine::Claude, "");
-        assert!(!admits(Posture::Simple, &claude, never));
+        assert!(admits(Posture::Simple, &claude, never));
     }
 }

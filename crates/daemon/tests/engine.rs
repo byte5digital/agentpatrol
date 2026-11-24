@@ -251,9 +251,8 @@ fn posture(client: &mut Client, posture: Posture) {
 }
 
 /// In the Simple Posture the daemon refuses every engine not within the eval
-/// bar, which while no engine passes is every engine, measured and outside
-/// the bar or not measured, with a plain error; nothing is written and
-/// nothing is recorded.
+/// bar, measured and outside it or not measured, with a plain error; nothing
+/// is written and nothing is recorded. Claude, within the bar, is taken.
 #[test]
 fn an_untested_engine_is_refused_in_the_simple_posture() {
     let sandbox = Sandbox::new("untested-simple");
@@ -274,7 +273,6 @@ fn an_untested_engine_is_refused_in_the_simple_posture() {
             ollama_model: Some("gemma3:27b".to_string()),
             ..EngineChange::default()
         },
-        engine(JudgementEngine::Claude),
     ] {
         let Err(ClientError::Request(refused)) = client.change_engine(change.clone()) else {
             panic!("{change:?} was taken in the Simple Posture");
@@ -294,6 +292,13 @@ fn an_untested_engine_is_refused_in_the_simple_posture() {
         sandbox.engine_events().len(),
         recorded,
         "nothing was recorded"
+    );
+    assert_eq!(
+        client
+            .change_engine(engine(JudgementEngine::Claude))
+            .expect("Claude is within the bar")
+            .engine,
+        JudgementEngine::Claude
     );
 }
 
@@ -557,8 +562,9 @@ fn the_engine_state_names_apple_s_availability_and_its_reason() {
 /// The engine state names each engine's standing against the eval bar, read
 /// from the table in the core with the model the daemon knows for it: the
 /// macOS version the Apple helper named at its last check, the Ollama model
-/// without its digest, the Claude model in use. Every measured engine is
-/// outside the bar; a model, or a major macOS version, with no row is not
+/// without its digest, the Claude model in use. Apple and Ollama are
+/// outside the bar and Claude within it; a model, or a major macOS version,
+/// with no row is not
 /// measured. The settings state carries the same standings.
 #[cfg(unix)]
 #[test]
@@ -598,12 +604,12 @@ fn the_engine_state_names_each_engine_s_standing_against_the_eval_bar() {
     };
     assert_eq!(
         client.engine().expect("the engine state").eval_bar,
-        bar(Standing::Outside, Standing::NotMeasured, Standing::Outside),
+        bar(Standing::Outside, Standing::NotMeasured, Standing::Within),
         "no Ollama model is chosen yet"
     );
     assert_eq!(
         client.settings().expect("the settings").engine.eval_bar,
-        bar(Standing::Outside, Standing::NotMeasured, Standing::Outside),
+        bar(Standing::Outside, Standing::NotMeasured, Standing::Within),
         "the settings state names the macOS version of the last check"
     );
 
@@ -628,7 +634,7 @@ fn the_engine_state_names_each_engine_s_standing_against_the_eval_bar() {
         .expect("the models are taken");
     assert_eq!(
         state.eval_bar,
-        bar(Standing::Outside, Standing::NotMeasured, Standing::Outside)
+        bar(Standing::Outside, Standing::NotMeasured, Standing::Within)
     );
 
     apple_on("27.0 (26A1)");
@@ -660,7 +666,7 @@ fn without_an_apple_helper_apple_is_not_measured() {
     let state = sandbox.client().engine().expect("the engine state");
     assert_eq!(state.eval_bar.apple, Standing::NotMeasured);
     assert_eq!(state.eval_bar.ollama, Standing::NotMeasured);
-    assert_eq!(state.eval_bar.claude, Standing::Outside);
+    assert_eq!(state.eval_bar.claude, Standing::Within);
 }
 
 /// A non-loopback address, or a host name that is not `localhost`, is

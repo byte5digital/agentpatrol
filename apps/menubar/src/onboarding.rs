@@ -922,6 +922,8 @@ mod tests {
     /// screen 3 leads to Keep watching in the background, the steps count
     /// four, and AI Judgement is handed over off. Rows outside the bar, or
     /// within it under an older prompt version, add no screen.
+    /// With Claude within the bar in the table, the wizard has one; see
+    /// `claude_within_the_bar_brings_the_ai_screen`.
     #[test]
     fn no_ai_screen_while_no_engine_passes() {
         const NONE_WITHIN: &[Row] = &[
@@ -938,11 +940,7 @@ mod tests {
                 standing: Standing::Within,
             },
         ];
-        assert_eq!(
-            Wizard::under(inventory(), NONE_WITHIN).screens(),
-            Wizard::new(inventory()).screens()
-        );
-        let mut wizard = Wizard::new(inventory());
+        let mut wizard = Wizard::under(inventory(), NONE_WITHIN);
         assert_eq!(
             wizard.screens(),
             [
@@ -965,6 +963,23 @@ mod tests {
         wizard.back();
         assert_eq!(wizard.screen(), Screen::Detail);
         assert_eq!(wizard.answers().engine.engine, Some(JudgementEngine::Off));
+    }
+
+    /// The table holds Claude within the bar, so the wizard asks about the AI
+    /// check on screen 4, before Keep watching in the background.
+    #[test]
+    fn claude_within_the_bar_brings_the_ai_screen() {
+        let wizard = Wizard::new(inventory());
+        assert_eq!(
+            wizard.screens(),
+            [
+                Screen::Welcome,
+                Screen::Found,
+                Screen::Detail,
+                Screen::AiCheck,
+                Screen::Background
+            ]
+        );
     }
 
     /// In the Simple Posture screen 4 offers only engines within the bar,

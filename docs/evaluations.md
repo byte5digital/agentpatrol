@@ -31,8 +31,10 @@ The benign corpus holds 29 Items in the Ambiguous Band, one short of the thirty
 the bar is measured over, so every engine reads "cannot pass" whatever its
 rate. The bad corpus holds no sample yet, so recall is over the bad Heuristic
 Fixtures alone and is insufficient in every class. The wrapper list is empty,
-so no injection variant was built and no flip-rate was measured. Every engine
-below is therefore outside the bar and ships disabled in the Simple Posture.
+so no injection variant was built and no flip-rate was measured. Apple and
+Ollama are outside the bar and ship disabled in the Simple Posture. Claude
+called no benign Item malicious, and the owner accepted it as within the bar
+on 2026-11-24 despite the 29 Items.
 
 ## 2026-11-24, Apple on-device, macOS 26.6.2 (25G83), prompt version 2
 
@@ -95,5 +97,5 @@ Sets: as for Apple above.
 
 No Verdict: no benign Item and 10 bad Items (1 engine error, 9 failing the
 quote check). The benign Verdicts were 114 benign and 16 unsure. The rate is
-under the bar, but over 29 Items it does not count, so the engine stands
-outside the bar until a run over thirty or more says otherwise.
+under the bar. Over 29 Items it does not count by the rule above; the owner
+accepted Claude as within the bar on 2026-11-24 all the same.
