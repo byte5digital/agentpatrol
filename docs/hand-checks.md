@@ -157,14 +157,14 @@ AGENTPATROL_DEV_SOCKET=$w/d.sock target/debug/agentpatrol-menubar &
 target/debug/agentpatrol status --socket $w/d.sock
 ```
 
-- [ ] The window has a sidebar with Overview, Needs your decision, Worth fixing, Quarantine, Activity and Settings, in that order. Needs your decision and Worth fixing show the number of open Threat and Exposure Findings, Quarantine the number of Items in quarantine; the other three show no number. Only the two Finding panes show anything; the other four show their name and nothing else until their own screen is built.
+- [ ] The window has a sidebar with Overview, Needs your decision, Worth fixing, Quarantine, Activity and Settings, in that order. Needs your decision and Worth fixing show the number of open Threat and Exposure Findings, Quarantine the number of Items in quarantine; the other three show no number. Section 24 checks the other four panes.
 - [ ] Needs your decision and Worth fixing together list the same open Findings as `agentpatrol status`, the Threats in the one and the Exposures in the other: a list on the left, and beside it the selected Finding. In the Simple Posture the list names the skill "The skill 'setup' downloads and runs hidden code", and the detail reads in three parts: a red Dangerous chip beside "The skill 'setup'", then **What it is** ("A skill in Claude Code. Claude Code uses it each time it starts."), **Why it matters** (one short sentence) and **What to do** ("Quarantine it. You can restore it later.") with Quarantine, filled as the one main button, and a plain Trust this version inside it, then a closed **More** that opens on the Probation note, "This check is new, so AgentPatrol asks first.". The 0019 Exposure shows an amber Worth fixing chip beside "A Claude Code setting"; What it is reads "Your own setting that decides when Claude Code asks before acting. Not an attack.", What to do "Take it out. Claude Code will ask again." with Take this setting out filled as the main button and a plain Keep it as it is beside it, in the light and the dark theme alike, then a closed **Show me how to fix this** and a closed **More**; the key `permissions.defaultMode` shows nowhere until the technical details. **Show technical details** and **Report false positive** stand as links at the foot of each Finding. Open More on one Finding, let a Scan run, and it stays open. No id, path, hash or Rule number shows anywhere until **Show technical details** is pressed, which opens the table for that Finding alone under it and reads **Hide technical details**; pressing it again closes the table, and selecting the other Finding shows its own details closed. Every text reads as short as the chosen mock-up. In the Developer Posture the selected Finding shows kind and name, Severity, Tier, category, Probation state, the plain line and the ids, with its buttons above the technical table.
 - [ ] No empty bar stands above the panes while Protection is on. Under Settings, Advanced, the Ollama address saves with its Save button, as the settings folders do.
 - [ ] The Simple Overview shows "Protection is on." with a green dot, four tiles (Need your decision 1 in red, Worth fixing 1 in amber, Projects not checked 0, Projects without the check 0), the line "Watching Claude Code. Last check today, <time>." and Scan now and Scan a folder; no Agent version, no Item count and no rules date. A click on Need your decision or Worth fixing opens that pane. Plant a registered project in the home's Documents folder as in section 9: its tile counts 1 with **Check now** on it, and a click on the tile shows the project's name beneath, a second click hides it. While Scan now runs, "Checking now." stands under the Protection line. In the Developer Posture the Overview shows the status sentence, one line per Agent with its version and Item count, the last check and the rules date, and no tile.
 - [ ] On a Managed Finding (and only there), **Copy a message for your admin** puts a message on the clipboard: paste it into a text editor and read that it names the Item and the Agent and says why in the Rule's sentence, with no value of the setting in it.
 - [ ] The skill offers Quarantine and Trust this version; the 0019 Exposure offers Keep it as it is and Take this setting out, and never Quarantine.
 - [ ] Quarantine runs at once and its answer reads "Moved to quarantine. Restore undoes it.", and the confirmation under it says whether Agent sessions appear to be running (write `$w/home/.claude/sessions/<pid>.json` naming a live pid, for example the shell's, to see the other answer).
-- [ ] After Quarantine the Finding leaves Needs your decision without any refresh, its count drops by one and the Quarantine count rises by one, and `agentpatrol status` says it is stopped with its Receipt id. Restore and the trusted list wait for the Quarantine pane, so Restore from the command line (`agentpatrol restore <id> --socket $w/d.sock`) brings it back to Needs your decision, again without a refresh.
+- [ ] After Quarantine the Finding leaves Needs your decision without any refresh, its count drops by one and the Quarantine count rises by one, and `agentpatrol status` says it is stopped with its Receipt id. **Restore** in the Quarantine pane, or `agentpatrol restore <id> --socket $w/d.sock`, brings it back to Needs your decision, again without a refresh.
 - [ ] An action the daemon refuses shows one sentence beginning "Nothing was done:" and changes nothing. A Quarantine asked again of a Finding already in quarantine says only "It is already in quarantine."; the window moves the Finding out of its pane before a second press can reach it, so the suite holds that sentence (the daemon's `actions` tests and the app's `asking` and `window` tests).
 - [ ] Scan now shows "Checked N of M Items." while it runs and the last Scan line when it ends, in the window and in the popover.
 - [ ] While Scan now runs, no action button in the window is greyed out. Press Quarantine on the skill during the Scan: the Finding at once shows "Waiting for the check to finish…" in place of its buttons, and when the Scan ends it shows "Moved to quarantine. Restore undoes it." without a second press. A press with no Scan running shows "Working…" until the answer. Press a button while the window renders a Scan's progress: every click takes.
@@ -177,7 +177,7 @@ target/debug/agentpatrol status --socket $w/d.sock
 - [ ] With the window open, `lsappinfo info -only ApplicationType -app de.byte5.agentpatrol` says `Foreground` and the app has a Dock icon and a Cmd-Tab entry; after closing the window it says `UIElement` and both are gone. On an installed bundle this is the Tauri issue 15005 check of the release draft.
 - [ ] Keyboard focus is in the window as soon as it opens from the popover, without clicking it first: Tab moves through the sidebar entries and the buttons of the selected Finding. Close it, click into another app, and open it again from the popover: the window comes to the front with keyboard focus again, also after switching away with Cmd-Tab and back. This settles the Accessory-policy focus question the stack research lists as unverified (item 6).
 - [ ] Cmd-W and the red button each hide the window: the app leaves the Dock and Cmd-Tab, the menu bar icon stays, and opening the window from the popover brings it back. With the window open, Cmd-Q (Quit in the app menu) quits the app as the popover's Quit does: the menu bar icon goes, and `agentpatrol status --socket $w/d.sock` still answers, because the daemon keeps running.
-- [ ] The Posture follows the settings file: stop the daemon (`pkill -x agentpatrold`), write `{"posture": "developer"}` to `$w/data/settings.json`, and start the daemon again with the same command as above. Without reopening the window, once the daemon answers, the sidebar reads Overview, Threat Findings, Exposure Findings, Quarantine, Event Log and Settings, with the same counts. Write `{"posture": "simple"}` and restart it again: the plain names come back. A Posture switched through the settings request while the daemon runs re-labels the open window the same way; the app has no switch for it until the Settings pane, so that path is covered by the suite.
+- [ ] The Posture follows the settings file: stop the daemon (`pkill -x agentpatrold`), write `{"posture": "developer"}` to `$w/data/settings.json`, and start the daemon again with the same command as above. Without reopening the window, once the daemon answers, the sidebar reads Overview, Threat Findings, Exposure Findings, Quarantine, Event Log and Settings, with the same counts. Write `{"posture": "simple"}` and restart it again: the plain names come back. Switching Detail in Settings while the daemon runs re-labels the open window the same way.
 
 Stop both with `pkill -x agentpatrol-menubar; pkill -x agentpatrold`, then `rm -rf $w` and the three folders a run of the bare binary leaves: `~/Library/Caches/agentpatrol-menubar`, `~/Library/WebKit/agentpatrol-menubar` and `"$TMPDIR"agentpatrol-menubar`.
 
@@ -558,29 +558,101 @@ This check needs the hand install of section 1, with onboarding done, because on
 
 - [ ] With the app running and its window closed, double-click AgentPatrol in `/Applications`: the window opens, with a Dock icon. Close it, open it again with `open -a AgentPatrol`: the same.
 - [ ] Quit the app from the popover, then double-click it in Finder: the window opens at launch.
-- [ ] Quit the app, log out and log in again: the login item starts the app into the menu bar with no window, no Dock icon and the app that had focus still in front (`lsappinfo info -only ApplicationType -app agentpatrol-menubar` says `UIElement`). If a window opens, AppKit's launch event did not mark the launch as the login item's on this macOS; write the version under Record of runs.
+- [ ] Quit the app, log out and log in again: the login item starts the app into the menu bar with no window, no Dock icon and the app that had focus still in front (`lsappinfo info -only ApplicationType -app de.byte5.agentpatrol` says `UIElement`). If a window opens, AppKit's launch event did not mark the launch as the login item's on this macOS; write the version under Record of runs.
 - [ ] Section 14's windowless launch still opens no window.
 - [ ] On a Mac with two displays, onboarding on a clean user (section 21): the wizard opens on one display, and the first window after **Turn on protection** (a click on the first check's notification) opens on that display wherever the pointer is.
 
 Seams in the suite: `window::tests` in the app (the launch kinds against opening the window, the onboarding wizard in its place while the daemon is not registered, the launch event of the login item read from an AppKit Apple event, and a reopen showing the window or the wizard in hand) and `placement::tests::the_window_that_follows_onboarding_opens_on_the_wizards_display`.
 
+## 24. Every screen of spec section 8, in one pass
+
+The milestone's exit check. Run it on the hand install of section 1, in the order below, and use section 7 for everything that needs planted Findings: it needs no install, and its temporary home never touches the real one. Each part names the numbered sections whose boxes it runs; the boxes here cover only what no numbered section does. Write the run under Record of runs.
+
+### 8.1 Structure
+
+Sections 2, 6 and 23, and the boxes of section 7 on the Dock, the keyboard focus and Cmd-W. The glyph shows its tick in section 2, its exclamation mark in section 7 and its dash in section 19; the notification click is in section 17. The two Finding panes and the Overview are section 7; the other two panes are these:
+
+- [ ] Quarantine: after the Quarantine of section 7 the pane lists the skill with when and by whom it was stopped, and **Restore**. **Delete permanently** asks first and says it cannot be undone. After **Trust this version** on another Finding, the Trusted section at its foot lists it with **Stop trusting this**, and pressing it brings the Finding back with the next Scan. In the Developer Posture an entry adds the Receipt id and **Reveal in Finder**, which selects the payload in Finder.
+- [ ] Activity lists each of those actions, newest first, without being opened again: a plain sentence and its time in the Simple Posture, with the action, ids and hash beside it in the Developer Posture.
+
+Seams in the suite: those of sections 2, 6, 7 and 23, `quarantine::tests`, `reveal::tests`, `activity::tests` and `glyph::tests` in the app, and its `window` integration tests `the_quarantine_pane_purges_a_quarantined_skill` and `the_activity_pane_follows_an_action_from_the_stream_newest_first`.
+
+### 8.2 Postures
+
+- [ ] In Settings, Detail, choose **I am a developer** and then **Keep it simple**: the open window re-labels its sidebar at once, and the Findings, the Overview and Activity change wording and density only, with the same Findings and counts in both. The Simple Posture shows no id, path, hash, Score or Ambiguous Item outside **Show technical details**.
+
+Seams in the suite: `frame::tests`, `wording::tests` and `developer::tests` in the app, its `settings` integration tests and `the_window_frame_lands_the_findings_in_their_panes_and_follows_the_posture`.
+
+### 8.3 Onboarding
+
+Section 21 on a clean user, and the Keep box of section 20 for a reinstall over kept data, which skips the wizard. Seams in the suite: those of sections 20 and 21.
+
+### 8.4 Finding wording
+
+Section 7 shows a T1 Threat on Probation, an Exposure, a Managed Item and the Developer title; section 16 a T2 score Finding (Heuristic 0566); section 18 the AI block in the Developer Posture. For the rest, add to section 7's home before starting the daemon: a project folder registered in `$w/home/.claude.json` under `projects` with `"hasTrustDialogAccepted": false`, holding the `content` of Rule 0004's bad Fixture `instruction-user-query-comment` as its `CLAUDE.md` and a `.env` of the one line `CLAUDE_CONFIG_DIR=./agent-home`, and in the same file an `mcpServers` entry `tracker` with `"command": "/opt/tools/tracker"`.
+
+- [ ] The project's `CLAUDE.md` says Claude Code would not use it yet, since the project is not trusted, and carries "Git will show the change. Restore undoes it." under **More**. Set `hasTrustDialogAccepted` to `true`: after the next Scan it says Claude Code would use it.
+- [ ] Once the first Scan is done, change `tracker`'s command to `/opt/tools/tracker-two` and add a second server `notes-sync`: the list shows "The command that starts the MCP server 'tracker' changed. Was that you?" and "A new MCP server 'notes-sync' was added to Claude Code. Was that you?".
+- [ ] In the Developer Posture each of these reads `<Kind> · <name>` with its chips.
+
+The bundled pack keeps every Rule on Probation, so nothing is stopped by itself and these cases show in the suite only: "Stopped: …", "keeps coming back", the withdrawn Rule's line, "Files inside plugin X changed without an update" and the cap-reached line. Seams in the suite: `wording::tests`, `developer::tests` and `verdict::tests` in the app, the `window_simple` script tests and `the_simple_posture_words_the_findings_a_real_daemon_sends`.
+
+### 8.5 Actions
+
+Section 7 (Quarantine, Trust this version, Keep it as it is, Take this setting out, the waiting and refusal sentences) and section 15 (Show me how to fix this). On the home of 8.4:
+
+- [ ] The `.env` offers **Switch this line off**: pressed, the file starts with `# agentpatrol: quarantined` and the answer adds the git line. **Switch the line back on** puts the file back as it was.
+- [ ] A Drift question offers **Yes, that was me** and **No, remove it** in the Simple Posture, with **Trust this version** only under Show technical details; the Developer Posture shows the three side by side. **Yes, that was me** closes it, and Activity records it.
+- [ ] Quarantine the skill, write a new `SKILL.md` at `$w/home/.claude/skills/setup`, then press **Restore** in Quarantine: a dialog offers **Replace the new file** and **Restore beside it**, and the second puts the skill back as `setup.restored`.
+
+**Restore and trust this version**, **Re-enable** and **Switch this off** need an Item AgentPatrol stopped by itself, a plugin with a clean newer version or a switched Codex entry, so they show in the suite only. Seams in the suite: `actions::tests` in the app, its `presses` integration tests, the `window_presses` script tests and `the_window_switches_a_line_answers_a_drift_question_and_offers_the_conflict_choices`.
+
+### 8.6 Integrity, Protection and permission states
+
+Sections 3 and 19 (Protection off, Not watching right now, Turn on protection and its starting state), section 7's key-missing box, section 9 (Needs Permission and the Privacy link) and section 16 (the Gate lines and "Gate off in this project"). The chain-broken banner, "AgentPatrol's records were changed by something else." with **Show what changed** and **Scan again, trusting nothing**, needs an edited Event Log under a key that survives a restart, which only the real Keychain item gives, so the suite holds it: `banner::tests` and `integrity::tests` in the app and the daemon's `integrity` integration tests.
+
+### 8.7 Notifications
+
+Sections 14 and 17 (the windowless launch, the round trip after Quit and every class's wording) and section 21 ("First check finished"). Seams in the suite: those of sections 14, 17 and 21.
+
+### 8.8 False-alarm report
+
+On section 7's home:
+
+- [ ] **Report false positive** on the skill opens a dialog with the prepared issue: the Rule ids with their status, the Tier, the Rule Pack version, the Item kind, Scope and Provenance class, and the app and macOS versions, with no name, path or content. Its button opens the new-issue page of `byte5digital/agentpatrol` in the browser with exactly that text; close it without submitting.
+- [ ] After **Trust this version** and after a **Restore** the card "Thanks. Was that a false alarm?" shows once each, with **Report it** and **No thanks**, and never after a Quarantine. **No thanks** closes it.
+
+Seams in the suite: `false_alarm::tests` in the app.
+
+### 8.9 Scan a folder
+
+The two Scan a folder boxes of section 7, with its seams.
+
+### 8.10 Settings
+
+Section 13 (the command line tool, Full Disk Access, Your own rules and the full list), section 18 (the AI check), section 16 (the Gate switch), section 22 (the update toggle), section 20 (Uninstall) and 8.2 above (Detail).
+
+- [ ] Every tab shows all its settings without cutting any off. The Rule Feed and app update toggles stand under one line naming both requests, and a change stays after closing and opening the window. The Gate switch reads **Stop the AI from using flagged items** with its subtitle, and "Gate: hooks in Claude Code and Codex" with the two files in the Developer Posture. Under Advanced, a Claude Code folder written as `~/claude` is refused and the setting stays as it was.
+
+Seams in the suite: `settings_pane::tests` and `gate::tests` in the app, its `settings` integration tests, and the `window_layout` tests (every pane scrolls, the tabs reach every setting).
+
 ## Dogfooding: one day with the app
 
-The minimal app's layout and words are placeholders so that the Posture and wording decisions of spec section 8 stay open. The author runs it for a day on their own machine, as an installed bundle, and files one note per question below with what they saw. None of these is decided by the minimal app.
+The minimal app left these questions open for spec section 8. Each now points at the ticket that settled it; the one still open is for the owner's day with an installed bundle.
 
-- [ ] Does "N things need your decision", with the Threat and Exposure counts, read well in the popover and in `agentpatrol status`? It sits below "Checking now." and above the Rule Pack notices.
-- [ ] Which ids, paths, Tiers and Rule ids does the Simple Posture hide, and which stay one click away? The window shows them all today.
-- [x] Is "Restore" enough, or must the button say "Restore and trust this version" before it is pressed? (Built 2026-10-15: the status names who took the Item out, so the button says "Restore and trust this version" for what AgentPatrol stopped by itself, behind a confirmation that quotes why it was stopped, and "Restore" for what the user stopped.)
-- [x] Drift questions offer "Yes, that was me", "No, remove it" and "Trust this version" side by side; spec section 8.5 hides Trust behind technical details in the Simple Posture. (Built 2026-10-15: in the Simple Posture Trust sits under the technical table that Show technical details opens; the Developer Posture shows it beside the other two.)
-- [x] Where does an action's answer belong? (Decided 2026-10-14: beside the Finding, in its detail pane, with the Receipt lines under Details; the top of the window carries nothing.)
-- [x] Is the Quarantine confirmation's sessions sentence the one to keep, and should it name the sessions it found? (Decided 2026-10-14: keep it; it names the count and the Agent, "2 Claude Code sessions appear to be running.", never projects or process ids, and is generic where detection is unavailable. It now comes after the Quarantine, with the restart request and, on Project Scope, the git line.)
-- [ ] Exposures need "Show me how to fix this" with Open the file; only the 0018 and 0019 fix exists.
-- [ ] Scan a folder needs its drop zone and, in the Developer Posture, the equivalent `agentpatrol scan <dir>`. The daemon's Folder Scan uses the Rule Pack in force and the command line the bundled one; both name the version they used.
-- [x] The sidebar of spec section 8.1 (Overview, Needs your decision, Worth fixing, Quarantine, Activity, Settings) with counts, and where the list of what was stopped and decided goes. (Decided 2026-10-14: stopped Items in Quarantine with a Trusted section at its foot, every other decision in Activity.)
-- [ ] Delete permanently, Reveal in Finder, Untrust and the "rule was withdrawn" line are not offered yet.
-- [x] Closing the window hides it; is that what a person expects of Cmd-W and of the red button, and does Cmd-Q from the regular app's menu quit the menu bar app too? (Decided 2026-10-14: Cmd-W and the red button hide the window, Cmd-Q quits the app and the daemon keeps running; checked by hand in section 7.)
-- [ ] Should Scan now's progress show in the popover, or only the sentence "Checking now."?
-- [ ] Do the notification sentences of section 17 read well, the sessions sentence in "stopped automatically" included?
+- [x] Does "N things need your decision", with the Threat and Exposure counts, read well in the popover and in `agentpatrol status`? It sits below "Checking now." and above the Rule Pack notices. (Decided 2026-09-28 and built by ticket 29; spec section 6.6.)
+- [x] Which ids, paths, Tiers and Rule ids does the Simple Posture hide, and which stay one click away? (Built by tickets 71, 123 and 129: the Simple Posture hides them all, and **Show technical details** shows them for one Finding.)
+- [x] Is "Restore" enough, or must the button say "Restore and trust this version" before it is pressed? (Built 2026-10-15 by ticket 73: the status names who took the Item out, so the button says "Restore and trust this version" for what AgentPatrol stopped by itself, behind a confirmation that quotes why it was stopped, and "Restore" for what the user stopped.)
+- [x] Drift questions offer "Yes, that was me", "No, remove it" and "Trust this version" side by side; spec section 8.5 hides Trust behind technical details in the Simple Posture. (Built 2026-10-15 by ticket 73: in the Simple Posture Trust sits under the technical table that Show technical details opens; the Developer Posture shows it beside the other two.)
+- [x] Where does an action's answer belong? (Decided 2026-10-14 for ticket 73: beside the Finding, in its detail pane, with the Receipt lines under Details; the top of the window carries nothing.)
+- [x] Is the Quarantine confirmation's sessions sentence the one to keep, and should it name the sessions it found? (Decided 2026-10-14 for ticket 73: keep it; it names the count and the Agent, "2 Claude Code sessions appear to be running.", never projects or process ids, and is generic where detection is unavailable. It now comes after the Quarantine, with the restart request and, on Project Scope, the git line.)
+- [x] Exposures need "Show me how to fix this" with Open the file; only the 0018 and 0019 fix exists. (Built by ticket 75: every Exposure carries its how-to in the Rule's `fix` key; section 15.)
+- [x] Scan a folder needs its drop zone and, in the Developer Posture, the equivalent `agentpatrol scan <dir>`. The daemon's Folder Scan uses the Rule Pack in force and the command line the bundled one; both name the version they used. (Built by ticket 81, the version by ticket 29; spec section 8.9.)
+- [x] The sidebar of spec section 8.1 (Overview, Needs your decision, Worth fixing, Quarantine, Activity, Settings) with counts, and where the list of what was stopped and decided goes. (Decided 2026-10-14 for ticket 69, built by tickets 69 and 74: stopped Items in Quarantine with a Trusted section at its foot, every other decision in Activity.)
+- [x] Delete permanently, Reveal in Finder, Untrust and the "rule was withdrawn" line are not offered yet. (Built by tickets 64 and 74 in the Quarantine pane, Untrust as **Stop trusting this**; section 24.)
+- [x] Closing the window hides it; is that what a person expects of Cmd-W and of the red button, and does Cmd-Q from the regular app's menu quit the menu bar app too? (Decided 2026-10-14 for ticket 69: Cmd-W and the red button hide the window, Cmd-Q quits the app and the daemon keeps running; checked by hand in section 7.)
+- [x] Should Scan now's progress show in the popover, or only the sentence "Checking now."? (Decided by ticket 140: a Full Scan shows "Checking…" over a bar with no count, a Change Scan "Checking now." at most; section 2.)
+- [ ] Do the notification sentences of section 17 read well, the sessions sentence in "stopped automatically" included? (Open: ticket 79 wrote them for the owner to read here.)
 
 ## Clean up, completely
 
@@ -689,8 +761,18 @@ Each release settles some facts of spec section 12 again. They are written under
 - The `Skill` keys and the `UserPromptExpansion` ordering on the current Claude Code: item 11, with the Claude Code version.
 - The Codex `[hooks.state]` recipe against the current Codex: item 11, with the Codex version and whether the pin matched.
 - The first-run permission items that need a signed build: item 5, per macOS version, with a dated line under unverified item 4 of the research note on first-run permissions.
+- The other first-run items of that note the app meets: the subsection below.
 
 The T3 eval result of item 12 is the exception: it is recorded in the evaluations document, one dated section per engine run.
+
+### The first-run items of the research a release settles
+
+Spec section 12 leaves the unverified items of the research note on first-run permissions to the release, each with the fallback the note states. Four of them touch what the app does. Write each per macOS version under Record of runs, on macOS 15 and 26.
+
+- **The prompt names AgentPatrol, and the grant to the app covers the daemon** (unverified item 4, note section 2). Checked by item 5 through section 9. The note states no fallback: a miss holds the draft and goes back to an agent as a ticket. A debug bundle passed it on macOS 26.6.2 on 2026-11-04; only the signed draft settles it.
+- **The Privacy deep links** (unverified item 8, note section 4). **Open Privacy & Security** in section 9 aims at Files and Folders, **Open Full Disk Access settings** in section 13 at Full Disk Access. Fallback: Privacy & Security without an anchor, which the app opens when no anchored address opens. A pane that opens without its list in front means the anchor is the address to change. Both opened their pane on macOS 26.6.2 on 2026-11-04.
+- **The macOS 26 prompt to keep running after quit** (unverified item 13, note section 9). Checked by the last box of section 21; on a second clean user answer **Don't Allow** once and write what the daemon does. Fallback: screen 5 already says protection continues after quitting, and a daemon macOS stops or leaves waiting shows as Protection is off with **Open Login Items**, or as Not watching right now with **Start it**.
+- **The background-items notice** (unverified item 13, note section 9). Checked by the first box of section 1 and by section 21: write its title and sentence and whether it names AgentPatrol. Fallback: the app quotes none of Apple's wording (screen 5 says only that macOS will announce a background item) and opens Login Items through `SMAppService.openSystemSettingsLoginItems()`, so neither the wording nor the pane's name changes anything in the app. A notice naming byte5's organisation instead of AgentPatrol goes back to an agent as a ticket.
 
 ### A Rule Pack release
 
