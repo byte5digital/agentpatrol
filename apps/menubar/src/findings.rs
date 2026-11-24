@@ -361,7 +361,8 @@ pub fn plain_card(finding: &RecordedFinding) -> Value {
     })
 }
 
-/// The one fixed note a card carries, where one applies. Placeholder.
+/// The one fixed note a card carries, where one applies. The window draws the
+/// notes of [`crate::wording`] in its place and leaves this one unshown.
 fn note(finding: &RecordedFinding) -> &'static str {
     if finding.item_id.in_scope("managed") {
         return "This is controlled by whoever administers this Mac, so AgentPatrol only flags it.";

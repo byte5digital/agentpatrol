@@ -63,7 +63,8 @@ pub enum Off {
 }
 
 impl Off {
-    /// The reason, as the Developer Posture will show it. Placeholder wording.
+    /// The reason Protection is off, as the Developer Posture shows it under
+    /// the banner (spec section 8.6).
     pub fn reason(&self) -> String {
         match self {
             Off::NeedsApproval => {
@@ -735,7 +736,7 @@ mod tests {
         assert!(script.contains("renderBar(checkingBar, scan.done, scan.total);"));
     }
 
-    /// Placeholder wording still keeps the house style: no em-dashes.
+    /// Every string keeps the house style: no em-dashes.
     #[test]
     fn no_string_carries_an_em_dash() {
         let views = [

@@ -1,6 +1,6 @@
 /* The Findings window: a sidebar, and beside it the pane in sight, the two
    Finding panes split into a list and the selected Finding (spec section
-   8.1). Placeholder styling inside the panes. */
+   8.1). */
 
 :root {
   --text: #1d1d1f;
