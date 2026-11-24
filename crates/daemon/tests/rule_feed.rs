@@ -486,8 +486,10 @@ impl Sandbox {
     }
 
     /// A daemon pointed at this feed. With `at_start` the fetch every start
-    /// makes runs at once; without it, it waits an hour, which is longer than
-    /// any test, and the test asks the feed itself.
+    /// makes runs at once; without it, it waits a random time of up to a
+    /// year. The wait is drawn below its bound, so an hour would let one run in
+    /// a few dozen fetch during a slow test; a year never does, and the test asks
+    /// the feed itself.
     fn start(&self, feed: &FeedServer, at_start: bool) -> Background {
         self.start_at(feed.endpoints(), at_start)
     }
@@ -495,7 +497,7 @@ impl Sandbox {
     fn start_at(&self, endpoints: Endpoints, at_start: bool) -> Background {
         let jitter = match at_start {
             true => Duration::ZERO,
-            false => Duration::from_secs(3_600),
+            false => Duration::from_secs(365 * 24 * 3_600),
         };
         self.start_tuned(endpoints, jitter, Duration::ZERO)
     }
