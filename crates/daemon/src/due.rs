@@ -334,6 +334,7 @@ mod tests {
     fn a_wall_clock_that_jumped_is_read_as_a_wake() {
         let jumped = Arc::new(AtomicBool::new(false));
         let clock = Arc::clone(&jumped);
+        let reads = AtomicUsize::new(0);
         let woke = Arc::new(AtomicBool::new(false));
         let noticed = Arc::clone(&woke);
 
@@ -343,10 +344,17 @@ mod tests {
                 // the jump can make the loop ask.
                 every: Duration::from_secs(3_600),
                 slice: Duration::from_millis(2),
+                // Once jumped, the clock moves ten hours with every reading.
+                // A clock that jumped only once could jump between two slices
+                // and never inside one; this way the next slice sees a jump
+                // whichever reading of the loop comes first after the switch.
                 now: Arc::new(move || {
                     let base = 1_700_000_000_000;
                     match clock.load(Ordering::SeqCst) {
-                        true => Timestamp::from_unix_ms(base + 10 * 3_600_000),
+                        true => {
+                            let read = reads.fetch_add(1, Ordering::SeqCst) as i64 + 1;
+                            Timestamp::from_unix_ms(base + read * 10 * 3_600_000)
+                        }
                         false => Timestamp::from_unix_ms(base),
                     }
                 }),
